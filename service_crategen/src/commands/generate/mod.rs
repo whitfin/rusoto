@@ -250,6 +250,7 @@ pub use custom::*;
             let mut config = rustfmt::config::Config::default();
             config.set().max_width(200);
             config.set().error_on_line_overflow(false);
+            config.set().error_on_line_overflow_comments(false);
 
             let _ = rustfmt::run(rustfmt::Input::File(gen_file_path), &config);
             debug!("Rustfmt of {} took {}ms", service.full_name(), sw.elapsed_ms());
