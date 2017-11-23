@@ -247,11 +247,11 @@ pub use custom::*;
             let src_dir = crate_dir.join("src");
             let gen_file_path = src_dir.join("generated.rs");
 
-            let _ = rustfmt::run(rustfmt::Input::File(gen_file_path), &rustfmt::config::Config {
-                write_mode: rustfmt::config::WriteMode::Overwrite,
-                error_on_line_overflow: false,
-                ..rustfmt::config::Config::default()
-            });
+            let mut config = rustfmt::config::Config::default();
+            config.set().max_width(200);
+            config.set().error_on_line_overflow(false);
+
+            let _ = rustfmt::run(rustfmt::Input::File(gen_file_path), &config);
             debug!("Rustfmt of {} took {}ms", service.full_name(), sw.elapsed_ms());
         }
 
