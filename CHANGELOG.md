@@ -3,6 +3,8 @@
 ## [Unreleased]
 (Please put an entry here in each PR)
 
+- Allow setting both, Region name and endpoint, via `Region::Custom`
+
 ## [0.30.0] - 2017-12-02
 
 - Added CloudHSMv2
