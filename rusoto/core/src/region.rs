@@ -117,12 +117,15 @@ impl Region {
             Region::EuCentral1 => "eu-central-1",
             Region::EuWest1 => "eu-west-1",
             Region::EuWest2 => "eu-west-2",
+            Region::EuWest3 => "eu-west-3",
             Region::SaEast1 => "sa-east-1",
             Region::UsEast1 => "us-east-1",
             Region::UsEast2 => "us-east-2",
+            Region::UsGovWest1 => "us-gov-west-1",
             Region::UsWest1 => "us-west-1",
             Region::UsWest2 => "us-west-2",
             Region::CnNorth1 => "cn-north-1",
+            Region::CnNorthwest1 => "cn-northwest-1",
             Region::Custom { ref name, .. } => name,
         }
     }
@@ -345,7 +348,7 @@ mod tests {
         assert_tokens(&Region::UsWest1, &tokens_for_region("us-west-1"));
         assert_tokens(&Region::UsWest2, &tokens_for_region("us-west-2"));
         assert_tokens(&Region::CnNorth1, &tokens_for_region("cn-north-1"));
-        assert_tokens(&Region::CnNorthwest1, &tokens_for_region("cn-northwest-1")]);
+        assert_tokens(&Region::CnNorthwest1, &tokens_for_region("cn-northwest-1"));
     }
 
     fn tokens_for_region(name: &'static str) -> [Token; 4] {
