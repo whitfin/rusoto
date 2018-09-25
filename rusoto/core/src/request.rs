@@ -31,6 +31,7 @@ use tokio_timer::Timeout;
 use log::Level::Debug;
 
 use signature::{SignedRequest, SignedRequestPayload};
+use stream::ByteStream;
 
 // Pulls in the statically generated rustc version.
 include!(concat!(env!("OUT_DIR"), "/user_agent_vars.rs"));
@@ -87,7 +88,7 @@ pub struct HttpResponse {
     /// Status code of HTTP Request
     pub status: StatusCode,
     /// Contents of Response
-    pub body: Box<Stream<Item=Vec<u8>, Error=io::Error> + Send>,
+    pub body: ByteStream,
     /// Response headers
     pub headers: Headers,
 }
@@ -106,7 +107,7 @@ pub struct BufferedHttpResponse {
 pub struct BufferedHttpResponseFuture {
     status: StatusCode,
     headers: HashMap<String, String>,
-    future: ::futures::stream::Concat2<Box<Stream<Item=Vec<u8>, Error=io::Error> + Send>>
+    future: ::futures::stream::Concat2<ByteStream>
 }
 
 impl Future for BufferedHttpResponseFuture {
@@ -125,7 +126,7 @@ impl Future for BufferedHttpResponseFuture {
 }
 
 impl HttpResponse {
-    /// Buffer the full response body in memory, resulting in a `BufferedHttpResponse`. 
+    /// Buffer the full response body in memory, resulting in a `BufferedHttpResponse`.
     pub fn buffer(self) -> BufferedHttpResponseFuture {
         BufferedHttpResponseFuture {
             status: self.status,
@@ -149,7 +150,7 @@ impl HttpResponse {
         HttpResponse {
             status: status,
             headers: headers,
-            body: Box::new(body),
+            body: ByteStream::new(body),
         }
     }
 }
@@ -265,7 +266,7 @@ impl Payload for HttpClientPayload {
                     Ok(Async::Ready(Some(io::Cursor::new(buffer.split_off(0)))))
                 }
             },
-            Some(SignedRequestPayload::Stream(_, ref mut stream)) => {
+            Some(SignedRequestPayload::Stream(ref mut stream)) => {
                 match stream.poll()? {
                     Async::NotReady => Ok(Async::NotReady),
                     Async::Ready(None) => Ok(Async::Ready(None)),
@@ -279,7 +280,7 @@ impl Payload for HttpClientPayload {
         match self.inner {
             None => true,
             Some(SignedRequestPayload::Buffer(ref buffer)) => buffer.len() == 0,
-            Some(SignedRequestPayload::Stream(_, _)) => false
+            Some(SignedRequestPayload::Stream(_)) => false
         }
     }
 
@@ -288,8 +289,8 @@ impl Payload for HttpClientPayload {
             None => Some(0),
             Some(SignedRequestPayload::Buffer(ref buffer)) =>
                 Some(buffer.len() as u64),
-            Some(SignedRequestPayload::Stream(hint, _)) =>
-                hint.map(|s| s as u64)
+            Some(SignedRequestPayload::Stream(ref stream)) =>
+                stream.size_hint().map(|s| s as u64)
         }
     }
 }
@@ -389,8 +390,8 @@ impl<C> DispatchSignedRequest for HttpClient<C>
                     String::from_utf8(payload_bytes.to_owned())
                         .unwrap_or_else(|_| String::from("<non-UTF-8 data>"))
                 },
-                Some(SignedRequestPayload::Stream(len, _)) =>
-                    format!("<stream len_hint={:?}>", len),
+                Some(SignedRequestPayload::Stream(ref stream)) =>
+                    format!("<stream size_hint={:?}>", stream.size_hint()),
                 None => "".to_owned(),
             };
 
