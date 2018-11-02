@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Represents the input of, and adds tags to, an on-premises instance operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -67,6 +67,7 @@ pub struct AlarmConfiguration {
 
 /// <p>Information about an application.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApplicationInfo {
     /// <p>The application ID.</p>
     #[serde(rename = "applicationId")]
@@ -109,6 +110,7 @@ pub struct AutoRollbackConfiguration {
 
 /// <p>Information about an Auto Scaling group.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AutoScalingGroup {
     /// <p>An Auto Scaling lifecycle event hook name.</p>
     #[serde(rename = "hook")]
@@ -133,6 +135,7 @@ pub struct BatchGetApplicationRevisionsInput {
 
 /// <p>Represents the output of a BatchGetApplicationRevisions operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetApplicationRevisionsOutput {
     /// <p>The name of the application that corresponds to the revisions.</p>
     #[serde(rename = "applicationName")]
@@ -158,6 +161,7 @@ pub struct BatchGetApplicationsInput {
 
 /// <p>Represents the output of a BatchGetApplications operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetApplicationsOutput {
     /// <p>Information about the applications.</p>
     #[serde(rename = "applicationsInfo")]
@@ -178,6 +182,7 @@ pub struct BatchGetDeploymentGroupsInput {
 
 /// <p>Represents the output of a BatchGetDeploymentGroups operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetDeploymentGroupsOutput {
     /// <p>Information about the deployment groups.</p>
     #[serde(rename = "deploymentGroupsInfo")]
@@ -202,6 +207,7 @@ pub struct BatchGetDeploymentInstancesInput {
 
 /// <p>Represents the output of a BatchGetDeploymentInstances operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetDeploymentInstancesOutput {
     /// <p>Information about errors that may have occurred during the API call.</p>
     #[serde(rename = "errorMessage")]
@@ -223,6 +229,7 @@ pub struct BatchGetDeploymentsInput {
 
 /// <p>Represents the output of a BatchGetDeployments operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetDeploymentsOutput {
     /// <p>Information about the deployments.</p>
     #[serde(rename = "deploymentsInfo")]
@@ -240,6 +247,7 @@ pub struct BatchGetOnPremisesInstancesInput {
 
 /// <p>Represents the output of a BatchGetOnPremisesInstances operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetOnPremisesInstancesOutput {
     /// <p>Information about the on-premises instances.</p>
     #[serde(rename = "instanceInfos")]
@@ -299,6 +307,7 @@ pub struct CreateApplicationInput {
 
 /// <p>Represents the output of a CreateApplication operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateApplicationOutput {
     /// <p>A unique application ID.</p>
     #[serde(rename = "applicationId")]
@@ -328,6 +337,7 @@ pub struct CreateDeploymentConfigInput {
 
 /// <p>Represents the output of a CreateDeploymentConfig operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateDeploymentConfigOutput {
     /// <p>A unique deployment configuration ID.</p>
     #[serde(rename = "deploymentConfigId")]
@@ -399,6 +409,7 @@ pub struct CreateDeploymentGroupInput {
 
 /// <p>Represents the output of a CreateDeploymentGroup operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateDeploymentGroupOutput {
     /// <p>A unique deployment group ID.</p>
     #[serde(rename = "deploymentGroupId")]
@@ -452,6 +463,7 @@ pub struct CreateDeploymentInput {
 
 /// <p>Represents the output of a CreateDeployment operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateDeploymentOutput {
     /// <p>A unique deployment ID.</p>
     #[serde(rename = "deploymentId")]
@@ -488,6 +500,7 @@ pub struct DeleteDeploymentGroupInput {
 
 /// <p>Represents the output of a DeleteDeploymentGroup operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteDeploymentGroupOutput {
     /// <p>If the output contains no data, and the corresponding deployment group contained at least one Auto Scaling group, AWS CodeDeploy successfully removed all corresponding Auto Scaling lifecycle event hooks from the Amazon EC2 instances in the Auto Scaling group. If the output contains data, AWS CodeDeploy could not remove some Auto Scaling lifecycle event hooks from the Amazon EC2 instances in the Auto Scaling group.</p>
     #[serde(rename = "hooksNotCleanedUp")]
@@ -506,6 +519,7 @@ pub struct DeleteGitHubAccountTokenInput {
 
 /// <p>Represents the output of a DeleteGitHubAccountToken operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteGitHubAccountTokenOutput {
     /// <p>The name of the GitHub account connection that was deleted.</p>
     #[serde(rename = "tokenName")]
@@ -515,6 +529,7 @@ pub struct DeleteGitHubAccountTokenOutput {
 
 /// <p>Information about a deployment configuration.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeploymentConfigInfo {
     /// <p>The destination platform type for the deployment (<code>Lambda</code> or <code>Server</code>).</p>
     #[serde(rename = "computePlatform")]
@@ -544,6 +559,7 @@ pub struct DeploymentConfigInfo {
 
 /// <p>Information about a deployment group.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeploymentGroupInfo {
     /// <p>A list of alarms associated with the deployment group.</p>
     #[serde(rename = "alarmConfiguration")]
@@ -629,6 +645,7 @@ pub struct DeploymentGroupInfo {
 
 /// <p>Information about a deployment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeploymentInfo {
     /// <p>Provides information about the results of a deployment, such as whether instances in the original environment in a blue/green deployment were not terminated.</p>
     #[serde(rename = "additionalDeploymentStatusInfo")]
@@ -742,6 +759,7 @@ pub struct DeploymentInfo {
 
 /// <p>Information about the deployment status of the instances in the deployment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeploymentOverview {
     /// <p>The number of instances in the deployment in a failed state.</p>
     #[serde(rename = "Failed")]
@@ -805,6 +823,7 @@ pub struct DeregisterOnPremisesInstanceInput {
 
 /// <p>Diagnostic information about executable scripts that are part of a deployment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Diagnostics {
     /// <p><p>The associated error code:</p> <ul> <li> <p>Success: The specified script ran.</p> </li> <li> <p>ScriptMissing: The specified script was not found in the specified location.</p> </li> <li> <p>ScriptNotExecutable: The specified script is not a recognized executable file type.</p> </li> <li> <p>ScriptTimedOut: The specified script did not finish running in the specified time period.</p> </li> <li> <p>ScriptFailed: The specified script failed to run as expected.</p> </li> <li> <p>UnknownError: The specified script did not run for an unknown reason.</p> </li> </ul></p>
     #[serde(rename = "errorCode")]
@@ -861,6 +880,7 @@ pub struct ELBInfo {
 
 /// <p>Information about a deployment error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ErrorInformation {
     /// <p><p>For information about additional error codes, see <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide/error-codes.html">Error Codes for AWS CodeDeploy</a> in the <a href="http://docs.aws.amazon.com/codedeploy/latest/userguide">AWS CodeDeploy User Guide</a>.</p> <p>The error code:</p> <ul> <li> <p>APPLICATION<em>MISSING: The application was missing. This error code will most likely be raised if the application is deleted after the deployment is created but before it is started.</p> </li> <li> <p>DEPLOYMENT</em>GROUP<em>MISSING: The deployment group was missing. This error code will most likely be raised if the deployment group is deleted after the deployment is created but before it is started.</p> </li> <li> <p>HEALTH</em>CONSTRAINTS: The deployment failed on too many instances to be successfully deployed within the instance health constraints specified.</p> </li> <li> <p>HEALTH<em>CONSTRAINTS</em>INVALID: The revision cannot be successfully deployed within the instance health constraints specified.</p> </li> <li> <p>IAM<em>ROLE</em>MISSING: The service role cannot be accessed.</p> </li> <li> <p>IAM<em>ROLE</em>PERMISSIONS: The service role does not have the correct permissions.</p> </li> <li> <p>INTERNAL<em>ERROR: There was an internal error.</p> </li> <li> <p>NO</em>EC2<em>SUBSCRIPTION: The calling account is not subscribed to the Amazon EC2 service.</p> </li> <li> <p>NO</em>INSTANCES: No instance were specified, or no instance can be found.</p> </li> <li> <p>OVER<em>MAX</em>INSTANCES: The maximum number of instance was exceeded.</p> </li> <li> <p>THROTTLED: The operation was throttled because the calling account exceeded the throttling limits of one or more AWS services.</p> </li> <li> <p>TIMEOUT: The deployment has timed out.</p> </li> <li> <p>REVISION_MISSING: The revision ID was missing. This error code will most likely be raised if the revision is deleted after the deployment is created but before it is started.</p> </li> </ul></p>
     #[serde(rename = "code")]
@@ -874,6 +894,7 @@ pub struct ErrorInformation {
 
 /// <p>Information about an application revision.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GenericRevisionInfo {
     /// <p>The deployment groups for which this is the current target revision.</p>
     #[serde(rename = "deploymentGroups")]
@@ -907,6 +928,7 @@ pub struct GetApplicationInput {
 
 /// <p>Represents the output of a GetApplication operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetApplicationOutput {
     /// <p>Information about the application.</p>
     #[serde(rename = "application")]
@@ -927,6 +949,7 @@ pub struct GetApplicationRevisionInput {
 
 /// <p>Represents the output of a GetApplicationRevision operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetApplicationRevisionOutput {
     /// <p>The name of the application that corresponds to the revision.</p>
     #[serde(rename = "applicationName")]
@@ -952,6 +975,7 @@ pub struct GetDeploymentConfigInput {
 
 /// <p>Represents the output of a GetDeploymentConfig operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDeploymentConfigOutput {
     /// <p>Information about the deployment configuration.</p>
     #[serde(rename = "deploymentConfigInfo")]
@@ -972,6 +996,7 @@ pub struct GetDeploymentGroupInput {
 
 /// <p>Represents the output of a GetDeploymentGroup operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDeploymentGroupOutput {
     /// <p>Information about the deployment group.</p>
     #[serde(rename = "deploymentGroupInfo")]
@@ -1000,6 +1025,7 @@ pub struct GetDeploymentInstanceInput {
 
 /// <p>Represents the output of a GetDeploymentInstance operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDeploymentInstanceOutput {
     /// <p>Information about the instance.</p>
     #[serde(rename = "instanceSummary")]
@@ -1009,6 +1035,7 @@ pub struct GetDeploymentInstanceOutput {
 
 /// <p>Represents the output of a GetDeployment operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDeploymentOutput {
     /// <p>Information about the deployment.</p>
     #[serde(rename = "deploymentInfo")]
@@ -1026,6 +1053,7 @@ pub struct GetOnPremisesInstanceInput {
 
 /// <p>Represents the output of a GetOnPremisesInstance operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetOnPremisesInstanceOutput {
     /// <p>Information about the on-premises instance.</p>
     #[serde(rename = "instanceInfo")]
@@ -1057,6 +1085,7 @@ pub struct GreenFleetProvisioningOption {
 
 /// <p>Information about an on-premises instance.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InstanceInfo {
     /// <p>If the on-premises instance was deregistered, the time at which the on-premises instance was deregistered.</p>
     #[serde(rename = "deregisterTime")]
@@ -1090,6 +1119,7 @@ pub struct InstanceInfo {
 
 /// <p>Information about an instance in a deployment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InstanceSummary {
     /// <p>The deployment ID.</p>
     #[serde(rename = "deploymentId")]
@@ -1119,6 +1149,7 @@ pub struct InstanceSummary {
 
 /// <p>Information about the most recent attempted or successful deployment to a deployment group.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LastDeploymentInfo {
     /// <p>A timestamp indicating when the most recent deployment to the deployment group started.</p>
     #[serde(rename = "createTime")]
@@ -1140,6 +1171,7 @@ pub struct LastDeploymentInfo {
 
 /// <p>Information about a deployment lifecycle event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LifecycleEvent {
     /// <p>Diagnostic information about the deployment lifecycle event.</p>
     #[serde(rename = "diagnostics")]
@@ -1197,6 +1229,7 @@ pub struct ListApplicationRevisionsInput {
 
 /// <p>Represents the output of a ListApplicationRevisions operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListApplicationRevisionsOutput {
     /// <p>If a large amount of information is returned, an identifier will also be returned. It can be used in a subsequent list application revisions call to return the next set of application revisions in the list.</p>
     #[serde(rename = "nextToken")]
@@ -1219,6 +1252,7 @@ pub struct ListApplicationsInput {
 
 /// <p>Represents the output of a ListApplications operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListApplicationsOutput {
     /// <p>A list of application names.</p>
     #[serde(rename = "applications")]
@@ -1241,6 +1275,7 @@ pub struct ListDeploymentConfigsInput {
 
 /// <p>Represents the output of a ListDeploymentConfigs operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDeploymentConfigsOutput {
     /// <p>A list of deployment configurations, including built-in configurations such as CodeDeployDefault.OneAtATime.</p>
     #[serde(rename = "deploymentConfigsList")]
@@ -1266,6 +1301,7 @@ pub struct ListDeploymentGroupsInput {
 
 /// <p>Represents the output of a ListDeploymentGroups operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDeploymentGroupsOutput {
     /// <p>The application name.</p>
     #[serde(rename = "applicationName")]
@@ -1303,6 +1339,7 @@ pub struct ListDeploymentInstancesInput {
 
 /// <p>Represents the output of a ListDeploymentInstances operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDeploymentInstancesOutput {
     /// <p>A list of instance IDs.</p>
     #[serde(rename = "instancesList")]
@@ -1341,6 +1378,7 @@ pub struct ListDeploymentsInput {
 
 /// <p>Represents the output of a ListDeployments operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDeploymentsOutput {
     /// <p>A list of deployment IDs.</p>
     #[serde(rename = "deployments")]
@@ -1363,6 +1401,7 @@ pub struct ListGitHubAccountTokenNamesInput {
 
 /// <p>Represents the output of a ListGitHubAccountTokenNames operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListGitHubAccountTokenNamesOutput {
     /// <p>If a large amount of information is returned, an identifier is also returned. It can be used in a subsequent ListGitHubAccountTokenNames call to return the next set of names in the list. </p>
     #[serde(rename = "nextToken")]
@@ -1393,6 +1432,7 @@ pub struct ListOnPremisesInstancesInput {
 
 /// <p>Represents the output of list on-premises instances operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListOnPremisesInstancesOutput {
     /// <p>The list of matching on-premises instance names.</p>
     #[serde(rename = "instanceNames")]
@@ -1456,6 +1496,7 @@ pub struct PutLifecycleEventHookExecutionStatusInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutLifecycleEventHookExecutionStatusOutput {
     /// <p>The execution ID of the lifecycle event hook. A hook is specified in the <code>hooks</code> section of the deployment's AppSpec file.</p>
     #[serde(rename = "lifecycleEventHookExecutionId")]
@@ -1520,6 +1561,7 @@ pub struct RemoveTagsFromOnPremisesInstancesInput {
 
 /// <p>Information about an application revision.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RevisionInfo {
     /// <p>Information about an application revision, including usage details and associated deployment groups.</p>
     #[serde(rename = "genericRevisionInfo")]
@@ -1554,6 +1596,7 @@ pub struct RevisionLocation {
 
 /// <p>Information about a deployment rollback.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RollbackInfo {
     /// <p>The ID of the deployment rollback.</p>
     #[serde(rename = "rollbackDeploymentId")]
@@ -1616,6 +1659,7 @@ pub struct StopDeploymentInput {
 
 /// <p>Represents the output of a StopDeployment operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StopDeploymentOutput {
     /// <p><p>The status of the stop deployment operation:</p> <ul> <li> <p>Pending: The stop operation is pending.</p> </li> <li> <p>Succeeded: The stop operation was successful.</p> </li> </ul></p>
     #[serde(rename = "status")]
@@ -1838,6 +1882,7 @@ pub struct UpdateDeploymentGroupInput {
 
 /// <p>Represents the output of an UpdateDeploymentGroup operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateDeploymentGroupOutput {
     /// <p>If the output contains no data, and the corresponding deployment group contained at least one Auto Scaling group, AWS CodeDeploy successfully removed all corresponding Auto Scaling lifecycle event hooks from the AWS account. If the output contains data, AWS CodeDeploy could not remove some Auto Scaling lifecycle event hooks from the AWS account.</p>
     #[serde(rename = "hooksNotCleanedUp")]
@@ -1868,69 +1913,73 @@ pub enum AddTagsToOnPremisesInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddTagsToOnPremisesInstancesError {
-    pub fn from_body(body: &str) -> AddTagsToOnPremisesInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddTagsToOnPremisesInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InstanceLimitExceededException" => {
-                        AddTagsToOnPremisesInstancesError::InstanceLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNameRequiredException" => {
-                        AddTagsToOnPremisesInstancesError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNotRegisteredException" => {
-                        AddTagsToOnPremisesInstancesError::InstanceNotRegistered(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        AddTagsToOnPremisesInstancesError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidTagException" => {
-                        AddTagsToOnPremisesInstancesError::InvalidTag(String::from(error_message))
-                    }
-                    "TagLimitExceededException" => {
-                        AddTagsToOnPremisesInstancesError::TagLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TagRequiredException" => {
-                        AddTagsToOnPremisesInstancesError::TagRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddTagsToOnPremisesInstancesError::Validation(error_message.to_string())
-                    }
-                    _ => AddTagsToOnPremisesInstancesError::Unknown(String::from(body)),
+            match *error_type {
+                "InstanceLimitExceededException" => {
+                    return AddTagsToOnPremisesInstancesError::InstanceLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "InstanceNameRequiredException" => {
+                    return AddTagsToOnPremisesInstancesError::InstanceNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InstanceNotRegisteredException" => {
+                    return AddTagsToOnPremisesInstancesError::InstanceNotRegistered(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return AddTagsToOnPremisesInstancesError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidTagException" => {
+                    return AddTagsToOnPremisesInstancesError::InvalidTag(String::from(
+                        error_message,
+                    ))
+                }
+                "TagLimitExceededException" => {
+                    return AddTagsToOnPremisesInstancesError::TagLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "TagRequiredException" => {
+                    return AddTagsToOnPremisesInstancesError::TagRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AddTagsToOnPremisesInstancesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddTagsToOnPremisesInstancesError::Unknown(String::from(body)),
         }
+        return AddTagsToOnPremisesInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddTagsToOnPremisesInstancesError {
     fn from(err: serde_json::error::Error) -> AddTagsToOnPremisesInstancesError {
-        AddTagsToOnPremisesInstancesError::Unknown(err.description().to_string())
+        AddTagsToOnPremisesInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddTagsToOnPremisesInstancesError {
@@ -1968,7 +2017,8 @@ impl Error for AddTagsToOnPremisesInstancesError {
             AddTagsToOnPremisesInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddTagsToOnPremisesInstancesError::Unknown(ref cause) => cause,
+            AddTagsToOnPremisesInstancesError::ParseError(ref cause) => cause,
+            AddTagsToOnPremisesInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1993,68 +2043,68 @@ pub enum BatchGetApplicationRevisionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetApplicationRevisionsError {
-    pub fn from_body(body: &str) -> BatchGetApplicationRevisionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetApplicationRevisionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        BatchGetApplicationRevisionsError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        BatchGetApplicationRevisionsError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "BatchLimitExceededException" => {
-                        BatchGetApplicationRevisionsError::BatchLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        BatchGetApplicationRevisionsError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRevisionException" => {
-                        BatchGetApplicationRevisionsError::InvalidRevision(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RevisionRequiredException" => {
-                        BatchGetApplicationRevisionsError::RevisionRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetApplicationRevisionsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetApplicationRevisionsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return BatchGetApplicationRevisionsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return BatchGetApplicationRevisionsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "BatchLimitExceededException" => {
+                    return BatchGetApplicationRevisionsError::BatchLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return BatchGetApplicationRevisionsError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRevisionException" => {
+                    return BatchGetApplicationRevisionsError::InvalidRevision(String::from(
+                        error_message,
+                    ))
+                }
+                "RevisionRequiredException" => {
+                    return BatchGetApplicationRevisionsError::RevisionRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetApplicationRevisionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetApplicationRevisionsError::Unknown(String::from(body)),
         }
+        return BatchGetApplicationRevisionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetApplicationRevisionsError {
     fn from(err: serde_json::error::Error) -> BatchGetApplicationRevisionsError {
-        BatchGetApplicationRevisionsError::Unknown(err.description().to_string())
+        BatchGetApplicationRevisionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetApplicationRevisionsError {
@@ -2091,7 +2141,8 @@ impl Error for BatchGetApplicationRevisionsError {
             BatchGetApplicationRevisionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetApplicationRevisionsError::Unknown(ref cause) => cause,
+            BatchGetApplicationRevisionsError::ParseError(ref cause) => cause,
+            BatchGetApplicationRevisionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2112,56 +2163,58 @@ pub enum BatchGetApplicationsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetApplicationsError {
-    pub fn from_body(body: &str) -> BatchGetApplicationsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetApplicationsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        BatchGetApplicationsError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        BatchGetApplicationsError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "BatchLimitExceededException" => {
-                        BatchGetApplicationsError::BatchLimitExceeded(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        BatchGetApplicationsError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetApplicationsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetApplicationsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return BatchGetApplicationsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return BatchGetApplicationsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "BatchLimitExceededException" => {
+                    return BatchGetApplicationsError::BatchLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return BatchGetApplicationsError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetApplicationsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetApplicationsError::Unknown(String::from(body)),
         }
+        return BatchGetApplicationsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetApplicationsError {
     fn from(err: serde_json::error::Error) -> BatchGetApplicationsError {
-        BatchGetApplicationsError::Unknown(err.description().to_string())
+        BatchGetApplicationsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetApplicationsError {
@@ -2196,7 +2249,8 @@ impl Error for BatchGetApplicationsError {
             BatchGetApplicationsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetApplicationsError::Unknown(ref cause) => cause,
+            BatchGetApplicationsError::ParseError(ref cause) => cause,
+            BatchGetApplicationsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2221,68 +2275,68 @@ pub enum BatchGetDeploymentGroupsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetDeploymentGroupsError {
-    pub fn from_body(body: &str) -> BatchGetDeploymentGroupsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetDeploymentGroupsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        BatchGetDeploymentGroupsError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        BatchGetDeploymentGroupsError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "BatchLimitExceededException" => {
-                        BatchGetDeploymentGroupsError::BatchLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        BatchGetDeploymentGroupsError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        BatchGetDeploymentGroupsError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        BatchGetDeploymentGroupsError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetDeploymentGroupsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetDeploymentGroupsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return BatchGetDeploymentGroupsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return BatchGetDeploymentGroupsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "BatchLimitExceededException" => {
+                    return BatchGetDeploymentGroupsError::BatchLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return BatchGetDeploymentGroupsError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return BatchGetDeploymentGroupsError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return BatchGetDeploymentGroupsError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetDeploymentGroupsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetDeploymentGroupsError::Unknown(String::from(body)),
         }
+        return BatchGetDeploymentGroupsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetDeploymentGroupsError {
     fn from(err: serde_json::error::Error) -> BatchGetDeploymentGroupsError {
-        BatchGetDeploymentGroupsError::Unknown(err.description().to_string())
+        BatchGetDeploymentGroupsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetDeploymentGroupsError {
@@ -2319,7 +2373,8 @@ impl Error for BatchGetDeploymentGroupsError {
             BatchGetDeploymentGroupsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetDeploymentGroupsError::Unknown(ref cause) => cause,
+            BatchGetDeploymentGroupsError::ParseError(ref cause) => cause,
+            BatchGetDeploymentGroupsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2344,68 +2399,68 @@ pub enum BatchGetDeploymentInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetDeploymentInstancesError {
-    pub fn from_body(body: &str) -> BatchGetDeploymentInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetDeploymentInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BatchLimitExceededException" => {
-                        BatchGetDeploymentInstancesError::BatchLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentDoesNotExistException" => {
-                        BatchGetDeploymentInstancesError::DeploymentDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        BatchGetDeploymentInstancesError::DeploymentIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceIdRequiredException" => {
-                        BatchGetDeploymentInstancesError::InstanceIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        BatchGetDeploymentInstancesError::InvalidDeploymentId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        BatchGetDeploymentInstancesError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetDeploymentInstancesError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetDeploymentInstancesError::Unknown(String::from(body)),
+            match *error_type {
+                "BatchLimitExceededException" => {
+                    return BatchGetDeploymentInstancesError::BatchLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentDoesNotExistException" => {
+                    return BatchGetDeploymentInstancesError::DeploymentDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentIdRequiredException" => {
+                    return BatchGetDeploymentInstancesError::DeploymentIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InstanceIdRequiredException" => {
+                    return BatchGetDeploymentInstancesError::InstanceIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentIdException" => {
+                    return BatchGetDeploymentInstancesError::InvalidDeploymentId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return BatchGetDeploymentInstancesError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetDeploymentInstancesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetDeploymentInstancesError::Unknown(String::from(body)),
         }
+        return BatchGetDeploymentInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetDeploymentInstancesError {
     fn from(err: serde_json::error::Error) -> BatchGetDeploymentInstancesError {
-        BatchGetDeploymentInstancesError::Unknown(err.description().to_string())
+        BatchGetDeploymentInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetDeploymentInstancesError {
@@ -2442,7 +2497,8 @@ impl Error for BatchGetDeploymentInstancesError {
             BatchGetDeploymentInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetDeploymentInstancesError::Unknown(ref cause) => cause,
+            BatchGetDeploymentInstancesError::ParseError(ref cause) => cause,
+            BatchGetDeploymentInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2461,47 +2517,51 @@ pub enum BatchGetDeploymentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetDeploymentsError {
-    pub fn from_body(body: &str) -> BatchGetDeploymentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetDeploymentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BatchLimitExceededException" => {
-                        BatchGetDeploymentsError::BatchLimitExceeded(String::from(error_message))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        BatchGetDeploymentsError::DeploymentIdRequired(String::from(error_message))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        BatchGetDeploymentsError::InvalidDeploymentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        BatchGetDeploymentsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetDeploymentsError::Unknown(String::from(body)),
+            match *error_type {
+                "BatchLimitExceededException" => {
+                    return BatchGetDeploymentsError::BatchLimitExceeded(String::from(error_message))
                 }
+                "DeploymentIdRequiredException" => {
+                    return BatchGetDeploymentsError::DeploymentIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentIdException" => {
+                    return BatchGetDeploymentsError::InvalidDeploymentId(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetDeploymentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetDeploymentsError::Unknown(String::from(body)),
         }
+        return BatchGetDeploymentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetDeploymentsError {
     fn from(err: serde_json::error::Error) -> BatchGetDeploymentsError {
-        BatchGetDeploymentsError::Unknown(err.description().to_string())
+        BatchGetDeploymentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetDeploymentsError {
@@ -2535,7 +2595,8 @@ impl Error for BatchGetDeploymentsError {
             BatchGetDeploymentsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetDeploymentsError::Unknown(ref cause) => cause,
+            BatchGetDeploymentsError::ParseError(ref cause) => cause,
+            BatchGetDeploymentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2554,53 +2615,53 @@ pub enum BatchGetOnPremisesInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetOnPremisesInstancesError {
-    pub fn from_body(body: &str) -> BatchGetOnPremisesInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetOnPremisesInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BatchLimitExceededException" => {
-                        BatchGetOnPremisesInstancesError::BatchLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNameRequiredException" => {
-                        BatchGetOnPremisesInstancesError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        BatchGetOnPremisesInstancesError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetOnPremisesInstancesError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetOnPremisesInstancesError::Unknown(String::from(body)),
+            match *error_type {
+                "BatchLimitExceededException" => {
+                    return BatchGetOnPremisesInstancesError::BatchLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "InstanceNameRequiredException" => {
+                    return BatchGetOnPremisesInstancesError::InstanceNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return BatchGetOnPremisesInstancesError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetOnPremisesInstancesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetOnPremisesInstancesError::Unknown(String::from(body)),
         }
+        return BatchGetOnPremisesInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetOnPremisesInstancesError {
     fn from(err: serde_json::error::Error) -> BatchGetOnPremisesInstancesError {
-        BatchGetOnPremisesInstancesError::Unknown(err.description().to_string())
+        BatchGetOnPremisesInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetOnPremisesInstancesError {
@@ -2634,7 +2695,8 @@ impl Error for BatchGetOnPremisesInstancesError {
             BatchGetOnPremisesInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetOnPremisesInstancesError::Unknown(ref cause) => cause,
+            BatchGetOnPremisesInstancesError::ParseError(ref cause) => cause,
+            BatchGetOnPremisesInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2659,62 +2721,66 @@ pub enum ContinueDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ContinueDeploymentError {
-    pub fn from_body(body: &str) -> ContinueDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ContinueDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentAlreadyCompletedException" => {
-                        ContinueDeploymentError::DeploymentAlreadyCompleted(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentDoesNotExistException" => {
-                        ContinueDeploymentError::DeploymentDoesNotExist(String::from(error_message))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        ContinueDeploymentError::DeploymentIdRequired(String::from(error_message))
-                    }
-                    "DeploymentIsNotInReadyStateException" => {
-                        ContinueDeploymentError::DeploymentIsNotInReadyState(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        ContinueDeploymentError::InvalidDeploymentId(String::from(error_message))
-                    }
-                    "UnsupportedActionForDeploymentTypeException" => {
-                        ContinueDeploymentError::UnsupportedActionForDeploymentType(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ContinueDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => ContinueDeploymentError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentAlreadyCompletedException" => {
+                    return ContinueDeploymentError::DeploymentAlreadyCompleted(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentDoesNotExistException" => {
+                    return ContinueDeploymentError::DeploymentDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentIdRequiredException" => {
+                    return ContinueDeploymentError::DeploymentIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentIsNotInReadyStateException" => {
+                    return ContinueDeploymentError::DeploymentIsNotInReadyState(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentIdException" => {
+                    return ContinueDeploymentError::InvalidDeploymentId(String::from(error_message))
+                }
+                "UnsupportedActionForDeploymentTypeException" => {
+                    return ContinueDeploymentError::UnsupportedActionForDeploymentType(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return ContinueDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ContinueDeploymentError::Unknown(String::from(body)),
         }
+        return ContinueDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ContinueDeploymentError {
     fn from(err: serde_json::error::Error) -> ContinueDeploymentError {
-        ContinueDeploymentError::Unknown(err.description().to_string())
+        ContinueDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ContinueDeploymentError {
@@ -2751,7 +2817,8 @@ impl Error for ContinueDeploymentError {
             ContinueDeploymentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ContinueDeploymentError::Unknown(ref cause) => cause,
+            ContinueDeploymentError::ParseError(ref cause) => cause,
+            ContinueDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2774,57 +2841,63 @@ pub enum CreateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateApplicationError {
-    pub fn from_body(body: &str) -> CreateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationAlreadyExistsException" => {
-                        CreateApplicationError::ApplicationAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationLimitExceededException" => {
-                        CreateApplicationError::ApplicationLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        CreateApplicationError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        CreateApplicationError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "InvalidComputePlatformException" => {
-                        CreateApplicationError::InvalidComputePlatform(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => CreateApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationAlreadyExistsException" => {
+                    return CreateApplicationError::ApplicationAlreadyExists(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationLimitExceededException" => {
+                    return CreateApplicationError::ApplicationLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ApplicationNameRequiredException" => {
+                    return CreateApplicationError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return CreateApplicationError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidComputePlatformException" => {
+                    return CreateApplicationError::InvalidComputePlatform(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateApplicationError::Unknown(String::from(body)),
         }
+        return CreateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateApplicationError {
     fn from(err: serde_json::error::Error) -> CreateApplicationError {
-        CreateApplicationError::Unknown(err.description().to_string())
+        CreateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateApplicationError {
@@ -2860,7 +2933,8 @@ impl Error for CreateApplicationError {
             CreateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateApplicationError::Unknown(ref cause) => cause,
+            CreateApplicationError::ParseError(ref cause) => cause,
+            CreateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2919,127 +2993,141 @@ pub enum CreateDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDeploymentError {
-    pub fn from_body(body: &str) -> CreateDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        CreateDeploymentError::ApplicationDoesNotExist(String::from(error_message))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        CreateDeploymentError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "DeploymentConfigDoesNotExistException" => {
-                        CreateDeploymentError::DeploymentConfigDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupDoesNotExistException" => {
-                        CreateDeploymentError::DeploymentGroupDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        CreateDeploymentError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentLimitExceededException" => {
-                        CreateDeploymentError::DeploymentLimitExceeded(String::from(error_message))
-                    }
-                    "DescriptionTooLongException" => {
-                        CreateDeploymentError::DescriptionTooLong(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        CreateDeploymentError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "InvalidAutoRollbackConfigException" => {
-                        CreateDeploymentError::InvalidAutoRollbackConfig(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAutoScalingGroupException" => {
-                        CreateDeploymentError::InvalidAutoScalingGroup(String::from(error_message))
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        CreateDeploymentError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        CreateDeploymentError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidFileExistsBehaviorException" => {
-                        CreateDeploymentError::InvalidFileExistsBehavior(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidGitHubAccountTokenException" => {
-                        CreateDeploymentError::InvalidGitHubAccountToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidIgnoreApplicationStopFailuresValueException" => {
-                        CreateDeploymentError::InvalidIgnoreApplicationStopFailuresValue(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidLoadBalancerInfoException" => {
-                        CreateDeploymentError::InvalidLoadBalancerInfo(String::from(error_message))
-                    }
-                    "InvalidRevisionException" => {
-                        CreateDeploymentError::InvalidRevision(String::from(error_message))
-                    }
-                    "InvalidRoleException" => {
-                        CreateDeploymentError::InvalidRole(String::from(error_message))
-                    }
-                    "InvalidTargetInstancesException" => {
-                        CreateDeploymentError::InvalidTargetInstances(String::from(error_message))
-                    }
-                    "InvalidUpdateOutdatedInstancesOnlyValueException" => {
-                        CreateDeploymentError::InvalidUpdateOutdatedInstancesOnlyValue(
-                            String::from(error_message),
-                        )
-                    }
-                    "RevisionDoesNotExistException" => {
-                        CreateDeploymentError::RevisionDoesNotExist(String::from(error_message))
-                    }
-                    "RevisionRequiredException" => {
-                        CreateDeploymentError::RevisionRequired(String::from(error_message))
-                    }
-                    "ThrottlingException" => {
-                        CreateDeploymentError::Throttling(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDeploymentError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return CreateDeploymentError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return CreateDeploymentError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentConfigDoesNotExistException" => {
+                    return CreateDeploymentError::DeploymentConfigDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupDoesNotExistException" => {
+                    return CreateDeploymentError::DeploymentGroupDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return CreateDeploymentError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentLimitExceededException" => {
+                    return CreateDeploymentError::DeploymentLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "DescriptionTooLongException" => {
+                    return CreateDeploymentError::DescriptionTooLong(String::from(error_message))
+                }
+                "InvalidApplicationNameException" => {
+                    return CreateDeploymentError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoRollbackConfigException" => {
+                    return CreateDeploymentError::InvalidAutoRollbackConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoScalingGroupException" => {
+                    return CreateDeploymentError::InvalidAutoScalingGroup(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return CreateDeploymentError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return CreateDeploymentError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidFileExistsBehaviorException" => {
+                    return CreateDeploymentError::InvalidFileExistsBehavior(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidGitHubAccountTokenException" => {
+                    return CreateDeploymentError::InvalidGitHubAccountToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidIgnoreApplicationStopFailuresValueException" => {
+                    return CreateDeploymentError::InvalidIgnoreApplicationStopFailuresValue(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidLoadBalancerInfoException" => {
+                    return CreateDeploymentError::InvalidLoadBalancerInfo(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRevisionException" => {
+                    return CreateDeploymentError::InvalidRevision(String::from(error_message))
+                }
+                "InvalidRoleException" => {
+                    return CreateDeploymentError::InvalidRole(String::from(error_message))
+                }
+                "InvalidTargetInstancesException" => {
+                    return CreateDeploymentError::InvalidTargetInstances(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidUpdateOutdatedInstancesOnlyValueException" => {
+                    return CreateDeploymentError::InvalidUpdateOutdatedInstancesOnlyValue(
+                        String::from(error_message),
+                    )
+                }
+                "RevisionDoesNotExistException" => {
+                    return CreateDeploymentError::RevisionDoesNotExist(String::from(error_message))
+                }
+                "RevisionRequiredException" => {
+                    return CreateDeploymentError::RevisionRequired(String::from(error_message))
+                }
+                "ThrottlingException" => {
+                    return CreateDeploymentError::Throttling(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDeploymentError::Unknown(String::from(body)),
         }
+        return CreateDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDeploymentError {
     fn from(err: serde_json::error::Error) -> CreateDeploymentError {
-        CreateDeploymentError::Unknown(err.description().to_string())
+        CreateDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDeploymentError {
@@ -3091,7 +3179,8 @@ impl Error for CreateDeploymentError {
             CreateDeploymentError::Validation(ref cause) => cause,
             CreateDeploymentError::Credentials(ref err) => err.description(),
             CreateDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateDeploymentError::Unknown(ref cause) => cause,
+            CreateDeploymentError::ParseError(ref cause) => cause,
+            CreateDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3118,73 +3207,73 @@ pub enum CreateDeploymentConfigError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDeploymentConfigError {
-    pub fn from_body(body: &str) -> CreateDeploymentConfigError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDeploymentConfigError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentConfigAlreadyExistsException" => {
-                        CreateDeploymentConfigError::DeploymentConfigAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigLimitExceededException" => {
-                        CreateDeploymentConfigError::DeploymentConfigLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigNameRequiredException" => {
-                        CreateDeploymentConfigError::DeploymentConfigNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidComputePlatformException" => {
-                        CreateDeploymentConfigError::InvalidComputePlatform(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        CreateDeploymentConfigError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidMinimumHealthyHostValueException" => {
-                        CreateDeploymentConfigError::InvalidMinimumHealthyHostValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidTrafficRoutingConfigurationException" => {
-                        CreateDeploymentConfigError::InvalidTrafficRoutingConfiguration(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        CreateDeploymentConfigError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDeploymentConfigError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentConfigAlreadyExistsException" => {
+                    return CreateDeploymentConfigError::DeploymentConfigAlreadyExists(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentConfigLimitExceededException" => {
+                    return CreateDeploymentConfigError::DeploymentConfigLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentConfigNameRequiredException" => {
+                    return CreateDeploymentConfigError::DeploymentConfigNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidComputePlatformException" => {
+                    return CreateDeploymentConfigError::InvalidComputePlatform(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return CreateDeploymentConfigError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMinimumHealthyHostValueException" => {
+                    return CreateDeploymentConfigError::InvalidMinimumHealthyHostValue(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidTrafficRoutingConfigurationException" => {
+                    return CreateDeploymentConfigError::InvalidTrafficRoutingConfiguration(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return CreateDeploymentConfigError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDeploymentConfigError::Unknown(String::from(body)),
         }
+        return CreateDeploymentConfigError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDeploymentConfigError {
     fn from(err: serde_json::error::Error) -> CreateDeploymentConfigError {
-        CreateDeploymentConfigError::Unknown(err.description().to_string())
+        CreateDeploymentConfigError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDeploymentConfigError {
@@ -3222,7 +3311,8 @@ impl Error for CreateDeploymentConfigError {
             CreateDeploymentConfigError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateDeploymentConfigError::Unknown(ref cause) => cause,
+            CreateDeploymentConfigError::ParseError(ref cause) => cause,
+            CreateDeploymentConfigError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3289,159 +3379,163 @@ pub enum CreateDeploymentGroupError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDeploymentGroupError {
-    pub fn from_body(body: &str) -> CreateDeploymentGroupError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDeploymentGroupError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AlarmsLimitExceededException" => {
-                        CreateDeploymentGroupError::AlarmsLimitExceeded(String::from(error_message))
-                    }
-                    "ApplicationDoesNotExistException" => {
-                        CreateDeploymentGroupError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        CreateDeploymentGroupError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigDoesNotExistException" => {
-                        CreateDeploymentGroupError::DeploymentConfigDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupAlreadyExistsException" => {
-                        CreateDeploymentGroupError::DeploymentGroupAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupLimitExceededException" => {
-                        CreateDeploymentGroupError::DeploymentGroupLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        CreateDeploymentGroupError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAlarmConfigException" => {
-                        CreateDeploymentGroupError::InvalidAlarmConfig(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        CreateDeploymentGroupError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAutoRollbackConfigException" => {
-                        CreateDeploymentGroupError::InvalidAutoRollbackConfig(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAutoScalingGroupException" => {
-                        CreateDeploymentGroupError::InvalidAutoScalingGroup(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidBlueGreenDeploymentConfigurationException" => {
-                        CreateDeploymentGroupError::InvalidBlueGreenDeploymentConfiguration(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        CreateDeploymentGroupError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        CreateDeploymentGroupError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentStyleException" => {
-                        CreateDeploymentGroupError::InvalidDeploymentStyle(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidEC2TagCombinationException" => {
-                        CreateDeploymentGroupError::InvalidEC2TagCombination(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidEC2TagException" => {
-                        CreateDeploymentGroupError::InvalidEC2Tag(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateDeploymentGroupError::InvalidInput(String::from(error_message))
-                    }
-                    "InvalidLoadBalancerInfoException" => {
-                        CreateDeploymentGroupError::InvalidLoadBalancerInfo(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidOnPremisesTagCombinationException" => {
-                        CreateDeploymentGroupError::InvalidOnPremisesTagCombination(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRoleException" => {
-                        CreateDeploymentGroupError::InvalidRole(String::from(error_message))
-                    }
-                    "InvalidTagException" => {
-                        CreateDeploymentGroupError::InvalidTag(String::from(error_message))
-                    }
-                    "InvalidTriggerConfigException" => {
-                        CreateDeploymentGroupError::InvalidTriggerConfig(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LifecycleHookLimitExceededException" => {
-                        CreateDeploymentGroupError::LifecycleHookLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RoleRequiredException" => {
-                        CreateDeploymentGroupError::RoleRequired(String::from(error_message))
-                    }
-                    "TagSetListLimitExceededException" => {
-                        CreateDeploymentGroupError::TagSetListLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TriggerTargetsLimitExceededException" => {
-                        CreateDeploymentGroupError::TriggerTargetsLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateDeploymentGroupError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDeploymentGroupError::Unknown(String::from(body)),
+            match *error_type {
+                "AlarmsLimitExceededException" => {
+                    return CreateDeploymentGroupError::AlarmsLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationDoesNotExistException" => {
+                    return CreateDeploymentGroupError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "ApplicationNameRequiredException" => {
+                    return CreateDeploymentGroupError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentConfigDoesNotExistException" => {
+                    return CreateDeploymentGroupError::DeploymentConfigDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupAlreadyExistsException" => {
+                    return CreateDeploymentGroupError::DeploymentGroupAlreadyExists(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupLimitExceededException" => {
+                    return CreateDeploymentGroupError::DeploymentGroupLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return CreateDeploymentGroupError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAlarmConfigException" => {
+                    return CreateDeploymentGroupError::InvalidAlarmConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return CreateDeploymentGroupError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoRollbackConfigException" => {
+                    return CreateDeploymentGroupError::InvalidAutoRollbackConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoScalingGroupException" => {
+                    return CreateDeploymentGroupError::InvalidAutoScalingGroup(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidBlueGreenDeploymentConfigurationException" => {
+                    return CreateDeploymentGroupError::InvalidBlueGreenDeploymentConfiguration(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return CreateDeploymentGroupError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return CreateDeploymentGroupError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentStyleException" => {
+                    return CreateDeploymentGroupError::InvalidDeploymentStyle(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidEC2TagCombinationException" => {
+                    return CreateDeploymentGroupError::InvalidEC2TagCombination(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidEC2TagException" => {
+                    return CreateDeploymentGroupError::InvalidEC2Tag(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateDeploymentGroupError::InvalidInput(String::from(error_message))
+                }
+                "InvalidLoadBalancerInfoException" => {
+                    return CreateDeploymentGroupError::InvalidLoadBalancerInfo(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidOnPremisesTagCombinationException" => {
+                    return CreateDeploymentGroupError::InvalidOnPremisesTagCombination(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRoleException" => {
+                    return CreateDeploymentGroupError::InvalidRole(String::from(error_message))
+                }
+                "InvalidTagException" => {
+                    return CreateDeploymentGroupError::InvalidTag(String::from(error_message))
+                }
+                "InvalidTriggerConfigException" => {
+                    return CreateDeploymentGroupError::InvalidTriggerConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "LifecycleHookLimitExceededException" => {
+                    return CreateDeploymentGroupError::LifecycleHookLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "RoleRequiredException" => {
+                    return CreateDeploymentGroupError::RoleRequired(String::from(error_message))
+                }
+                "TagSetListLimitExceededException" => {
+                    return CreateDeploymentGroupError::TagSetListLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "TriggerTargetsLimitExceededException" => {
+                    return CreateDeploymentGroupError::TriggerTargetsLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateDeploymentGroupError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDeploymentGroupError::Unknown(String::from(body)),
         }
+        return CreateDeploymentGroupError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDeploymentGroupError {
     fn from(err: serde_json::error::Error) -> CreateDeploymentGroupError {
-        CreateDeploymentGroupError::Unknown(err.description().to_string())
+        CreateDeploymentGroupError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDeploymentGroupError {
@@ -3499,7 +3593,8 @@ impl Error for CreateDeploymentGroupError {
             CreateDeploymentGroupError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateDeploymentGroupError::Unknown(ref cause) => cause,
+            CreateDeploymentGroupError::ParseError(ref cause) => cause,
+            CreateDeploymentGroupError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3516,44 +3611,48 @@ pub enum DeleteApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationError {
-    pub fn from_body(body: &str) -> DeleteApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationNameRequiredException" => {
-                        DeleteApplicationError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        DeleteApplicationError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationNameRequiredException" => {
+                    return DeleteApplicationError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidApplicationNameException" => {
+                    return DeleteApplicationError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationError::Unknown(String::from(body)),
         }
+        return DeleteApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationError {
-        DeleteApplicationError::Unknown(err.description().to_string())
+        DeleteApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationError {
@@ -3586,7 +3685,8 @@ impl Error for DeleteApplicationError {
             DeleteApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationError::Unknown(ref cause) => cause,
+            DeleteApplicationError::ParseError(ref cause) => cause,
+            DeleteApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3607,56 +3707,58 @@ pub enum DeleteDeploymentConfigError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDeploymentConfigError {
-    pub fn from_body(body: &str) -> DeleteDeploymentConfigError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDeploymentConfigError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentConfigInUseException" => {
-                        DeleteDeploymentConfigError::DeploymentConfigInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigNameRequiredException" => {
-                        DeleteDeploymentConfigError::DeploymentConfigNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        DeleteDeploymentConfigError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidOperationException" => {
-                        DeleteDeploymentConfigError::InvalidOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDeploymentConfigError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDeploymentConfigError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentConfigInUseException" => {
+                    return DeleteDeploymentConfigError::DeploymentConfigInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentConfigNameRequiredException" => {
+                    return DeleteDeploymentConfigError::DeploymentConfigNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return DeleteDeploymentConfigError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidOperationException" => {
+                    return DeleteDeploymentConfigError::InvalidOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteDeploymentConfigError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDeploymentConfigError::Unknown(String::from(body)),
         }
+        return DeleteDeploymentConfigError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDeploymentConfigError {
     fn from(err: serde_json::error::Error) -> DeleteDeploymentConfigError {
-        DeleteDeploymentConfigError::Unknown(err.description().to_string())
+        DeleteDeploymentConfigError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDeploymentConfigError {
@@ -3691,7 +3793,8 @@ impl Error for DeleteDeploymentConfigError {
             DeleteDeploymentConfigError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteDeploymentConfigError::Unknown(ref cause) => cause,
+            DeleteDeploymentConfigError::ParseError(ref cause) => cause,
+            DeleteDeploymentConfigError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3714,61 +3817,61 @@ pub enum DeleteDeploymentGroupError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDeploymentGroupError {
-    pub fn from_body(body: &str) -> DeleteDeploymentGroupError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDeploymentGroupError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationNameRequiredException" => {
-                        DeleteDeploymentGroupError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        DeleteDeploymentGroupError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        DeleteDeploymentGroupError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        DeleteDeploymentGroupError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRoleException" => {
-                        DeleteDeploymentGroupError::InvalidRole(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDeploymentGroupError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDeploymentGroupError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationNameRequiredException" => {
+                    return DeleteDeploymentGroupError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentGroupNameRequiredException" => {
+                    return DeleteDeploymentGroupError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return DeleteDeploymentGroupError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return DeleteDeploymentGroupError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRoleException" => {
+                    return DeleteDeploymentGroupError::InvalidRole(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteDeploymentGroupError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDeploymentGroupError::Unknown(String::from(body)),
         }
+        return DeleteDeploymentGroupError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDeploymentGroupError {
     fn from(err: serde_json::error::Error) -> DeleteDeploymentGroupError {
-        DeleteDeploymentGroupError::Unknown(err.description().to_string())
+        DeleteDeploymentGroupError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDeploymentGroupError {
@@ -3804,7 +3907,8 @@ impl Error for DeleteDeploymentGroupError {
             DeleteDeploymentGroupError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteDeploymentGroupError::Unknown(ref cause) => cause,
+            DeleteDeploymentGroupError::ParseError(ref cause) => cause,
+            DeleteDeploymentGroupError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3827,63 +3931,63 @@ pub enum DeleteGitHubAccountTokenError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteGitHubAccountTokenError {
-    pub fn from_body(body: &str) -> DeleteGitHubAccountTokenError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteGitHubAccountTokenError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "GitHubAccountTokenDoesNotExistException" => {
-                        DeleteGitHubAccountTokenError::GitHubAccountTokenDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "GitHubAccountTokenNameRequiredException" => {
-                        DeleteGitHubAccountTokenError::GitHubAccountTokenNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidGitHubAccountTokenNameException" => {
-                        DeleteGitHubAccountTokenError::InvalidGitHubAccountTokenName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "OperationNotSupportedException" => {
-                        DeleteGitHubAccountTokenError::OperationNotSupported(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceValidationException" => {
-                        DeleteGitHubAccountTokenError::ResourceValidation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteGitHubAccountTokenError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteGitHubAccountTokenError::Unknown(String::from(body)),
+            match *error_type {
+                "GitHubAccountTokenDoesNotExistException" => {
+                    return DeleteGitHubAccountTokenError::GitHubAccountTokenDoesNotExist(
+                        String::from(error_message),
+                    )
                 }
+                "GitHubAccountTokenNameRequiredException" => {
+                    return DeleteGitHubAccountTokenError::GitHubAccountTokenNameRequired(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidGitHubAccountTokenNameException" => {
+                    return DeleteGitHubAccountTokenError::InvalidGitHubAccountTokenName(
+                        String::from(error_message),
+                    )
+                }
+                "OperationNotSupportedException" => {
+                    return DeleteGitHubAccountTokenError::OperationNotSupported(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceValidationException" => {
+                    return DeleteGitHubAccountTokenError::ResourceValidation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteGitHubAccountTokenError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteGitHubAccountTokenError::Unknown(String::from(body)),
         }
+        return DeleteGitHubAccountTokenError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteGitHubAccountTokenError {
     fn from(err: serde_json::error::Error) -> DeleteGitHubAccountTokenError {
-        DeleteGitHubAccountTokenError::Unknown(err.description().to_string())
+        DeleteGitHubAccountTokenError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteGitHubAccountTokenError {
@@ -3919,7 +4023,8 @@ impl Error for DeleteGitHubAccountTokenError {
             DeleteGitHubAccountTokenError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteGitHubAccountTokenError::Unknown(ref cause) => cause,
+            DeleteGitHubAccountTokenError::ParseError(ref cause) => cause,
+            DeleteGitHubAccountTokenError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3936,48 +4041,48 @@ pub enum DeregisterOnPremisesInstanceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeregisterOnPremisesInstanceError {
-    pub fn from_body(body: &str) -> DeregisterOnPremisesInstanceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeregisterOnPremisesInstanceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InstanceNameRequiredException" => {
-                        DeregisterOnPremisesInstanceError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        DeregisterOnPremisesInstanceError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeregisterOnPremisesInstanceError::Validation(error_message.to_string())
-                    }
-                    _ => DeregisterOnPremisesInstanceError::Unknown(String::from(body)),
+            match *error_type {
+                "InstanceNameRequiredException" => {
+                    return DeregisterOnPremisesInstanceError::InstanceNameRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidInstanceNameException" => {
+                    return DeregisterOnPremisesInstanceError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeregisterOnPremisesInstanceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeregisterOnPremisesInstanceError::Unknown(String::from(body)),
         }
+        return DeregisterOnPremisesInstanceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeregisterOnPremisesInstanceError {
     fn from(err: serde_json::error::Error) -> DeregisterOnPremisesInstanceError {
-        DeregisterOnPremisesInstanceError::Unknown(err.description().to_string())
+        DeregisterOnPremisesInstanceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeregisterOnPremisesInstanceError {
@@ -4010,7 +4115,8 @@ impl Error for DeregisterOnPremisesInstanceError {
             DeregisterOnPremisesInstanceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeregisterOnPremisesInstanceError::Unknown(ref cause) => cause,
+            DeregisterOnPremisesInstanceError::ParseError(ref cause) => cause,
+            DeregisterOnPremisesInstanceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4029,47 +4135,47 @@ pub enum GetApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApplicationError {
-    pub fn from_body(body: &str) -> GetApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        GetApplicationError::ApplicationDoesNotExist(String::from(error_message))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        GetApplicationError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        GetApplicationError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => GetApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return GetApplicationError::ApplicationDoesNotExist(String::from(error_message))
                 }
+                "ApplicationNameRequiredException" => {
+                    return GetApplicationError::ApplicationNameRequired(String::from(error_message))
+                }
+                "InvalidApplicationNameException" => {
+                    return GetApplicationError::InvalidApplicationName(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApplicationError::Unknown(String::from(body)),
         }
+        return GetApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApplicationError {
     fn from(err: serde_json::error::Error) -> GetApplicationError {
-        GetApplicationError::Unknown(err.description().to_string())
+        GetApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApplicationError {
@@ -4101,7 +4207,8 @@ impl Error for GetApplicationError {
             GetApplicationError::Validation(ref cause) => cause,
             GetApplicationError::Credentials(ref err) => err.description(),
             GetApplicationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetApplicationError::Unknown(ref cause) => cause,
+            GetApplicationError::ParseError(ref cause) => cause,
+            GetApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4126,64 +4233,66 @@ pub enum GetApplicationRevisionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApplicationRevisionError {
-    pub fn from_body(body: &str) -> GetApplicationRevisionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetApplicationRevisionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        GetApplicationRevisionError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        GetApplicationRevisionError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        GetApplicationRevisionError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRevisionException" => {
-                        GetApplicationRevisionError::InvalidRevision(String::from(error_message))
-                    }
-                    "RevisionDoesNotExistException" => {
-                        GetApplicationRevisionError::RevisionDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RevisionRequiredException" => {
-                        GetApplicationRevisionError::RevisionRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetApplicationRevisionError::Validation(error_message.to_string())
-                    }
-                    _ => GetApplicationRevisionError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return GetApplicationRevisionError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return GetApplicationRevisionError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return GetApplicationRevisionError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRevisionException" => {
+                    return GetApplicationRevisionError::InvalidRevision(String::from(error_message))
+                }
+                "RevisionDoesNotExistException" => {
+                    return GetApplicationRevisionError::RevisionDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RevisionRequiredException" => {
+                    return GetApplicationRevisionError::RevisionRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetApplicationRevisionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApplicationRevisionError::Unknown(String::from(body)),
         }
+        return GetApplicationRevisionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApplicationRevisionError {
     fn from(err: serde_json::error::Error) -> GetApplicationRevisionError {
-        GetApplicationRevisionError::Unknown(err.description().to_string())
+        GetApplicationRevisionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApplicationRevisionError {
@@ -4220,7 +4329,8 @@ impl Error for GetApplicationRevisionError {
             GetApplicationRevisionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetApplicationRevisionError::Unknown(ref cause) => cause,
+            GetApplicationRevisionError::ParseError(ref cause) => cause,
+            GetApplicationRevisionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4239,47 +4349,47 @@ pub enum GetDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentError {
-    pub fn from_body(body: &str) -> GetDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentDoesNotExistException" => {
-                        GetDeploymentError::DeploymentDoesNotExist(String::from(error_message))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        GetDeploymentError::DeploymentIdRequired(String::from(error_message))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        GetDeploymentError::InvalidDeploymentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentDoesNotExistException" => {
+                    return GetDeploymentError::DeploymentDoesNotExist(String::from(error_message))
                 }
+                "DeploymentIdRequiredException" => {
+                    return GetDeploymentError::DeploymentIdRequired(String::from(error_message))
+                }
+                "InvalidDeploymentIdException" => {
+                    return GetDeploymentError::InvalidDeploymentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentError::Unknown(String::from(body)),
         }
+        return GetDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentError {
     fn from(err: serde_json::error::Error) -> GetDeploymentError {
-        GetDeploymentError::Unknown(err.description().to_string())
+        GetDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentError {
@@ -4311,7 +4421,8 @@ impl Error for GetDeploymentError {
             GetDeploymentError::Validation(ref cause) => cause,
             GetDeploymentError::Credentials(ref err) => err.description(),
             GetDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDeploymentError::Unknown(ref cause) => cause,
+            GetDeploymentError::ParseError(ref cause) => cause,
+            GetDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4330,53 +4441,53 @@ pub enum GetDeploymentConfigError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentConfigError {
-    pub fn from_body(body: &str) -> GetDeploymentConfigError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentConfigError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentConfigDoesNotExistException" => {
-                        GetDeploymentConfigError::DeploymentConfigDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigNameRequiredException" => {
-                        GetDeploymentConfigError::DeploymentConfigNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        GetDeploymentConfigError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentConfigError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentConfigError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentConfigDoesNotExistException" => {
+                    return GetDeploymentConfigError::DeploymentConfigDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentConfigNameRequiredException" => {
+                    return GetDeploymentConfigError::DeploymentConfigNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return GetDeploymentConfigError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetDeploymentConfigError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentConfigError::Unknown(String::from(body)),
         }
+        return GetDeploymentConfigError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentConfigError {
     fn from(err: serde_json::error::Error) -> GetDeploymentConfigError {
-        GetDeploymentConfigError::Unknown(err.description().to_string())
+        GetDeploymentConfigError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentConfigError {
@@ -4410,7 +4521,8 @@ impl Error for GetDeploymentConfigError {
             GetDeploymentConfigError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDeploymentConfigError::Unknown(ref cause) => cause,
+            GetDeploymentConfigError::ParseError(ref cause) => cause,
+            GetDeploymentConfigError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4435,66 +4547,68 @@ pub enum GetDeploymentGroupError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentGroupError {
-    pub fn from_body(body: &str) -> GetDeploymentGroupError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentGroupError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        GetDeploymentGroupError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        GetDeploymentGroupError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupDoesNotExistException" => {
-                        GetDeploymentGroupError::DeploymentGroupDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        GetDeploymentGroupError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        GetDeploymentGroupError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        GetDeploymentGroupError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentGroupError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentGroupError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return GetDeploymentGroupError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return GetDeploymentGroupError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupDoesNotExistException" => {
+                    return GetDeploymentGroupError::DeploymentGroupDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return GetDeploymentGroupError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return GetDeploymentGroupError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return GetDeploymentGroupError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetDeploymentGroupError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentGroupError::Unknown(String::from(body)),
         }
+        return GetDeploymentGroupError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentGroupError {
     fn from(err: serde_json::error::Error) -> GetDeploymentGroupError {
-        GetDeploymentGroupError::Unknown(err.description().to_string())
+        GetDeploymentGroupError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentGroupError {
@@ -4531,7 +4645,8 @@ impl Error for GetDeploymentGroupError {
             GetDeploymentGroupError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDeploymentGroupError::Unknown(ref cause) => cause,
+            GetDeploymentGroupError::ParseError(ref cause) => cause,
+            GetDeploymentGroupError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4556,62 +4671,68 @@ pub enum GetDeploymentInstanceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentInstanceError {
-    pub fn from_body(body: &str) -> GetDeploymentInstanceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentInstanceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentDoesNotExistException" => {
-                        GetDeploymentInstanceError::DeploymentDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        GetDeploymentInstanceError::DeploymentIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceDoesNotExistException" => {
-                        GetDeploymentInstanceError::InstanceDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceIdRequiredException" => {
-                        GetDeploymentInstanceError::InstanceIdRequired(String::from(error_message))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        GetDeploymentInstanceError::InvalidDeploymentId(String::from(error_message))
-                    }
-                    "InvalidInstanceNameException" => {
-                        GetDeploymentInstanceError::InvalidInstanceName(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentInstanceError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentInstanceError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentDoesNotExistException" => {
+                    return GetDeploymentInstanceError::DeploymentDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentIdRequiredException" => {
+                    return GetDeploymentInstanceError::DeploymentIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InstanceDoesNotExistException" => {
+                    return GetDeploymentInstanceError::InstanceDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "InstanceIdRequiredException" => {
+                    return GetDeploymentInstanceError::InstanceIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentIdException" => {
+                    return GetDeploymentInstanceError::InvalidDeploymentId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return GetDeploymentInstanceError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetDeploymentInstanceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentInstanceError::Unknown(String::from(body)),
         }
+        return GetDeploymentInstanceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentInstanceError {
     fn from(err: serde_json::error::Error) -> GetDeploymentInstanceError {
-        GetDeploymentInstanceError::Unknown(err.description().to_string())
+        GetDeploymentInstanceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentInstanceError {
@@ -4648,7 +4769,8 @@ impl Error for GetDeploymentInstanceError {
             GetDeploymentInstanceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDeploymentInstanceError::Unknown(ref cause) => cause,
+            GetDeploymentInstanceError::ParseError(ref cause) => cause,
+            GetDeploymentInstanceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4667,51 +4789,53 @@ pub enum GetOnPremisesInstanceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetOnPremisesInstanceError {
-    pub fn from_body(body: &str) -> GetOnPremisesInstanceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetOnPremisesInstanceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InstanceNameRequiredException" => {
-                        GetOnPremisesInstanceError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNotRegisteredException" => {
-                        GetOnPremisesInstanceError::InstanceNotRegistered(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        GetOnPremisesInstanceError::InvalidInstanceName(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetOnPremisesInstanceError::Validation(error_message.to_string())
-                    }
-                    _ => GetOnPremisesInstanceError::Unknown(String::from(body)),
+            match *error_type {
+                "InstanceNameRequiredException" => {
+                    return GetOnPremisesInstanceError::InstanceNameRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "InstanceNotRegisteredException" => {
+                    return GetOnPremisesInstanceError::InstanceNotRegistered(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return GetOnPremisesInstanceError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetOnPremisesInstanceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetOnPremisesInstanceError::Unknown(String::from(body)),
         }
+        return GetOnPremisesInstanceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetOnPremisesInstanceError {
     fn from(err: serde_json::error::Error) -> GetOnPremisesInstanceError {
-        GetOnPremisesInstanceError::Unknown(err.description().to_string())
+        GetOnPremisesInstanceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetOnPremisesInstanceError {
@@ -4745,7 +4869,8 @@ impl Error for GetOnPremisesInstanceError {
             GetOnPremisesInstanceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetOnPremisesInstanceError::Unknown(ref cause) => cause,
+            GetOnPremisesInstanceError::ParseError(ref cause) => cause,
+            GetOnPremisesInstanceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4778,82 +4903,86 @@ pub enum ListApplicationRevisionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListApplicationRevisionsError {
-    pub fn from_body(body: &str) -> ListApplicationRevisionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListApplicationRevisionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        ListApplicationRevisionsError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        ListApplicationRevisionsError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "BucketNameFilterRequiredException" => {
-                        ListApplicationRevisionsError::BucketNameFilterRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        ListApplicationRevisionsError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidBucketNameFilterException" => {
-                        ListApplicationRevisionsError::InvalidBucketNameFilter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeployedStateFilterException" => {
-                        ListApplicationRevisionsError::InvalidDeployedStateFilter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidKeyPrefixFilterException" => {
-                        ListApplicationRevisionsError::InvalidKeyPrefixFilter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidNextTokenException" => {
-                        ListApplicationRevisionsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidSortByException" => {
-                        ListApplicationRevisionsError::InvalidSortBy(String::from(error_message))
-                    }
-                    "InvalidSortOrderException" => {
-                        ListApplicationRevisionsError::InvalidSortOrder(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListApplicationRevisionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListApplicationRevisionsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return ListApplicationRevisionsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return ListApplicationRevisionsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "BucketNameFilterRequiredException" => {
+                    return ListApplicationRevisionsError::BucketNameFilterRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return ListApplicationRevisionsError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidBucketNameFilterException" => {
+                    return ListApplicationRevisionsError::InvalidBucketNameFilter(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeployedStateFilterException" => {
+                    return ListApplicationRevisionsError::InvalidDeployedStateFilter(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidKeyPrefixFilterException" => {
+                    return ListApplicationRevisionsError::InvalidKeyPrefixFilter(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidNextTokenException" => {
+                    return ListApplicationRevisionsError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidSortByException" => {
+                    return ListApplicationRevisionsError::InvalidSortBy(String::from(error_message))
+                }
+                "InvalidSortOrderException" => {
+                    return ListApplicationRevisionsError::InvalidSortOrder(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListApplicationRevisionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListApplicationRevisionsError::Unknown(String::from(body)),
         }
+        return ListApplicationRevisionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListApplicationRevisionsError {
     fn from(err: serde_json::error::Error) -> ListApplicationRevisionsError {
-        ListApplicationRevisionsError::Unknown(err.description().to_string())
+        ListApplicationRevisionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListApplicationRevisionsError {
@@ -4894,7 +5023,8 @@ impl Error for ListApplicationRevisionsError {
             ListApplicationRevisionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListApplicationRevisionsError::Unknown(ref cause) => cause,
+            ListApplicationRevisionsError::ParseError(ref cause) => cause,
+            ListApplicationRevisionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4909,41 +5039,41 @@ pub enum ListApplicationsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListApplicationsError {
-    pub fn from_body(body: &str) -> ListApplicationsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListApplicationsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListApplicationsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListApplicationsError::Validation(error_message.to_string())
-                    }
-                    _ => ListApplicationsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidNextTokenException" => {
+                    return ListApplicationsError::InvalidNextToken(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return ListApplicationsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListApplicationsError::Unknown(String::from(body)),
         }
+        return ListApplicationsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListApplicationsError {
     fn from(err: serde_json::error::Error) -> ListApplicationsError {
-        ListApplicationsError::Unknown(err.description().to_string())
+        ListApplicationsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListApplicationsError {
@@ -4973,7 +5103,8 @@ impl Error for ListApplicationsError {
             ListApplicationsError::Validation(ref cause) => cause,
             ListApplicationsError::Credentials(ref err) => err.description(),
             ListApplicationsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListApplicationsError::Unknown(ref cause) => cause,
+            ListApplicationsError::ParseError(ref cause) => cause,
+            ListApplicationsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4988,41 +5119,41 @@ pub enum ListDeploymentConfigsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDeploymentConfigsError {
-    pub fn from_body(body: &str) -> ListDeploymentConfigsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDeploymentConfigsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListDeploymentConfigsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListDeploymentConfigsError::Validation(error_message.to_string())
-                    }
-                    _ => ListDeploymentConfigsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidNextTokenException" => {
+                    return ListDeploymentConfigsError::InvalidNextToken(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return ListDeploymentConfigsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDeploymentConfigsError::Unknown(String::from(body)),
         }
+        return ListDeploymentConfigsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDeploymentConfigsError {
     fn from(err: serde_json::error::Error) -> ListDeploymentConfigsError {
-        ListDeploymentConfigsError::Unknown(err.description().to_string())
+        ListDeploymentConfigsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDeploymentConfigsError {
@@ -5054,7 +5185,8 @@ impl Error for ListDeploymentConfigsError {
             ListDeploymentConfigsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListDeploymentConfigsError::Unknown(ref cause) => cause,
+            ListDeploymentConfigsError::ParseError(ref cause) => cause,
+            ListDeploymentConfigsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5075,56 +5207,56 @@ pub enum ListDeploymentGroupsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDeploymentGroupsError {
-    pub fn from_body(body: &str) -> ListDeploymentGroupsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDeploymentGroupsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        ListDeploymentGroupsError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        ListDeploymentGroupsError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        ListDeploymentGroupsError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidNextTokenException" => {
-                        ListDeploymentGroupsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListDeploymentGroupsError::Validation(error_message.to_string())
-                    }
-                    _ => ListDeploymentGroupsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return ListDeploymentGroupsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return ListDeploymentGroupsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return ListDeploymentGroupsError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidNextTokenException" => {
+                    return ListDeploymentGroupsError::InvalidNextToken(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListDeploymentGroupsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDeploymentGroupsError::Unknown(String::from(body)),
         }
+        return ListDeploymentGroupsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDeploymentGroupsError {
     fn from(err: serde_json::error::Error) -> ListDeploymentGroupsError {
-        ListDeploymentGroupsError::Unknown(err.description().to_string())
+        ListDeploymentGroupsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDeploymentGroupsError {
@@ -5159,7 +5291,8 @@ impl Error for ListDeploymentGroupsError {
             ListDeploymentGroupsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListDeploymentGroupsError::Unknown(ref cause) => cause,
+            ListDeploymentGroupsError::ParseError(ref cause) => cause,
+            ListDeploymentGroupsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5188,76 +5321,78 @@ pub enum ListDeploymentInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDeploymentInstancesError {
-    pub fn from_body(body: &str) -> ListDeploymentInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDeploymentInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentDoesNotExistException" => {
-                        ListDeploymentInstancesError::DeploymentDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        ListDeploymentInstancesError::DeploymentIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentNotStartedException" => {
-                        ListDeploymentInstancesError::DeploymentNotStarted(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        ListDeploymentInstancesError::InvalidDeploymentId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentInstanceTypeException" => {
-                        ListDeploymentInstancesError::InvalidDeploymentInstanceType(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceStatusException" => {
-                        ListDeploymentInstancesError::InvalidInstanceStatus(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceTypeException" => {
-                        ListDeploymentInstancesError::InvalidInstanceType(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidNextTokenException" => {
-                        ListDeploymentInstancesError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListDeploymentInstancesError::Validation(error_message.to_string())
-                    }
-                    _ => ListDeploymentInstancesError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentDoesNotExistException" => {
+                    return ListDeploymentInstancesError::DeploymentDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentIdRequiredException" => {
+                    return ListDeploymentInstancesError::DeploymentIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentNotStartedException" => {
+                    return ListDeploymentInstancesError::DeploymentNotStarted(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentIdException" => {
+                    return ListDeploymentInstancesError::InvalidDeploymentId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentInstanceTypeException" => {
+                    return ListDeploymentInstancesError::InvalidDeploymentInstanceType(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInstanceStatusException" => {
+                    return ListDeploymentInstancesError::InvalidInstanceStatus(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceTypeException" => {
+                    return ListDeploymentInstancesError::InvalidInstanceType(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidNextTokenException" => {
+                    return ListDeploymentInstancesError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListDeploymentInstancesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDeploymentInstancesError::Unknown(String::from(body)),
         }
+        return ListDeploymentInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDeploymentInstancesError {
     fn from(err: serde_json::error::Error) -> ListDeploymentInstancesError {
-        ListDeploymentInstancesError::Unknown(err.description().to_string())
+        ListDeploymentInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDeploymentInstancesError {
@@ -5296,7 +5431,8 @@ impl Error for ListDeploymentInstancesError {
             ListDeploymentInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListDeploymentInstancesError::Unknown(ref cause) => cause,
+            ListDeploymentInstancesError::ParseError(ref cause) => cause,
+            ListDeploymentInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5327,71 +5463,77 @@ pub enum ListDeploymentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDeploymentsError {
-    pub fn from_body(body: &str) -> ListDeploymentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDeploymentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        ListDeploymentsError::ApplicationDoesNotExist(String::from(error_message))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        ListDeploymentsError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "DeploymentGroupDoesNotExistException" => {
-                        ListDeploymentsError::DeploymentGroupDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        ListDeploymentsError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        ListDeploymentsError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        ListDeploymentsError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentStatusException" => {
-                        ListDeploymentsError::InvalidDeploymentStatus(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        ListDeploymentsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidTimeRangeException" => {
-                        ListDeploymentsError::InvalidTimeRange(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListDeploymentsError::Validation(error_message.to_string())
-                    }
-                    _ => ListDeploymentsError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return ListDeploymentsError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return ListDeploymentsError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupDoesNotExistException" => {
+                    return ListDeploymentsError::DeploymentGroupDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return ListDeploymentsError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return ListDeploymentsError::InvalidApplicationName(String::from(error_message))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return ListDeploymentsError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentStatusException" => {
+                    return ListDeploymentsError::InvalidDeploymentStatus(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidNextTokenException" => {
+                    return ListDeploymentsError::InvalidNextToken(String::from(error_message))
+                }
+                "InvalidTimeRangeException" => {
+                    return ListDeploymentsError::InvalidTimeRange(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListDeploymentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDeploymentsError::Unknown(String::from(body)),
         }
+        return ListDeploymentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDeploymentsError {
     fn from(err: serde_json::error::Error) -> ListDeploymentsError {
-        ListDeploymentsError::Unknown(err.description().to_string())
+        ListDeploymentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDeploymentsError {
@@ -5429,7 +5571,8 @@ impl Error for ListDeploymentsError {
             ListDeploymentsError::Validation(ref cause) => cause,
             ListDeploymentsError::Credentials(ref err) => err.description(),
             ListDeploymentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListDeploymentsError::Unknown(ref cause) => cause,
+            ListDeploymentsError::ParseError(ref cause) => cause,
+            ListDeploymentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5448,53 +5591,53 @@ pub enum ListGitHubAccountTokenNamesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListGitHubAccountTokenNamesError {
-    pub fn from_body(body: &str) -> ListGitHubAccountTokenNamesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListGitHubAccountTokenNamesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListGitHubAccountTokenNamesError::InvalidNextToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "OperationNotSupportedException" => {
-                        ListGitHubAccountTokenNamesError::OperationNotSupported(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceValidationException" => {
-                        ListGitHubAccountTokenNamesError::ResourceValidation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListGitHubAccountTokenNamesError::Validation(error_message.to_string())
-                    }
-                    _ => ListGitHubAccountTokenNamesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidNextTokenException" => {
+                    return ListGitHubAccountTokenNamesError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
                 }
+                "OperationNotSupportedException" => {
+                    return ListGitHubAccountTokenNamesError::OperationNotSupported(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceValidationException" => {
+                    return ListGitHubAccountTokenNamesError::ResourceValidation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListGitHubAccountTokenNamesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListGitHubAccountTokenNamesError::Unknown(String::from(body)),
         }
+        return ListGitHubAccountTokenNamesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListGitHubAccountTokenNamesError {
     fn from(err: serde_json::error::Error) -> ListGitHubAccountTokenNamesError {
-        ListGitHubAccountTokenNamesError::Unknown(err.description().to_string())
+        ListGitHubAccountTokenNamesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListGitHubAccountTokenNamesError {
@@ -5528,7 +5671,8 @@ impl Error for ListGitHubAccountTokenNamesError {
             ListGitHubAccountTokenNamesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListGitHubAccountTokenNamesError::Unknown(ref cause) => cause,
+            ListGitHubAccountTokenNamesError::ParseError(ref cause) => cause,
+            ListGitHubAccountTokenNamesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5547,49 +5691,53 @@ pub enum ListOnPremisesInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListOnPremisesInstancesError {
-    pub fn from_body(body: &str) -> ListOnPremisesInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListOnPremisesInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListOnPremisesInstancesError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidRegistrationStatusException" => {
-                        ListOnPremisesInstancesError::InvalidRegistrationStatus(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidTagFilterException" => {
-                        ListOnPremisesInstancesError::InvalidTagFilter(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListOnPremisesInstancesError::Validation(error_message.to_string())
-                    }
-                    _ => ListOnPremisesInstancesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidNextTokenException" => {
+                    return ListOnPremisesInstancesError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRegistrationStatusException" => {
+                    return ListOnPremisesInstancesError::InvalidRegistrationStatus(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidTagFilterException" => {
+                    return ListOnPremisesInstancesError::InvalidTagFilter(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListOnPremisesInstancesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListOnPremisesInstancesError::Unknown(String::from(body)),
         }
+        return ListOnPremisesInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListOnPremisesInstancesError {
     fn from(err: serde_json::error::Error) -> ListOnPremisesInstancesError {
-        ListOnPremisesInstancesError::Unknown(err.description().to_string())
+        ListOnPremisesInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListOnPremisesInstancesError {
@@ -5623,7 +5771,8 @@ impl Error for ListOnPremisesInstancesError {
             ListOnPremisesInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListOnPremisesInstancesError::Unknown(ref cause) => cause,
+            ListOnPremisesInstancesError::ParseError(ref cause) => cause,
+            ListOnPremisesInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5650,43 +5799,43 @@ pub enum PutLifecycleEventHookExecutionStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutLifecycleEventHookExecutionStatusError {
-    pub fn from_body(body: &str) -> PutLifecycleEventHookExecutionStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutLifecycleEventHookExecutionStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                                    "DeploymentDoesNotExistException" => PutLifecycleEventHookExecutionStatusError::DeploymentDoesNotExist(String::from(error_message)),
-"DeploymentIdRequiredException" => PutLifecycleEventHookExecutionStatusError::DeploymentIdRequired(String::from(error_message)),
-"InvalidDeploymentIdException" => PutLifecycleEventHookExecutionStatusError::InvalidDeploymentId(String::from(error_message)),
-"InvalidLifecycleEventHookExecutionIdException" => PutLifecycleEventHookExecutionStatusError::InvalidLifecycleEventHookExecutionId(String::from(error_message)),
-"InvalidLifecycleEventHookExecutionStatusException" => PutLifecycleEventHookExecutionStatusError::InvalidLifecycleEventHookExecutionStatus(String::from(error_message)),
-"LifecycleEventAlreadyCompletedException" => PutLifecycleEventHookExecutionStatusError::LifecycleEventAlreadyCompleted(String::from(error_message)),
-"UnsupportedActionForDeploymentTypeException" => PutLifecycleEventHookExecutionStatusError::UnsupportedActionForDeploymentType(String::from(error_message)),
-"ValidationException" => PutLifecycleEventHookExecutionStatusError::Validation(error_message.to_string()),
-_ => PutLifecycleEventHookExecutionStatusError::Unknown(String::from(body))
-                                }
-            }
-            Err(_) => PutLifecycleEventHookExecutionStatusError::Unknown(String::from(body)),
+            match *error_type {
+                                "DeploymentDoesNotExistException" => return PutLifecycleEventHookExecutionStatusError::DeploymentDoesNotExist(String::from(error_message)),
+"DeploymentIdRequiredException" => return PutLifecycleEventHookExecutionStatusError::DeploymentIdRequired(String::from(error_message)),
+"InvalidDeploymentIdException" => return PutLifecycleEventHookExecutionStatusError::InvalidDeploymentId(String::from(error_message)),
+"InvalidLifecycleEventHookExecutionIdException" => return PutLifecycleEventHookExecutionStatusError::InvalidLifecycleEventHookExecutionId(String::from(error_message)),
+"InvalidLifecycleEventHookExecutionStatusException" => return PutLifecycleEventHookExecutionStatusError::InvalidLifecycleEventHookExecutionStatus(String::from(error_message)),
+"LifecycleEventAlreadyCompletedException" => return PutLifecycleEventHookExecutionStatusError::LifecycleEventAlreadyCompleted(String::from(error_message)),
+"UnsupportedActionForDeploymentTypeException" => return PutLifecycleEventHookExecutionStatusError::UnsupportedActionForDeploymentType(String::from(error_message)),
+"ValidationException" => return PutLifecycleEventHookExecutionStatusError::Validation(error_message.to_string()),
+_ => {}
+                            }
         }
+        return PutLifecycleEventHookExecutionStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutLifecycleEventHookExecutionStatusError {
     fn from(err: serde_json::error::Error) -> PutLifecycleEventHookExecutionStatusError {
-        PutLifecycleEventHookExecutionStatusError::Unknown(err.description().to_string())
+        PutLifecycleEventHookExecutionStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutLifecycleEventHookExecutionStatusError {
@@ -5732,7 +5881,8 @@ impl Error for PutLifecycleEventHookExecutionStatusError {
             PutLifecycleEventHookExecutionStatusError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutLifecycleEventHookExecutionStatusError::Unknown(ref cause) => cause,
+            PutLifecycleEventHookExecutionStatusError::ParseError(ref cause) => cause,
+            PutLifecycleEventHookExecutionStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5757,68 +5907,68 @@ pub enum RegisterApplicationRevisionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterApplicationRevisionError {
-    pub fn from_body(body: &str) -> RegisterApplicationRevisionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterApplicationRevisionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationDoesNotExistException" => {
-                        RegisterApplicationRevisionError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        RegisterApplicationRevisionError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DescriptionTooLongException" => {
-                        RegisterApplicationRevisionError::DescriptionTooLong(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidApplicationNameException" => {
-                        RegisterApplicationRevisionError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRevisionException" => {
-                        RegisterApplicationRevisionError::InvalidRevision(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RevisionRequiredException" => {
-                        RegisterApplicationRevisionError::RevisionRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RegisterApplicationRevisionError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterApplicationRevisionError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationDoesNotExistException" => {
+                    return RegisterApplicationRevisionError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationNameRequiredException" => {
+                    return RegisterApplicationRevisionError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DescriptionTooLongException" => {
+                    return RegisterApplicationRevisionError::DescriptionTooLong(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return RegisterApplicationRevisionError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRevisionException" => {
+                    return RegisterApplicationRevisionError::InvalidRevision(String::from(
+                        error_message,
+                    ))
+                }
+                "RevisionRequiredException" => {
+                    return RegisterApplicationRevisionError::RevisionRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RegisterApplicationRevisionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterApplicationRevisionError::Unknown(String::from(body)),
         }
+        return RegisterApplicationRevisionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterApplicationRevisionError {
     fn from(err: serde_json::error::Error) -> RegisterApplicationRevisionError {
-        RegisterApplicationRevisionError::Unknown(err.description().to_string())
+        RegisterApplicationRevisionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterApplicationRevisionError {
@@ -5855,7 +6005,8 @@ impl Error for RegisterApplicationRevisionError {
             RegisterApplicationRevisionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterApplicationRevisionError::Unknown(ref cause) => cause,
+            RegisterApplicationRevisionError::ParseError(ref cause) => cause,
+            RegisterApplicationRevisionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5888,86 +6039,88 @@ pub enum RegisterOnPremisesInstanceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterOnPremisesInstanceError {
-    pub fn from_body(body: &str) -> RegisterOnPremisesInstanceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterOnPremisesInstanceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "IamArnRequiredException" => {
-                        RegisterOnPremisesInstanceError::IamArnRequired(String::from(error_message))
-                    }
-                    "IamSessionArnAlreadyRegisteredException" => {
-                        RegisterOnPremisesInstanceError::IamSessionArnAlreadyRegistered(
-                            String::from(error_message),
-                        )
-                    }
-                    "IamUserArnAlreadyRegisteredException" => {
-                        RegisterOnPremisesInstanceError::IamUserArnAlreadyRegistered(String::from(
-                            error_message,
-                        ))
-                    }
-                    "IamUserArnRequiredException" => {
-                        RegisterOnPremisesInstanceError::IamUserArnRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNameAlreadyRegisteredException" => {
-                        RegisterOnPremisesInstanceError::InstanceNameAlreadyRegistered(
-                            String::from(error_message),
-                        )
-                    }
-                    "InstanceNameRequiredException" => {
-                        RegisterOnPremisesInstanceError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidIamSessionArnException" => {
-                        RegisterOnPremisesInstanceError::InvalidIamSessionArn(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidIamUserArnException" => {
-                        RegisterOnPremisesInstanceError::InvalidIamUserArn(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        RegisterOnPremisesInstanceError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MultipleIamArnsProvidedException" => {
-                        RegisterOnPremisesInstanceError::MultipleIamArnsProvided(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RegisterOnPremisesInstanceError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterOnPremisesInstanceError::Unknown(String::from(body)),
+            match *error_type {
+                "IamArnRequiredException" => {
+                    return RegisterOnPremisesInstanceError::IamArnRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "IamSessionArnAlreadyRegisteredException" => {
+                    return RegisterOnPremisesInstanceError::IamSessionArnAlreadyRegistered(
+                        String::from(error_message),
+                    )
+                }
+                "IamUserArnAlreadyRegisteredException" => {
+                    return RegisterOnPremisesInstanceError::IamUserArnAlreadyRegistered(
+                        String::from(error_message),
+                    )
+                }
+                "IamUserArnRequiredException" => {
+                    return RegisterOnPremisesInstanceError::IamUserArnRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InstanceNameAlreadyRegisteredException" => {
+                    return RegisterOnPremisesInstanceError::InstanceNameAlreadyRegistered(
+                        String::from(error_message),
+                    )
+                }
+                "InstanceNameRequiredException" => {
+                    return RegisterOnPremisesInstanceError::InstanceNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidIamSessionArnException" => {
+                    return RegisterOnPremisesInstanceError::InvalidIamSessionArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidIamUserArnException" => {
+                    return RegisterOnPremisesInstanceError::InvalidIamUserArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInstanceNameException" => {
+                    return RegisterOnPremisesInstanceError::InvalidInstanceName(String::from(
+                        error_message,
+                    ))
+                }
+                "MultipleIamArnsProvidedException" => {
+                    return RegisterOnPremisesInstanceError::MultipleIamArnsProvided(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RegisterOnPremisesInstanceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterOnPremisesInstanceError::Unknown(String::from(body)),
         }
+        return RegisterOnPremisesInstanceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterOnPremisesInstanceError {
     fn from(err: serde_json::error::Error) -> RegisterOnPremisesInstanceError {
-        RegisterOnPremisesInstanceError::Unknown(err.description().to_string())
+        RegisterOnPremisesInstanceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterOnPremisesInstanceError {
@@ -6008,7 +6161,8 @@ impl Error for RegisterOnPremisesInstanceError {
             RegisterOnPremisesInstanceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterOnPremisesInstanceError::Unknown(ref cause) => cause,
+            RegisterOnPremisesInstanceError::ParseError(ref cause) => cause,
+            RegisterOnPremisesInstanceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6035,69 +6189,75 @@ pub enum RemoveTagsFromOnPremisesInstancesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveTagsFromOnPremisesInstancesError {
-    pub fn from_body(body: &str) -> RemoveTagsFromOnPremisesInstancesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveTagsFromOnPremisesInstancesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InstanceLimitExceededException" => {
-                        RemoveTagsFromOnPremisesInstancesError::InstanceLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNameRequiredException" => {
-                        RemoveTagsFromOnPremisesInstancesError::InstanceNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InstanceNotRegisteredException" => {
-                        RemoveTagsFromOnPremisesInstancesError::InstanceNotRegistered(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInstanceNameException" => {
-                        RemoveTagsFromOnPremisesInstancesError::InvalidInstanceName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidTagException" => RemoveTagsFromOnPremisesInstancesError::InvalidTag(
+            match *error_type {
+                "InstanceLimitExceededException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::InstanceLimitExceeded(
                         String::from(error_message),
-                    ),
-                    "TagLimitExceededException" => {
-                        RemoveTagsFromOnPremisesInstancesError::TagLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TagRequiredException" => RemoveTagsFromOnPremisesInstancesError::TagRequired(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => RemoveTagsFromOnPremisesInstancesError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => RemoveTagsFromOnPremisesInstancesError::Unknown(String::from(body)),
+                    )
                 }
+                "InstanceNameRequiredException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::InstanceNameRequired(
+                        String::from(error_message),
+                    )
+                }
+                "InstanceNotRegisteredException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::InstanceNotRegistered(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInstanceNameException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::InvalidInstanceName(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidTagException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::InvalidTag(String::from(
+                        error_message,
+                    ))
+                }
+                "TagLimitExceededException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::TagLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "TagRequiredException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::TagRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RemoveTagsFromOnPremisesInstancesError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => RemoveTagsFromOnPremisesInstancesError::Unknown(String::from(body)),
         }
+        return RemoveTagsFromOnPremisesInstancesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveTagsFromOnPremisesInstancesError {
     fn from(err: serde_json::error::Error) -> RemoveTagsFromOnPremisesInstancesError {
-        RemoveTagsFromOnPremisesInstancesError::Unknown(err.description().to_string())
+        RemoveTagsFromOnPremisesInstancesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveTagsFromOnPremisesInstancesError {
@@ -6135,7 +6295,8 @@ impl Error for RemoveTagsFromOnPremisesInstancesError {
             RemoveTagsFromOnPremisesInstancesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveTagsFromOnPremisesInstancesError::Unknown(ref cause) => cause,
+            RemoveTagsFromOnPremisesInstancesError::ParseError(ref cause) => cause,
+            RemoveTagsFromOnPremisesInstancesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6160,68 +6321,42 @@ pub enum SkipWaitTimeForInstanceTerminationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SkipWaitTimeForInstanceTerminationError {
-    pub fn from_body(body: &str) -> SkipWaitTimeForInstanceTerminationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SkipWaitTimeForInstanceTerminationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentAlreadyCompletedException" => {
-                        SkipWaitTimeForInstanceTerminationError::DeploymentAlreadyCompleted(
-                            String::from(error_message),
-                        )
-                    }
-                    "DeploymentDoesNotExistException" => {
-                        SkipWaitTimeForInstanceTerminationError::DeploymentDoesNotExist(
-                            String::from(error_message),
-                        )
-                    }
-                    "DeploymentIdRequiredException" => {
-                        SkipWaitTimeForInstanceTerminationError::DeploymentIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentNotStartedException" => {
-                        SkipWaitTimeForInstanceTerminationError::DeploymentNotStarted(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        SkipWaitTimeForInstanceTerminationError::InvalidDeploymentId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnsupportedActionForDeploymentTypeException" => {
-                        SkipWaitTimeForInstanceTerminationError::UnsupportedActionForDeploymentType(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => SkipWaitTimeForInstanceTerminationError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => SkipWaitTimeForInstanceTerminationError::Unknown(String::from(body)),
-                }
-            }
-            Err(_) => SkipWaitTimeForInstanceTerminationError::Unknown(String::from(body)),
+            match *error_type {
+                                "DeploymentAlreadyCompletedException" => return SkipWaitTimeForInstanceTerminationError::DeploymentAlreadyCompleted(String::from(error_message)),
+"DeploymentDoesNotExistException" => return SkipWaitTimeForInstanceTerminationError::DeploymentDoesNotExist(String::from(error_message)),
+"DeploymentIdRequiredException" => return SkipWaitTimeForInstanceTerminationError::DeploymentIdRequired(String::from(error_message)),
+"DeploymentNotStartedException" => return SkipWaitTimeForInstanceTerminationError::DeploymentNotStarted(String::from(error_message)),
+"InvalidDeploymentIdException" => return SkipWaitTimeForInstanceTerminationError::InvalidDeploymentId(String::from(error_message)),
+"UnsupportedActionForDeploymentTypeException" => return SkipWaitTimeForInstanceTerminationError::UnsupportedActionForDeploymentType(String::from(error_message)),
+"ValidationException" => return SkipWaitTimeForInstanceTerminationError::Validation(error_message.to_string()),
+_ => {}
+                            }
         }
+        return SkipWaitTimeForInstanceTerminationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SkipWaitTimeForInstanceTerminationError {
     fn from(err: serde_json::error::Error) -> SkipWaitTimeForInstanceTerminationError {
-        SkipWaitTimeForInstanceTerminationError::Unknown(err.description().to_string())
+        SkipWaitTimeForInstanceTerminationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SkipWaitTimeForInstanceTerminationError {
@@ -6260,7 +6395,8 @@ impl Error for SkipWaitTimeForInstanceTerminationError {
             SkipWaitTimeForInstanceTerminationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            SkipWaitTimeForInstanceTerminationError::Unknown(ref cause) => cause,
+            SkipWaitTimeForInstanceTerminationError::ParseError(ref cause) => cause,
+            SkipWaitTimeForInstanceTerminationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6281,50 +6417,52 @@ pub enum StopDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StopDeploymentError {
-    pub fn from_body(body: &str) -> StopDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StopDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DeploymentAlreadyCompletedException" => {
-                        StopDeploymentError::DeploymentAlreadyCompleted(String::from(error_message))
-                    }
-                    "DeploymentDoesNotExistException" => {
-                        StopDeploymentError::DeploymentDoesNotExist(String::from(error_message))
-                    }
-                    "DeploymentIdRequiredException" => {
-                        StopDeploymentError::DeploymentIdRequired(String::from(error_message))
-                    }
-                    "InvalidDeploymentIdException" => {
-                        StopDeploymentError::InvalidDeploymentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StopDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => StopDeploymentError::Unknown(String::from(body)),
+            match *error_type {
+                "DeploymentAlreadyCompletedException" => {
+                    return StopDeploymentError::DeploymentAlreadyCompleted(String::from(
+                        error_message,
+                    ))
                 }
+                "DeploymentDoesNotExistException" => {
+                    return StopDeploymentError::DeploymentDoesNotExist(String::from(error_message))
+                }
+                "DeploymentIdRequiredException" => {
+                    return StopDeploymentError::DeploymentIdRequired(String::from(error_message))
+                }
+                "InvalidDeploymentIdException" => {
+                    return StopDeploymentError::InvalidDeploymentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StopDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StopDeploymentError::Unknown(String::from(body)),
         }
+        return StopDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StopDeploymentError {
     fn from(err: serde_json::error::Error) -> StopDeploymentError {
-        StopDeploymentError::Unknown(err.description().to_string())
+        StopDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StopDeploymentError {
@@ -6357,7 +6495,8 @@ impl Error for StopDeploymentError {
             StopDeploymentError::Validation(ref cause) => cause,
             StopDeploymentError::Credentials(ref err) => err.description(),
             StopDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StopDeploymentError::Unknown(ref cause) => cause,
+            StopDeploymentError::ParseError(ref cause) => cause,
+            StopDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6378,52 +6517,58 @@ pub enum UpdateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateApplicationError {
-    pub fn from_body(body: &str) -> UpdateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ApplicationAlreadyExistsException" => {
-                        UpdateApplicationError::ApplicationAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationDoesNotExistException" => {
-                        UpdateApplicationError::ApplicationDoesNotExist(String::from(error_message))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        UpdateApplicationError::ApplicationNameRequired(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        UpdateApplicationError::InvalidApplicationName(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ApplicationAlreadyExistsException" => {
+                    return UpdateApplicationError::ApplicationAlreadyExists(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationDoesNotExistException" => {
+                    return UpdateApplicationError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "ApplicationNameRequiredException" => {
+                    return UpdateApplicationError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return UpdateApplicationError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateApplicationError::Unknown(String::from(body)),
         }
+        return UpdateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateApplicationError {
     fn from(err: serde_json::error::Error) -> UpdateApplicationError {
-        UpdateApplicationError::Unknown(err.description().to_string())
+        UpdateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateApplicationError {
@@ -6458,7 +6603,8 @@ impl Error for UpdateApplicationError {
             UpdateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateApplicationError::Unknown(ref cause) => cause,
+            UpdateApplicationError::ParseError(ref cause) => cause,
+            UpdateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6523,156 +6669,160 @@ pub enum UpdateDeploymentGroupError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDeploymentGroupError {
-    pub fn from_body(body: &str) -> UpdateDeploymentGroupError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDeploymentGroupError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AlarmsLimitExceededException" => {
-                        UpdateDeploymentGroupError::AlarmsLimitExceeded(String::from(error_message))
-                    }
-                    "ApplicationDoesNotExistException" => {
-                        UpdateDeploymentGroupError::ApplicationDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ApplicationNameRequiredException" => {
-                        UpdateDeploymentGroupError::ApplicationNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentConfigDoesNotExistException" => {
-                        UpdateDeploymentGroupError::DeploymentConfigDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupAlreadyExistsException" => {
-                        UpdateDeploymentGroupError::DeploymentGroupAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupDoesNotExistException" => {
-                        UpdateDeploymentGroupError::DeploymentGroupDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DeploymentGroupNameRequiredException" => {
-                        UpdateDeploymentGroupError::DeploymentGroupNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAlarmConfigException" => {
-                        UpdateDeploymentGroupError::InvalidAlarmConfig(String::from(error_message))
-                    }
-                    "InvalidApplicationNameException" => {
-                        UpdateDeploymentGroupError::InvalidApplicationName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAutoRollbackConfigException" => {
-                        UpdateDeploymentGroupError::InvalidAutoRollbackConfig(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidAutoScalingGroupException" => {
-                        UpdateDeploymentGroupError::InvalidAutoScalingGroup(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidBlueGreenDeploymentConfigurationException" => {
-                        UpdateDeploymentGroupError::InvalidBlueGreenDeploymentConfiguration(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidDeploymentConfigNameException" => {
-                        UpdateDeploymentGroupError::InvalidDeploymentConfigName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentGroupNameException" => {
-                        UpdateDeploymentGroupError::InvalidDeploymentGroupName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDeploymentStyleException" => {
-                        UpdateDeploymentGroupError::InvalidDeploymentStyle(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidEC2TagCombinationException" => {
-                        UpdateDeploymentGroupError::InvalidEC2TagCombination(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidEC2TagException" => {
-                        UpdateDeploymentGroupError::InvalidEC2Tag(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        UpdateDeploymentGroupError::InvalidInput(String::from(error_message))
-                    }
-                    "InvalidLoadBalancerInfoException" => {
-                        UpdateDeploymentGroupError::InvalidLoadBalancerInfo(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidOnPremisesTagCombinationException" => {
-                        UpdateDeploymentGroupError::InvalidOnPremisesTagCombination(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRoleException" => {
-                        UpdateDeploymentGroupError::InvalidRole(String::from(error_message))
-                    }
-                    "InvalidTagException" => {
-                        UpdateDeploymentGroupError::InvalidTag(String::from(error_message))
-                    }
-                    "InvalidTriggerConfigException" => {
-                        UpdateDeploymentGroupError::InvalidTriggerConfig(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LifecycleHookLimitExceededException" => {
-                        UpdateDeploymentGroupError::LifecycleHookLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TagSetListLimitExceededException" => {
-                        UpdateDeploymentGroupError::TagSetListLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TriggerTargetsLimitExceededException" => {
-                        UpdateDeploymentGroupError::TriggerTargetsLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateDeploymentGroupError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDeploymentGroupError::Unknown(String::from(body)),
+            match *error_type {
+                "AlarmsLimitExceededException" => {
+                    return UpdateDeploymentGroupError::AlarmsLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "ApplicationDoesNotExistException" => {
+                    return UpdateDeploymentGroupError::ApplicationDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "ApplicationNameRequiredException" => {
+                    return UpdateDeploymentGroupError::ApplicationNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentConfigDoesNotExistException" => {
+                    return UpdateDeploymentGroupError::DeploymentConfigDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupAlreadyExistsException" => {
+                    return UpdateDeploymentGroupError::DeploymentGroupAlreadyExists(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupDoesNotExistException" => {
+                    return UpdateDeploymentGroupError::DeploymentGroupDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "DeploymentGroupNameRequiredException" => {
+                    return UpdateDeploymentGroupError::DeploymentGroupNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAlarmConfigException" => {
+                    return UpdateDeploymentGroupError::InvalidAlarmConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidApplicationNameException" => {
+                    return UpdateDeploymentGroupError::InvalidApplicationName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoRollbackConfigException" => {
+                    return UpdateDeploymentGroupError::InvalidAutoRollbackConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAutoScalingGroupException" => {
+                    return UpdateDeploymentGroupError::InvalidAutoScalingGroup(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidBlueGreenDeploymentConfigurationException" => {
+                    return UpdateDeploymentGroupError::InvalidBlueGreenDeploymentConfiguration(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidDeploymentConfigNameException" => {
+                    return UpdateDeploymentGroupError::InvalidDeploymentConfigName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentGroupNameException" => {
+                    return UpdateDeploymentGroupError::InvalidDeploymentGroupName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDeploymentStyleException" => {
+                    return UpdateDeploymentGroupError::InvalidDeploymentStyle(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidEC2TagCombinationException" => {
+                    return UpdateDeploymentGroupError::InvalidEC2TagCombination(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidEC2TagException" => {
+                    return UpdateDeploymentGroupError::InvalidEC2Tag(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return UpdateDeploymentGroupError::InvalidInput(String::from(error_message))
+                }
+                "InvalidLoadBalancerInfoException" => {
+                    return UpdateDeploymentGroupError::InvalidLoadBalancerInfo(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidOnPremisesTagCombinationException" => {
+                    return UpdateDeploymentGroupError::InvalidOnPremisesTagCombination(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRoleException" => {
+                    return UpdateDeploymentGroupError::InvalidRole(String::from(error_message))
+                }
+                "InvalidTagException" => {
+                    return UpdateDeploymentGroupError::InvalidTag(String::from(error_message))
+                }
+                "InvalidTriggerConfigException" => {
+                    return UpdateDeploymentGroupError::InvalidTriggerConfig(String::from(
+                        error_message,
+                    ))
+                }
+                "LifecycleHookLimitExceededException" => {
+                    return UpdateDeploymentGroupError::LifecycleHookLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "TagSetListLimitExceededException" => {
+                    return UpdateDeploymentGroupError::TagSetListLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "TriggerTargetsLimitExceededException" => {
+                    return UpdateDeploymentGroupError::TriggerTargetsLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateDeploymentGroupError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDeploymentGroupError::Unknown(String::from(body)),
         }
+        return UpdateDeploymentGroupError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDeploymentGroupError {
     fn from(err: serde_json::error::Error) -> UpdateDeploymentGroupError {
-        UpdateDeploymentGroupError::Unknown(err.description().to_string())
+        UpdateDeploymentGroupError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDeploymentGroupError {
@@ -6729,7 +6879,8 @@ impl Error for UpdateDeploymentGroupError {
             UpdateDeploymentGroupError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDeploymentGroupError::Unknown(ref cause) => cause,
+            UpdateDeploymentGroupError::ParseError(ref cause) => cause,
+            UpdateDeploymentGroupError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7034,9 +7185,7 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddTagsToOnPremisesInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AddTagsToOnPremisesInstancesError::from_response(response))
                 }))
             }
         })
@@ -7068,13 +7217,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetApplicationRevisionsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetApplicationRevisionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(BatchGetApplicationRevisionsError::from_response(response))
                 }))
             }
         })
@@ -7103,14 +7251,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetApplicationsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetApplicationsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(BatchGetApplicationsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7141,13 +7290,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetDeploymentGroupsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetDeploymentGroupsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(BatchGetDeploymentGroupsError::from_response(response))
                 }))
             }
         })
@@ -7179,13 +7327,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetDeploymentInstancesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetDeploymentInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(BatchGetDeploymentInstancesError::from_response(response))
                 }))
             }
         })
@@ -7214,14 +7361,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetDeploymentsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetDeploymentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(BatchGetDeploymentsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7252,13 +7400,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<BatchGetOnPremisesInstancesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetOnPremisesInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(BatchGetOnPremisesInstancesError::from_response(response))
                 }))
             }
         })
@@ -7280,11 +7427,12 @@ impl CodeDeploy for CodeDeployClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ContinueDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ContinueDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -7312,14 +7460,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<CreateApplicationOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -7347,14 +7497,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<CreateDeploymentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -7382,14 +7534,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<CreateDeploymentConfigOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDeploymentConfigError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateDeploymentConfigError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7417,14 +7570,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<CreateDeploymentGroupOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDeploymentGroupError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateDeploymentGroupError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7445,11 +7599,12 @@ impl CodeDeploy for CodeDeployClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -7470,11 +7625,11 @@ impl CodeDeploy for CodeDeployClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDeploymentConfigError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteDeploymentConfigError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7502,14 +7657,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<DeleteDeploymentGroupOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDeploymentGroupError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteDeploymentGroupError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7540,13 +7696,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<DeleteGitHubAccountTokenOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteGitHubAccountTokenError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteGitHubAccountTokenError::from_response(response))
                 }))
             }
         })
@@ -7572,9 +7727,7 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeregisterOnPremisesInstanceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeregisterOnPremisesInstanceError::from_response(response))
                 }))
             }
         })
@@ -7603,14 +7756,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetApplicationOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -7638,14 +7793,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetApplicationRevisionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApplicationRevisionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetApplicationRevisionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7673,14 +7829,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetDeploymentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -7708,14 +7866,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetDeploymentConfigOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentConfigError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetDeploymentConfigError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7743,14 +7902,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetDeploymentGroupOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentGroupError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDeploymentGroupError::from_response(response))),
+                )
             }
         })
     }
@@ -7778,14 +7939,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetDeploymentInstanceOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentInstanceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetDeploymentInstanceError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7813,14 +7975,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<GetOnPremisesInstanceOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetOnPremisesInstanceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetOnPremisesInstanceError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7851,13 +8014,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListApplicationRevisionsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListApplicationRevisionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListApplicationRevisionsError::from_response(response))
                 }))
             }
         })
@@ -7886,14 +8048,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListApplicationsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListApplicationsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListApplicationsError::from_response(response))),
+                )
             }
         })
     }
@@ -7921,14 +8085,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListDeploymentConfigsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDeploymentConfigsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListDeploymentConfigsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7956,14 +8121,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListDeploymentGroupsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDeploymentGroupsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListDeploymentGroupsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7994,13 +8160,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListDeploymentInstancesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDeploymentInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListDeploymentInstancesError::from_response(response))
                 }))
             }
         })
@@ -8029,14 +8194,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListDeploymentsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDeploymentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListDeploymentsError::from_response(response))),
+                )
             }
         })
     }
@@ -8067,13 +8234,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListGitHubAccountTokenNamesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListGitHubAccountTokenNamesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListGitHubAccountTokenNamesError::from_response(response))
                 }))
             }
         })
@@ -8105,13 +8271,12 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<ListOnPremisesInstancesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListOnPremisesInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListOnPremisesInstancesError::from_response(response))
                 }))
             }
         })
@@ -8146,12 +8311,13 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<PutLifecycleEventHookExecutionStatusOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutLifecycleEventHookExecutionStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(PutLifecycleEventHookExecutionStatusError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -8178,9 +8344,7 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterApplicationRevisionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RegisterApplicationRevisionError::from_response(response))
                 }))
             }
         })
@@ -8206,9 +8370,7 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterOnPremisesInstanceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RegisterOnPremisesInstanceError::from_response(response))
                 }))
             }
         })
@@ -8234,8 +8396,8 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveTagsFromOnPremisesInstancesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(RemoveTagsFromOnPremisesInstancesError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -8262,8 +8424,8 @@ impl CodeDeploy for CodeDeployClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SkipWaitTimeForInstanceTerminationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(SkipWaitTimeForInstanceTerminationError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -8293,14 +8455,16 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<StopDeploymentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StopDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StopDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -8321,11 +8485,12 @@ impl CodeDeploy for CodeDeployClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -8353,14 +8518,15 @@ impl CodeDeploy for CodeDeployClient {
 
                     serde_json::from_str::<UpdateDeploymentGroupOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDeploymentGroupError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateDeploymentGroupError::from_response(response))
+                    }),
+                )
             }
         })
     }

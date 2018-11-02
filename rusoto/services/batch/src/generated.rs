@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>An object representing an AWS Batch array job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -39,6 +39,7 @@ pub struct ArrayProperties {
 
 /// <p>An object representing the array properties of a job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ArrayPropertiesDetail {
     /// <p>The job index within the array that is associated with this job. This parameter is returned for array job children.</p>
     #[serde(rename = "index")]
@@ -56,6 +57,7 @@ pub struct ArrayPropertiesDetail {
 
 /// <p>An object representing the array properties of a job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ArrayPropertiesSummary {
     /// <p>The job index within the array that is associated with this job. This parameter is returned for children of array jobs.</p>
     #[serde(rename = "index")]
@@ -69,6 +71,7 @@ pub struct ArrayPropertiesSummary {
 
 /// <p>An object representing the details of a container that is part of a job attempt.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttemptContainerDetail {
     /// <p>The Amazon Resource Name (ARN) of the Amazon ECS container instance that hosts the job attempt.</p>
     #[serde(rename = "containerInstanceArn")]
@@ -94,6 +97,7 @@ pub struct AttemptContainerDetail {
 
 /// <p>An object representing a job attempt.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttemptDetail {
     /// <p>Details about the container in this job attempt.</p>
     #[serde(rename = "container")]
@@ -124,10 +128,12 @@ pub struct CancelJobRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CancelJobResponse {}
 
 /// <p>An object representing an AWS Batch compute environment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ComputeEnvironmentDetail {
     /// <p>The Amazon Resource Name (ARN) of the compute environment. </p>
     #[serde(rename = "computeEnvironmentArn")]
@@ -244,6 +250,7 @@ pub struct ComputeResourceUpdate {
 
 /// <p>An object representing the details of a container that is part of a job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ContainerDetail {
     /// <p>The command that is passed to the container. </p>
     #[serde(rename = "command")]
@@ -388,6 +395,7 @@ pub struct ContainerProperties {
 
 /// <p>An object representing summary details of a container within a job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ContainerSummary {
     /// <p>The exit code to return upon completion.</p>
     #[serde(rename = "exitCode")]
@@ -421,6 +429,7 @@ pub struct CreateComputeEnvironmentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateComputeEnvironmentResponse {
     /// <p>The Amazon Resource Name (ARN) of the compute environment. </p>
     #[serde(rename = "computeEnvironmentArn")]
@@ -450,6 +459,7 @@ pub struct CreateJobQueueRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateJobQueueResponse {
     /// <p>The Amazon Resource Name (ARN) of the job queue.</p>
     #[serde(rename = "jobQueueArn")]
@@ -467,6 +477,7 @@ pub struct DeleteComputeEnvironmentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteComputeEnvironmentResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -477,6 +488,7 @@ pub struct DeleteJobQueueRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteJobQueueResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -487,6 +499,7 @@ pub struct DeregisterJobDefinitionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeregisterJobDefinitionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -506,6 +519,7 @@ pub struct DescribeComputeEnvironmentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeComputeEnvironmentsResponse {
     /// <p>The list of compute environments.</p>
     #[serde(rename = "computeEnvironments")]
@@ -542,6 +556,7 @@ pub struct DescribeJobDefinitionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeJobDefinitionsResponse {
     /// <p>The list of job definitions. </p>
     #[serde(rename = "jobDefinitions")]
@@ -570,6 +585,7 @@ pub struct DescribeJobQueuesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeJobQueuesResponse {
     /// <p>The list of job queues. </p>
     #[serde(rename = "jobQueues")]
@@ -589,6 +605,7 @@ pub struct DescribeJobsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeJobsResponse {
     /// <p>The list of jobs. </p>
     #[serde(rename = "jobs")]
@@ -607,6 +624,7 @@ pub struct Host {
 
 /// <p>An object representing an AWS Batch job definition.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct JobDefinition {
     /// <p>An object with various properties specific to container-based jobs. </p>
     #[serde(rename = "containerProperties")]
@@ -657,6 +675,7 @@ pub struct JobDependency {
 
 /// <p>An object representing an AWS Batch job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct JobDetail {
     /// <p>The array properties of the job, if it is an array job.</p>
     #[serde(rename = "arrayProperties")]
@@ -720,6 +739,7 @@ pub struct JobDetail {
 
 /// <p>An object representing the details of an AWS Batch job queue.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct JobQueueDetail {
     /// <p>The compute environments that are attached to the job queue and the order in which job placement is preferred. Compute environments are selected for job placement in ascending order.</p>
     #[serde(rename = "computeEnvironmentOrder")]
@@ -748,6 +768,7 @@ pub struct JobQueueDetail {
 
 /// <p>An object representing summary details of a job.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct JobSummary {
     /// <p>The array properties of the job, if it is an array job.</p>
     #[serde(rename = "arrayProperties")]
@@ -832,6 +853,7 @@ pub struct ListJobsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListJobsResponse {
     /// <p>A list of job summaries that match the request.</p>
     #[serde(rename = "jobSummaryList")]
@@ -886,6 +908,7 @@ pub struct RegisterJobDefinitionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RegisterJobDefinitionResponse {
     /// <p>The Amazon Resource Name (ARN) of the job definition. </p>
     #[serde(rename = "jobDefinitionArn")]
@@ -945,6 +968,7 @@ pub struct SubmitJobRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SubmitJobResponse {
     /// <p>The unique identifier for the job.</p>
     #[serde(rename = "jobId")]
@@ -965,6 +989,7 @@ pub struct TerminateJobRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TerminateJobResponse {}
 
 /// <p>The <code>ulimit</code> settings to pass to the container.</p>
@@ -1001,6 +1026,7 @@ pub struct UpdateComputeEnvironmentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateComputeEnvironmentResponse {
     /// <p>The Amazon Resource Name (ARN) of the compute environment. </p>
     #[serde(rename = "computeEnvironmentArn")]
@@ -1032,6 +1058,7 @@ pub struct UpdateJobQueueRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateJobQueueResponse {
     /// <p>The Amazon Resource Name (ARN) of the job queue.</p>
     #[serde(rename = "jobQueueArn")]
@@ -1069,38 +1096,54 @@ pub enum CancelJobError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CancelJobError {
-    pub fn from_body(body: &str) -> CancelJobError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CancelJobError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => CancelJobError::Client(String::from(error_message)),
-                    "ServerException" => CancelJobError::Server(String::from(error_message)),
-                    "ValidationException" => CancelJobError::Validation(error_message.to_string()),
-                    _ => CancelJobError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return CancelJobError::Client(String::from(error_message)),
+                "ServerException" => return CancelJobError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return CancelJobError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => CancelJobError::Unknown(String::from(body)),
         }
+        return CancelJobError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CancelJobError {
     fn from(err: serde_json::error::Error) -> CancelJobError {
-        CancelJobError::Unknown(err.description().to_string())
+        CancelJobError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CancelJobError {
@@ -1131,7 +1174,8 @@ impl Error for CancelJobError {
             CancelJobError::Validation(ref cause) => cause,
             CancelJobError::Credentials(ref err) => err.description(),
             CancelJobError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CancelJobError::Unknown(ref cause) => cause,
+            CancelJobError::ParseError(ref cause) => cause,
+            CancelJobError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1148,44 +1192,58 @@ pub enum CreateComputeEnvironmentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateComputeEnvironmentError {
-    pub fn from_body(body: &str) -> CreateComputeEnvironmentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateComputeEnvironmentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        CreateComputeEnvironmentError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        CreateComputeEnvironmentError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateComputeEnvironmentError::Validation(error_message.to_string())
-                    }
-                    _ => CreateComputeEnvironmentError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return CreateComputeEnvironmentError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return CreateComputeEnvironmentError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateComputeEnvironmentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateComputeEnvironmentError::Unknown(String::from(body)),
         }
+        return CreateComputeEnvironmentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateComputeEnvironmentError {
     fn from(err: serde_json::error::Error) -> CreateComputeEnvironmentError {
-        CreateComputeEnvironmentError::Unknown(err.description().to_string())
+        CreateComputeEnvironmentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateComputeEnvironmentError {
@@ -1218,7 +1276,8 @@ impl Error for CreateComputeEnvironmentError {
             CreateComputeEnvironmentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateComputeEnvironmentError::Unknown(ref cause) => cause,
+            CreateComputeEnvironmentError::ParseError(ref cause) => cause,
+            CreateComputeEnvironmentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1235,40 +1294,58 @@ pub enum CreateJobQueueError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateJobQueueError {
-    pub fn from_body(body: &str) -> CreateJobQueueError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateJobQueueError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => CreateJobQueueError::Client(String::from(error_message)),
-                    "ServerException" => CreateJobQueueError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        CreateJobQueueError::Validation(error_message.to_string())
-                    }
-                    _ => CreateJobQueueError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return CreateJobQueueError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return CreateJobQueueError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateJobQueueError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateJobQueueError::Unknown(String::from(body)),
         }
+        return CreateJobQueueError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateJobQueueError {
     fn from(err: serde_json::error::Error) -> CreateJobQueueError {
-        CreateJobQueueError::Unknown(err.description().to_string())
+        CreateJobQueueError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateJobQueueError {
@@ -1299,7 +1376,8 @@ impl Error for CreateJobQueueError {
             CreateJobQueueError::Validation(ref cause) => cause,
             CreateJobQueueError::Credentials(ref err) => err.description(),
             CreateJobQueueError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateJobQueueError::Unknown(ref cause) => cause,
+            CreateJobQueueError::ParseError(ref cause) => cause,
+            CreateJobQueueError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1316,44 +1394,58 @@ pub enum DeleteComputeEnvironmentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteComputeEnvironmentError {
-    pub fn from_body(body: &str) -> DeleteComputeEnvironmentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteComputeEnvironmentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        DeleteComputeEnvironmentError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DeleteComputeEnvironmentError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteComputeEnvironmentError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteComputeEnvironmentError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DeleteComputeEnvironmentError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DeleteComputeEnvironmentError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteComputeEnvironmentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteComputeEnvironmentError::Unknown(String::from(body)),
         }
+        return DeleteComputeEnvironmentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteComputeEnvironmentError {
     fn from(err: serde_json::error::Error) -> DeleteComputeEnvironmentError {
-        DeleteComputeEnvironmentError::Unknown(err.description().to_string())
+        DeleteComputeEnvironmentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteComputeEnvironmentError {
@@ -1386,7 +1478,8 @@ impl Error for DeleteComputeEnvironmentError {
             DeleteComputeEnvironmentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteComputeEnvironmentError::Unknown(ref cause) => cause,
+            DeleteComputeEnvironmentError::ParseError(ref cause) => cause,
+            DeleteComputeEnvironmentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1403,40 +1496,58 @@ pub enum DeleteJobQueueError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteJobQueueError {
-    pub fn from_body(body: &str) -> DeleteJobQueueError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteJobQueueError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => DeleteJobQueueError::Client(String::from(error_message)),
-                    "ServerException" => DeleteJobQueueError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        DeleteJobQueueError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteJobQueueError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DeleteJobQueueError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DeleteJobQueueError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteJobQueueError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteJobQueueError::Unknown(String::from(body)),
         }
+        return DeleteJobQueueError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteJobQueueError {
     fn from(err: serde_json::error::Error) -> DeleteJobQueueError {
-        DeleteJobQueueError::Unknown(err.description().to_string())
+        DeleteJobQueueError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteJobQueueError {
@@ -1467,7 +1578,8 @@ impl Error for DeleteJobQueueError {
             DeleteJobQueueError::Validation(ref cause) => cause,
             DeleteJobQueueError::Credentials(ref err) => err.description(),
             DeleteJobQueueError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteJobQueueError::Unknown(ref cause) => cause,
+            DeleteJobQueueError::ParseError(ref cause) => cause,
+            DeleteJobQueueError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1484,44 +1596,58 @@ pub enum DeregisterJobDefinitionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeregisterJobDefinitionError {
-    pub fn from_body(body: &str) -> DeregisterJobDefinitionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeregisterJobDefinitionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        DeregisterJobDefinitionError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DeregisterJobDefinitionError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeregisterJobDefinitionError::Validation(error_message.to_string())
-                    }
-                    _ => DeregisterJobDefinitionError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DeregisterJobDefinitionError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DeregisterJobDefinitionError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeregisterJobDefinitionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeregisterJobDefinitionError::Unknown(String::from(body)),
         }
+        return DeregisterJobDefinitionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeregisterJobDefinitionError {
     fn from(err: serde_json::error::Error) -> DeregisterJobDefinitionError {
-        DeregisterJobDefinitionError::Unknown(err.description().to_string())
+        DeregisterJobDefinitionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeregisterJobDefinitionError {
@@ -1554,7 +1680,8 @@ impl Error for DeregisterJobDefinitionError {
             DeregisterJobDefinitionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeregisterJobDefinitionError::Unknown(ref cause) => cause,
+            DeregisterJobDefinitionError::ParseError(ref cause) => cause,
+            DeregisterJobDefinitionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1571,44 +1698,58 @@ pub enum DescribeComputeEnvironmentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeComputeEnvironmentsError {
-    pub fn from_body(body: &str) -> DescribeComputeEnvironmentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeComputeEnvironmentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        DescribeComputeEnvironmentsError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DescribeComputeEnvironmentsError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeComputeEnvironmentsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeComputeEnvironmentsError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DescribeComputeEnvironmentsError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DescribeComputeEnvironmentsError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeComputeEnvironmentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeComputeEnvironmentsError::Unknown(String::from(body)),
         }
+        return DescribeComputeEnvironmentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeComputeEnvironmentsError {
     fn from(err: serde_json::error::Error) -> DescribeComputeEnvironmentsError {
-        DescribeComputeEnvironmentsError::Unknown(err.description().to_string())
+        DescribeComputeEnvironmentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeComputeEnvironmentsError {
@@ -1641,7 +1782,8 @@ impl Error for DescribeComputeEnvironmentsError {
             DescribeComputeEnvironmentsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeComputeEnvironmentsError::Unknown(ref cause) => cause,
+            DescribeComputeEnvironmentsError::ParseError(ref cause) => cause,
+            DescribeComputeEnvironmentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1658,44 +1800,58 @@ pub enum DescribeJobDefinitionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeJobDefinitionsError {
-    pub fn from_body(body: &str) -> DescribeJobDefinitionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeJobDefinitionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        DescribeJobDefinitionsError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DescribeJobDefinitionsError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeJobDefinitionsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeJobDefinitionsError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DescribeJobDefinitionsError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DescribeJobDefinitionsError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeJobDefinitionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeJobDefinitionsError::Unknown(String::from(body)),
         }
+        return DescribeJobDefinitionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeJobDefinitionsError {
     fn from(err: serde_json::error::Error) -> DescribeJobDefinitionsError {
-        DescribeJobDefinitionsError::Unknown(err.description().to_string())
+        DescribeJobDefinitionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeJobDefinitionsError {
@@ -1728,7 +1884,8 @@ impl Error for DescribeJobDefinitionsError {
             DescribeJobDefinitionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeJobDefinitionsError::Unknown(ref cause) => cause,
+            DescribeJobDefinitionsError::ParseError(ref cause) => cause,
+            DescribeJobDefinitionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1745,44 +1902,58 @@ pub enum DescribeJobQueuesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeJobQueuesError {
-    pub fn from_body(body: &str) -> DescribeJobQueuesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeJobQueuesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        DescribeJobQueuesError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DescribeJobQueuesError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeJobQueuesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeJobQueuesError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DescribeJobQueuesError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return DescribeJobQueuesError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeJobQueuesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeJobQueuesError::Unknown(String::from(body)),
         }
+        return DescribeJobQueuesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeJobQueuesError {
     fn from(err: serde_json::error::Error) -> DescribeJobQueuesError {
-        DescribeJobQueuesError::Unknown(err.description().to_string())
+        DescribeJobQueuesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeJobQueuesError {
@@ -1815,7 +1986,8 @@ impl Error for DescribeJobQueuesError {
             DescribeJobQueuesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeJobQueuesError::Unknown(ref cause) => cause,
+            DescribeJobQueuesError::ParseError(ref cause) => cause,
+            DescribeJobQueuesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1832,40 +2004,54 @@ pub enum DescribeJobsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeJobsError {
-    pub fn from_body(body: &str) -> DescribeJobsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeJobsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => DescribeJobsError::Client(String::from(error_message)),
-                    "ServerException" => DescribeJobsError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        DescribeJobsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeJobsError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return DescribeJobsError::Client(String::from(error_message)),
+                "ServerException" => return DescribeJobsError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return DescribeJobsError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => DescribeJobsError::Unknown(String::from(body)),
         }
+        return DescribeJobsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeJobsError {
     fn from(err: serde_json::error::Error) -> DescribeJobsError {
-        DescribeJobsError::Unknown(err.description().to_string())
+        DescribeJobsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeJobsError {
@@ -1896,7 +2082,8 @@ impl Error for DescribeJobsError {
             DescribeJobsError::Validation(ref cause) => cause,
             DescribeJobsError::Credentials(ref err) => err.description(),
             DescribeJobsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeJobsError::Unknown(ref cause) => cause,
+            DescribeJobsError::ParseError(ref cause) => cause,
+            DescribeJobsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1913,38 +2100,54 @@ pub enum ListJobsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListJobsError {
-    pub fn from_body(body: &str) -> ListJobsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListJobsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => ListJobsError::Client(String::from(error_message)),
-                    "ServerException" => ListJobsError::Server(String::from(error_message)),
-                    "ValidationException" => ListJobsError::Validation(error_message.to_string()),
-                    _ => ListJobsError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return ListJobsError::Client(String::from(error_message)),
+                "ServerException" => return ListJobsError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return ListJobsError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => ListJobsError::Unknown(String::from(body)),
         }
+        return ListJobsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListJobsError {
     fn from(err: serde_json::error::Error) -> ListJobsError {
-        ListJobsError::Unknown(err.description().to_string())
+        ListJobsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListJobsError {
@@ -1975,7 +2178,8 @@ impl Error for ListJobsError {
             ListJobsError::Validation(ref cause) => cause,
             ListJobsError::Credentials(ref err) => err.description(),
             ListJobsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListJobsError::Unknown(ref cause) => cause,
+            ListJobsError::ParseError(ref cause) => cause,
+            ListJobsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1992,44 +2196,58 @@ pub enum RegisterJobDefinitionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterJobDefinitionError {
-    pub fn from_body(body: &str) -> RegisterJobDefinitionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterJobDefinitionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        RegisterJobDefinitionError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        RegisterJobDefinitionError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RegisterJobDefinitionError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterJobDefinitionError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return RegisterJobDefinitionError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return RegisterJobDefinitionError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return RegisterJobDefinitionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterJobDefinitionError::Unknown(String::from(body)),
         }
+        return RegisterJobDefinitionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterJobDefinitionError {
     fn from(err: serde_json::error::Error) -> RegisterJobDefinitionError {
-        RegisterJobDefinitionError::Unknown(err.description().to_string())
+        RegisterJobDefinitionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterJobDefinitionError {
@@ -2062,7 +2280,8 @@ impl Error for RegisterJobDefinitionError {
             RegisterJobDefinitionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterJobDefinitionError::Unknown(ref cause) => cause,
+            RegisterJobDefinitionError::ParseError(ref cause) => cause,
+            RegisterJobDefinitionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2079,38 +2298,54 @@ pub enum SubmitJobError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SubmitJobError {
-    pub fn from_body(body: &str) -> SubmitJobError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> SubmitJobError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => SubmitJobError::Client(String::from(error_message)),
-                    "ServerException" => SubmitJobError::Server(String::from(error_message)),
-                    "ValidationException" => SubmitJobError::Validation(error_message.to_string()),
-                    _ => SubmitJobError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return SubmitJobError::Client(String::from(error_message)),
+                "ServerException" => return SubmitJobError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return SubmitJobError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => SubmitJobError::Unknown(String::from(body)),
         }
+        return SubmitJobError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SubmitJobError {
     fn from(err: serde_json::error::Error) -> SubmitJobError {
-        SubmitJobError::Unknown(err.description().to_string())
+        SubmitJobError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SubmitJobError {
@@ -2141,7 +2376,8 @@ impl Error for SubmitJobError {
             SubmitJobError::Validation(ref cause) => cause,
             SubmitJobError::Credentials(ref err) => err.description(),
             SubmitJobError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SubmitJobError::Unknown(ref cause) => cause,
+            SubmitJobError::ParseError(ref cause) => cause,
+            SubmitJobError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2158,40 +2394,54 @@ pub enum TerminateJobError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TerminateJobError {
-    pub fn from_body(body: &str) -> TerminateJobError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> TerminateJobError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => TerminateJobError::Client(String::from(error_message)),
-                    "ServerException" => TerminateJobError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        TerminateJobError::Validation(error_message.to_string())
-                    }
-                    _ => TerminateJobError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return TerminateJobError::Client(String::from(error_message)),
+                "ServerException" => return TerminateJobError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return TerminateJobError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => TerminateJobError::Unknown(String::from(body)),
         }
+        return TerminateJobError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TerminateJobError {
     fn from(err: serde_json::error::Error) -> TerminateJobError {
-        TerminateJobError::Unknown(err.description().to_string())
+        TerminateJobError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TerminateJobError {
@@ -2222,7 +2472,8 @@ impl Error for TerminateJobError {
             TerminateJobError::Validation(ref cause) => cause,
             TerminateJobError::Credentials(ref err) => err.description(),
             TerminateJobError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            TerminateJobError::Unknown(ref cause) => cause,
+            TerminateJobError::ParseError(ref cause) => cause,
+            TerminateJobError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2239,44 +2490,58 @@ pub enum UpdateComputeEnvironmentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateComputeEnvironmentError {
-    pub fn from_body(body: &str) -> UpdateComputeEnvironmentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateComputeEnvironmentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => {
-                        UpdateComputeEnvironmentError::Client(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        UpdateComputeEnvironmentError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateComputeEnvironmentError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateComputeEnvironmentError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return UpdateComputeEnvironmentError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return UpdateComputeEnvironmentError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateComputeEnvironmentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateComputeEnvironmentError::Unknown(String::from(body)),
         }
+        return UpdateComputeEnvironmentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateComputeEnvironmentError {
     fn from(err: serde_json::error::Error) -> UpdateComputeEnvironmentError {
-        UpdateComputeEnvironmentError::Unknown(err.description().to_string())
+        UpdateComputeEnvironmentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateComputeEnvironmentError {
@@ -2309,7 +2574,8 @@ impl Error for UpdateComputeEnvironmentError {
             UpdateComputeEnvironmentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateComputeEnvironmentError::Unknown(ref cause) => cause,
+            UpdateComputeEnvironmentError::ParseError(ref cause) => cause,
+            UpdateComputeEnvironmentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2326,40 +2592,58 @@ pub enum UpdateJobQueueError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateJobQueueError {
-    pub fn from_body(body: &str) -> UpdateJobQueueError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateJobQueueError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => UpdateJobQueueError::Client(String::from(error_message)),
-                    "ServerException" => UpdateJobQueueError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        UpdateJobQueueError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateJobQueueError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return UpdateJobQueueError::Client(String::from(error_message))
                 }
+                "ServerException" => {
+                    return UpdateJobQueueError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateJobQueueError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateJobQueueError::Unknown(String::from(body)),
         }
+        return UpdateJobQueueError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateJobQueueError {
     fn from(err: serde_json::error::Error) -> UpdateJobQueueError {
-        UpdateJobQueueError::Unknown(err.description().to_string())
+        UpdateJobQueueError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateJobQueueError {
@@ -2390,7 +2674,8 @@ impl Error for UpdateJobQueueError {
             UpdateJobQueueError::Validation(ref cause) => cause,
             UpdateJobQueueError::Credentials(ref err) => err.description(),
             UpdateJobQueueError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateJobQueueError::Unknown(ref cause) => cause,
+            UpdateJobQueueError::ParseError(ref cause) => cause,
+            UpdateJobQueueError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2554,11 +2839,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CancelJobError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CancelJobError::from_response(response))),
+                )
             }
         })
     }
@@ -2594,9 +2880,7 @@ impl Batch for BatchClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateComputeEnvironmentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateComputeEnvironmentError::from_response(response))
                 }))
             }
         })
@@ -2631,11 +2915,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateJobQueueError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateJobQueueError::from_response(response))),
+                )
             }
         })
     }
@@ -2671,9 +2956,7 @@ impl Batch for BatchClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteComputeEnvironmentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteComputeEnvironmentError::from_response(response))
                 }))
             }
         })
@@ -2708,11 +2991,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteJobQueueError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteJobQueueError::from_response(response))),
+                )
             }
         })
     }
@@ -2748,9 +3032,7 @@ impl Batch for BatchClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeregisterJobDefinitionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeregisterJobDefinitionError::from_response(response))
                 }))
             }
         })
@@ -2788,9 +3070,7 @@ impl Batch for BatchClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeComputeEnvironmentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeComputeEnvironmentsError::from_response(response))
                 }))
             }
         })
@@ -2826,11 +3106,11 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeJobDefinitionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeJobDefinitionsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2865,11 +3145,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeJobQueuesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeJobQueuesError::from_response(response))),
+                )
             }
         })
     }
@@ -2903,11 +3184,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeJobsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeJobsError::from_response(response))),
+                )
             }
         })
     }
@@ -2938,11 +3220,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListJobsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListJobsError::from_response(response))),
+                )
             }
         })
     }
@@ -2977,11 +3260,11 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterJobDefinitionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(RegisterJobDefinitionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3015,11 +3298,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SubmitJobError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SubmitJobError::from_response(response))),
+                )
             }
         })
     }
@@ -3053,11 +3337,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TerminateJobError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TerminateJobError::from_response(response))),
+                )
             }
         })
     }
@@ -3093,9 +3378,7 @@ impl Batch for BatchClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateComputeEnvironmentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateComputeEnvironmentError::from_response(response))
                 }))
             }
         })
@@ -3130,11 +3413,12 @@ impl Batch for BatchClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateJobQueueError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateJobQueueError::from_response(response))),
+                )
             }
         })
     }

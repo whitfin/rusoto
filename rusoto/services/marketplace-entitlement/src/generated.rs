@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>An entitlement represents capacity in a product owned by the customer. For example, a customer might own some number of users or seats in an SaaS application or some amount of data capacity in a multi-tenant database.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Entitlement {
     /// <p>The customer identifier is a handle to each unique customer in an application. Customer identifiers are obtained through the ResolveCustomer operation in AWS Marketplace Metering Service.</p>
     #[serde(rename = "CustomerIdentifier")]
@@ -55,6 +56,7 @@ pub struct Entitlement {
 
 /// <p>The EntitlementValue represents the amount of capacity that the customer is entitled to for the product.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EntitlementValue {
     /// <p>The BooleanValue field will be populated with a boolean value when the entitlement is a boolean type. Otherwise, the field will not be set.</p>
     #[serde(rename = "BooleanValue")]
@@ -96,6 +98,7 @@ pub struct GetEntitlementsRequest {
 
 /// <p>The GetEntitlementsRequest contains results from the GetEntitlements operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetEntitlementsResult {
     /// <p>The set of entitlements found through the GetEntitlements operation. If the result contains an empty set of entitlements, NextToken might still be present and should be used.</p>
     #[serde(rename = "Entitlements")]
@@ -122,47 +125,47 @@ pub enum GetEntitlementsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetEntitlementsError {
-    pub fn from_body(body: &str) -> GetEntitlementsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetEntitlementsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceErrorException" => {
-                        GetEntitlementsError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetEntitlementsError::InvalidParameter(String::from(error_message))
-                    }
-                    "ThrottlingException" => {
-                        GetEntitlementsError::Throttling(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetEntitlementsError::Validation(error_message.to_string())
-                    }
-                    _ => GetEntitlementsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceErrorException" => {
+                    return GetEntitlementsError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return GetEntitlementsError::InvalidParameter(String::from(error_message))
+                }
+                "ThrottlingException" => {
+                    return GetEntitlementsError::Throttling(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetEntitlementsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetEntitlementsError::Unknown(String::from(body)),
         }
+        return GetEntitlementsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetEntitlementsError {
     fn from(err: serde_json::error::Error) -> GetEntitlementsError {
-        GetEntitlementsError::Unknown(err.description().to_string())
+        GetEntitlementsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetEntitlementsError {
@@ -194,7 +197,8 @@ impl Error for GetEntitlementsError {
             GetEntitlementsError::Validation(ref cause) => cause,
             GetEntitlementsError::Credentials(ref err) => err.description(),
             GetEntitlementsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetEntitlementsError::Unknown(ref cause) => cause,
+            GetEntitlementsError::ParseError(ref cause) => cause,
+            GetEntitlementsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -265,14 +269,16 @@ impl MarketplaceEntitlement for MarketplaceEntitlementClient {
 
                     serde_json::from_str::<GetEntitlementsResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetEntitlementsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetEntitlementsError::from_response(response))),
+                )
             }
         })
     }

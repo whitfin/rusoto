@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,10 +27,11 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Access log settings, including the access log format and access log destination ARN.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AccessLogSettings {
     /// <p>The ARN of the CloudWatch Logs log group to receive access logs.</p>
     #[serde(rename = "destinationArn")]
@@ -44,6 +45,7 @@ pub struct AccessLogSettings {
 
 /// <p><p>Represents an AWS account that is associated with API Gateway.</p> <div class="remarks"> <p>To view the account info, call <code>GET</code> on this resource.</p> <h4>Error Codes</h4> <p>The following exception may be thrown when the request fails.</p> <ul> <li>UnauthorizedException</li> <li>NotFoundException</li> <li>TooManyRequestsException</li> </ul> <p>For detailed error code information, including the corresponding HTTP Status Codes, see <a href="http://docs.aws.amazon.com/apigateway/api-reference/handling-errors/#api-error-codes">API Gateway Error Codes</a></p> <h4>Example: Get the information about an account.</h4> <h5>Request</h5> <pre><code>GET /account HTTP/1.1 Content-Type: application/json Host: apigateway.us-east-1.amazonaws.com X-Amz-Date: 20160531T184618Z Authorization: AWS4-HMAC-SHA256 Credential={access<em>key</em>ID}/us-east-1/apigateway/aws4<em>request, SignedHeaders=content-type;host;x-amz-date, Signature={sig4</em>hash} </code></pre> <h5>Response</h5> <p>The successful response returns a <code>200 OK</code> status code and a payload similar to the following:</p> <pre><code>{ &quot;_links&quot;: { &quot;curies&quot;: { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/account-apigateway-{rel}.html&quot;, &quot;name&quot;: &quot;account&quot;, &quot;templated&quot;: true }, &quot;self&quot;: { &quot;href&quot;: &quot;/account&quot; }, &quot;account:update&quot;: { &quot;href&quot;: &quot;/account&quot; } }, &quot;cloudwatchRoleArn&quot;: &quot;arn:aws:iam::123456789012:role/apigAwsProxyRole&quot;, &quot;throttleSettings&quot;: { &quot;rateLimit&quot;: 500, &quot;burstLimit&quot;: 1000 } } </code></pre> <p>In addition to making the REST API call directly, you can use the AWS CLI and an AWS SDK to access this resource.</p> </div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-limits.html">API Gateway Limits</a> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html">Developer Guide</a>, <a href="http://docs.aws.amazon.com/cli/latest/reference/apigateway/get-account.html">AWS CLI</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Account {
     /// <p>The version of the API keys used for the account.</p>
     #[serde(rename = "apiKeyVersion")]
@@ -65,6 +67,7 @@ pub struct Account {
 
 /// <p><p>A resource that can be distributed to callers for executing <a>Method</a> resources that require an API key. API keys can be mapped to any <a>Stage</a> on any <a>RestApi</a>, which indicates that the callers with the API key can make requests to that stage.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-api-keys.html">Use API Keys</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApiKey {
     /// <p>The timestamp when the API Key was created.</p>
     #[serde(rename = "createdDate")]
@@ -106,6 +109,7 @@ pub struct ApiKey {
 
 /// <p>The identifier of an <a>ApiKey</a> used in a <a>UsagePlan</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApiKeyIds {
     /// <p>A list of all the <a>ApiKey</a> identifiers.</p>
     #[serde(rename = "ids")]
@@ -119,6 +123,7 @@ pub struct ApiKeyIds {
 
 /// <p><p>Represents a collection of API keys as represented by an <a>ApiKeys</a> resource.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-api-keys.html">Use API Keys</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApiKeys {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -152,6 +157,7 @@ pub struct ApiStage {
 
 /// <p><p>Represents an authorization layer for methods. If enabled on a method, API Gateway will activate the authorizer when a client calls the method.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html">Enable custom authorization</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Authorizer {
     /// <p>Optional customer-defined field, used in Swagger imports and exports without functional impact.</p>
     #[serde(rename = "authType")]
@@ -197,6 +203,7 @@ pub struct Authorizer {
 
 /// <p><p>Represents a collection of <a>Authorizer</a> resources.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/use-custom-authorizer.html">Enable custom authorization</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Authorizers {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -209,6 +216,7 @@ pub struct Authorizers {
 
 /// <p><p>Represents the base path that callers of the API must provide as part of the URL after the domain name.</p> <div class="remarks">A custom domain name plus a <code>BasePathMapping</code> specification identifies a deployed <a>RestApi</a> in a given stage of the owner <a>Account</a>.</div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">Use Custom Domain Names</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BasePathMapping {
     /// <p>The base path name that callers of the API must provide as part of the URL after the domain name.</p>
     #[serde(rename = "basePath")]
@@ -226,6 +234,7 @@ pub struct BasePathMapping {
 
 /// <p><p>Represents a collection of <a>BasePathMapping</a> resources.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">Use Custom Domain Names</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BasePathMappings {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -259,6 +268,7 @@ pub struct CanarySettings {
 
 /// <p><p>Represents a client certificate used to configure client-side SSL authentication while sending requests to the integration endpoint.</p> <div class="remarks">Client certificates are used to authenticate an API by the backend server. To authenticate an API client (or user), use IAM roles and policies, a custom <a>Authorizer</a> or an Amazon Cognito user pool.</div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-client-side-ssl-authentication.html">Use Client-Side Certificate</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ClientCertificate {
     /// <p>The identifier of the client certificate.</p>
     #[serde(rename = "clientCertificateId")]
@@ -284,6 +294,7 @@ pub struct ClientCertificate {
 
 /// <p><p>Represents a collection of <a>ClientCertificate</a> resources.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-client-side-ssl-authentication.html">Use Client-Side Certificate</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ClientCertificates {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -921,6 +932,7 @@ pub struct DeleteVpcLinkRequest {
 
 /// <p><p>An immutable representation of a <a>RestApi</a> resource that can be called by users using <a>Stages</a>. A deployment must be associated with a <a>Stage</a> for it to be callable over the Internet.</p> <div class="remarks">To create a deployment, call <code>POST</code> on the <a>Deployments</a> resource of a <a>RestApi</a>. To view, update, or delete a deployment, call <code>GET</code>, <code>PATCH</code>, or <code>DELETE</code> on the specified deployment resource (<code>/restapis/{restapi<em>id}/deployments/{deployment</em>id}</code>).</div> <div class="seeAlso"><a>RestApi</a>, <a>Deployments</a>, <a>Stage</a>, <a href="http://docs.aws.amazon.com/cli/latest/reference/apigateway/get-deployment.html">AWS CLI</a>, <a href="https://aws.amazon.com/tools/">AWS SDKs</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Deployment {
     /// <p>A summary of the <a>RestApi</a> at the date and time that the deployment resource was created.</p>
     #[serde(rename = "apiSummary")]
@@ -961,6 +973,7 @@ pub struct DeploymentCanarySettings {
 
 /// <p><p>Represents a collection resource that contains zero or more references to your existing deployments, and links that guide you on how to interact with your collection. The collection offers a paginated view of the contained deployments.</p> <div class="remarks">To create a new deployment of a <a>RestApi</a>, make a <code>POST</code> request against this resource. To view, update, or delete an existing deployment, make a <code>GET</code>, <code>PATCH</code>, or <code>DELETE</code> request, respectively, on a specified <a>Deployment</a> resource.</div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-deploy-api.html">Deploying an API</a>, <a href="http://docs.aws.amazon.com/cli/latest/reference/apigateway/get-deployment.html">AWS CLI</a>, <a href="https://aws.amazon.com/tools/">AWS SDKs</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Deployments {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -973,6 +986,7 @@ pub struct Deployments {
 
 /// <p><p>A documentation part for a targeted API entity.</p> <div class="remarks"> <p>A documentation part consists of a content map (<code>properties</code>) and a target (<code>location</code>). The target specifies an API entity to which the documentation content applies. The supported API entity types are <code>API</code>, <code>AUTHORIZER</code>, <code>MODEL</code>, <code>RESOURCE</code>, <code>METHOD</code>, <code>PATH<em>PARAMETER</code>, <code>QUERY</em>PARAMETER</code>, <code>REQUEST<em>HEADER</code>, <code>REQUEST</em>BODY</code>, <code>RESPONSE</code>, <code>RESPONSE<em>HEADER</code>, and <code>RESPONSE</em>BODY</code>. Valid <code>location</code> fields depend on the API entity type. All valid fields are not required.</p> <p>The content map is a JSON string of API-specific key-value pairs. Although an API can use any shape for the content map, only the Swagger-compliant documentation fields will be injected into the associated API entity definition in the exported Swagger definition file.</p></div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-documenting-api.html">Documenting an API</a>, <a>DocumentationParts</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentationPart {
     /// <p>The <a>DocumentationPart</a> identifier, generated by API Gateway when the <code>DocumentationPart</code> is created.</p>
     #[serde(rename = "id")]
@@ -990,6 +1004,7 @@ pub struct DocumentationPart {
 
 /// <p><p>A collection of the imported <a>DocumentationPart</a> identifiers.</p> <div class="remarks">This is used to return the result when documentation parts in an external (e.g., Swagger) file are imported into API Gateway</div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-documenting-api.html">Documenting an API</a>, <a href="http://docs.aws.amazon.com/apigateway/api-reference/link-relation/documentationpart-import/">documentationpart:import</a>, <a>DocumentationPart</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentationPartIds {
     /// <p>A list of the returned documentation part identifiers.</p>
     #[serde(rename = "ids")]
@@ -1027,6 +1042,7 @@ pub struct DocumentationPartLocation {
 
 /// <p><p>The collection of documentation parts of an API.</p> <div class="remarks"/> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-documenting-api.html">Documenting an API</a>, <a>DocumentationPart</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentationParts {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -1039,6 +1055,7 @@ pub struct DocumentationParts {
 
 /// <p><p>A snapshot of the documentation of an API.</p> <div class="remarks"><p>Publishing API documentation involves creating a documentation version associated with an API stage and exporting the versioned documentation to an external (e.g., Swagger) file.</p></div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-documenting-api.html">Documenting an API</a>, <a>DocumentationPart</a>, <a>DocumentationVersions</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentationVersion {
     /// <p>The date when the API documentation snapshot is created.</p>
     #[serde(rename = "createdDate")]
@@ -1056,6 +1073,7 @@ pub struct DocumentationVersion {
 
 /// <p><p>The collection of documentation snapshots of an API. </p> <div class="remarks"><p>Use the <a>DocumentationVersions</a> to manage documentation snapshots associated with various API stages.</p></div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-documenting-api.html">Documenting an API</a>, <a>DocumentationPart</a>, <a>DocumentationVersion</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentationVersions {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -1068,6 +1086,7 @@ pub struct DocumentationVersions {
 
 /// <p><p>Represents a custom domain name as a user-friendly host name of an API (<a>RestApi</a>).</p> <div class="Remarks"> <p>When you deploy an API, API Gateway creates a default host name for the API. This default API host name is of the <code>{restapi-id}.execute-api.{region}.amazonaws.com</code> format. With the default host name, you can access the API&#39;s root resource with the URL of <code>https://{restapi-id}.execute-api.{region}.amazonaws.com/{stage}/</code>. When you set up a custom domain name of <code>apis.example.com</code> for this API, you can then access the same resource using the URL of the <code>https://apis.examples.com/myApi</code>, where <code>myApi</code> is the base path mapping (<a>BasePathMapping</a>) of your API under the custom domain name. </p> </div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">Set a Custom Host Name for an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainName {
     /// <p>The reference to an AWS-managed certificate that will be used by edge-optimized endpoint for this domain name. AWS Certificate Manager is the only supported source.</p>
     #[serde(rename = "certificateArn")]
@@ -1117,6 +1136,7 @@ pub struct DomainName {
 
 /// <p><p>Represents a collection of <a>DomainName</a> resources.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html">Use Client-Side Certificate</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainNames {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -1171,6 +1191,7 @@ pub struct FlushStageCacheRequest {
 
 /// <p><p>A gateway response of a given response type and status code, with optional response parameters and mapping templates.</p> <div class="remarks"> For more information about valid gateway response types, see <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/supported-gateway-response-types.html">Gateway Response Types Supported by API Gateway</a> <div class="example"> <h4>Example: Get a Gateway Response of a given response type</h4> <h5>Request</h5> <p>This example shows how to get a gateway response of the <code>MISSING<em>AUTHENTICATION</em>TOKEN</code> type.</p> <pre><code>GET /restapis/o81lxisefl/gatewayresponses/MISSING<em>AUTHENTICATION</em>TOKEN HTTP/1.1 Host: beta-apigateway.us-east-1.amazonaws.com Content-Type: application/json X-Amz-Date: 20170503T202516Z Authorization: AWS4-HMAC-SHA256 Credential={access-key-id}/20170503/us-east-1/apigateway/aws4<em>request, SignedHeaders=content-type;host;x-amz-date, Signature=1b52460e3159c1a26cff29093855d50ea141c1c5b937528fecaf60f51129697a Cache-Control: no-cache Postman-Token: 3b2a1ce9-c848-2e26-2e2f-9c2caefbed45 </code></pre> <p>The response type is specified as a URL path.</p> <h5>Response</h5> <p>The successful operation returns the <code>200 OK</code> status code and a payload similar to the following:</p> <pre><code>{ &quot;</em>links&quot;: { &quot;curies&quot;: { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-gatewayresponse-{rel}.html&quot;, &quot;name&quot;: &quot;gatewayresponse&quot;, &quot;templated&quot;: true }, &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING<em>AUTHENTICATION</em>TOKEN&quot; }, &quot;gatewayresponse:delete&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING<em>AUTHENTICATION</em>TOKEN&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING</em>AUTHENTICATION<em>TOKEN&quot; } }, &quot;defaultResponse&quot;: false, &quot;responseParameters&quot;: { &quot;gatewayresponse.header.x-request-path&quot;: &quot;method.request.path.petId&quot;, &quot;gatewayresponse.header.Access-Control-Allow-Origin&quot;: &quot;&apos;a.b.c&apos;&quot;, &quot;gatewayresponse.header.x-request-query&quot;: &quot;method.request.querystring.q&quot;, &quot;gatewayresponse.header.x-request-header&quot;: &quot;method.request.header.Accept&quot; }, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{\n &quot;message&quot;: $context.error.messageString,\n &quot;type&quot;: &quot;$context.error.responseType&quot;,\n &quot;stage&quot;: &quot;$context.stage&quot;,\n &quot;resourcePath&quot;: &quot;$context.resourcePath&quot;,\n &quot;stageVariables.a&quot;: &quot;$stageVariables.a&quot;,\n &quot;statusCode&quot;: &quot;&apos;404&apos;&quot;\n}&quot; }, &quot;responseType&quot;: &quot;MISSING</em>AUTHENTICATION_TOKEN&quot;, &quot;statusCode&quot;: &quot;404&quot; }</code></pre> <p></p> </div> </div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/customize-gateway-responses.html">Customize Gateway Responses</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GatewayResponse {
     /// <p>A Boolean flag to indicate whether this <a>GatewayResponse</a> is the default gateway response (<code>true</code>) or not (<code>false</code>). A default gateway response is one generated by API Gateway without any customization by an API developer. </p>
     #[serde(rename = "defaultResponse")]
@@ -1196,6 +1217,7 @@ pub struct GatewayResponse {
 
 /// <p><p>The collection of the <a>GatewayResponse</a> instances of a <a>RestApi</a> as a <code>responseType</code>-to-<a>GatewayResponse</a> object map of key-value pairs. As such, pagination is not supported for querying this collection.</p> <div class="remarks"> For more information about valid gateway response types, see <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/supported-gateway-response-types.html">Gateway Response Types Supported by API Gateway</a> <div class="example"> <h4>Example: Get the collection of gateway responses of an API</h4> <h5>Request</h5> <p>This example request shows how to retrieve the <a>GatewayResponses</a> collection from an API.</p> <pre><code>GET /restapis/o81lxisefl/gatewayresponses HTTP/1.1 Host: beta-apigateway.us-east-1.amazonaws.com Content-Type: application/json X-Amz-Date: 20170503T220604Z Authorization: AWS4-HMAC-SHA256 Credential={access-key-id}/20170503/us-east-1/apigateway/aws4<em>request, SignedHeaders=content-type;host;x-amz-date, Signature=59b42fe54a76a5de8adf2c67baa6d39206f8e9ad49a1d77ccc6a5da3103a398a Cache-Control: no-cache Postman-Token: 5637af27-dc29-fc5c-9dfe-0645d52cb515 </code></pre> <p></p> <h5>Response</h5> <p>The successful operation returns the <code>200 OK</code> status code and a payload similar to the following:</p> <pre><code>{ &quot;</em>links&quot;: { &quot;curies&quot;: { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-gatewayresponse-{rel}.html&quot;, &quot;name&quot;: &quot;gatewayresponse&quot;, &quot;templated&quot;: true }, &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses&quot; }, &quot;first&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses&quot; }, &quot;gatewayresponse:by-type&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;item&quot;: [ { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION</em>FAILURE&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/RESOURCE<em>NOT</em>FOUND&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/REQUEST<em>TOO</em>LARGE&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/THROTTLED&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNSUPPORTED<em>MEDIA</em>TYPE&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER<em>CONFIGURATION</em>ERROR&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT<em>5XX&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT</em>4XX&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD<em>REQUEST</em>PARAMETERS&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD<em>REQUEST</em>BODY&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/EXPIRED<em>TOKEN&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/ACCESS</em>DENIED&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID<em>API</em>KEY&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNAUTHORIZED&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/API<em>CONFIGURATION</em>ERROR&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/QUOTA<em>EXCEEDED&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION</em>TIMEOUT&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING<em>AUTHENTICATION</em>TOKEN&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID<em>SIGNATURE&quot; }, { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER</em>FAILURE&quot; } ] }, &quot;<em>embedded&quot;: { &quot;item&quot;: [ { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION<em>FAILURE&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION<em>FAILURE&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;INTEGRATION</em>FAILURE&quot;, &quot;statusCode&quot;: &quot;504&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/RESOURCE</em>NOT<em>FOUND&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/RESOURCE<em>NOT</em>FOUND&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;RESOURCE<em>NOT</em>FOUND&quot;, &quot;statusCode&quot;: &quot;404&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/REQUEST</em>TOO<em>LARGE&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/REQUEST<em>TOO</em>LARGE&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;REQUEST<em>TOO</em>LARGE&quot;, &quot;statusCode&quot;: &quot;413&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/THROTTLED&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/THROTTLED&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;THROTTLED&quot;, &quot;statusCode&quot;: &quot;429&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNSUPPORTED</em>MEDIA<em>TYPE&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNSUPPORTED<em>MEDIA</em>TYPE&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;UNSUPPORTED<em>MEDIA</em>TYPE&quot;, &quot;statusCode&quot;: &quot;415&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER</em>CONFIGURATION<em>ERROR&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER<em>CONFIGURATION</em>ERROR&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;AUTHORIZER<em>CONFIGURATION</em>ERROR&quot;, &quot;statusCode&quot;: &quot;500&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT</em>5XX&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT</em>5XX&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;DEFAULT<em>5XX&quot; }, { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT<em>4XX&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/DEFAULT<em>4XX&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;DEFAULT</em>4XX&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD</em>REQUEST<em>PARAMETERS&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD<em>REQUEST</em>PARAMETERS&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;BAD<em>REQUEST</em>PARAMETERS&quot;, &quot;statusCode&quot;: &quot;400&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD</em>REQUEST<em>BODY&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/BAD<em>REQUEST</em>BODY&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;BAD<em>REQUEST</em>BODY&quot;, &quot;statusCode&quot;: &quot;400&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/EXPIRED</em>TOKEN&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/EXPIRED</em>TOKEN&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;EXPIRED<em>TOKEN&quot;, &quot;statusCode&quot;: &quot;403&quot; }, { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/ACCESS<em>DENIED&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/ACCESS<em>DENIED&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;ACCESS</em>DENIED&quot;, &quot;statusCode&quot;: &quot;403&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID</em>API<em>KEY&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID<em>API</em>KEY&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;INVALID<em>API</em>KEY&quot;, &quot;statusCode&quot;: &quot;403&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNAUTHORIZED&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/UNAUTHORIZED&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;UNAUTHORIZED&quot;, &quot;statusCode&quot;: &quot;401&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/API</em>CONFIGURATION<em>ERROR&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/API<em>CONFIGURATION</em>ERROR&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;API<em>CONFIGURATION</em>ERROR&quot;, &quot;statusCode&quot;: &quot;500&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/QUOTA</em>EXCEEDED&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/QUOTA</em>EXCEEDED&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;QUOTA<em>EXCEEDED&quot;, &quot;statusCode&quot;: &quot;429&quot; }, { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION<em>TIMEOUT&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INTEGRATION<em>TIMEOUT&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;INTEGRATION</em>TIMEOUT&quot;, &quot;statusCode&quot;: &quot;504&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING</em>AUTHENTICATION<em>TOKEN&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/MISSING<em>AUTHENTICATION</em>TOKEN&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;MISSING<em>AUTHENTICATION</em>TOKEN&quot;, &quot;statusCode&quot;: &quot;403&quot; }, { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID</em>SIGNATURE&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response<em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/INVALID</em>SIGNATURE&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;INVALID<em>SIGNATURE&quot;, &quot;statusCode&quot;: &quot;403&quot; }, { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER<em>FAILURE&quot; }, &quot;gatewayresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/{response</em>type}&quot;, &quot;templated&quot;: true }, &quot;gatewayresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/o81lxisefl/gatewayresponses/AUTHORIZER<em>FAILURE&quot; } }, &quot;defaultResponse&quot;: true, &quot;responseParameters&quot;: {}, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;{&quot;message&quot;:$context.error.messageString}&quot; }, &quot;responseType&quot;: &quot;AUTHORIZER</em>FAILURE&quot;, &quot;statusCode&quot;: &quot;500&quot; } ] } }</code></pre> <p></p> </div> </div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/customize-gateway-responses.html">Customize Gateway Responses</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GatewayResponses {
     /// <p>Returns the entire collection, because of no pagination support.</p>
     #[serde(rename = "items")]
@@ -1878,7 +1900,7 @@ pub struct ImportApiKeysRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub body: Vec<u8>,
     /// <p>A query parameter to indicate whether to rollback <a>ApiKey</a> importation (<code>true</code>) or not (<code>false</code>) when error is encountered.</p>
@@ -1898,7 +1920,7 @@ pub struct ImportDocumentationPartsRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub body: Vec<u8>,
     /// <p>A query parameter to specify whether to rollback the documentation importation (<code>true</code>) or not (<code>false</code>) when a warning is encountered. The default value is <code>false</code>.</p>
@@ -1922,7 +1944,7 @@ pub struct ImportRestApiRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub body: Vec<u8>,
     /// <p>A query parameter to indicate whether to rollback the API creation (<code>true</code>) or not (<code>false</code>) when a warning is encountered. The default value is <code>false</code>.</p>
@@ -1937,6 +1959,7 @@ pub struct ImportRestApiRequest {
 
 /// <p><p>Represents an HTTP, HTTP<em>PROXY, AWS, AWS</em>PROXY, or Mock integration.</p> <div class="remarks">In the API Gateway console, the built-in Lambda integration is an AWS integration.</div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Creating an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Integration {
     /// <p>Specifies the integration's cache key parameters.</p>
     #[serde(rename = "cacheKeyParameters")]
@@ -1998,6 +2021,7 @@ pub struct Integration {
 
 /// <p><p>Represents an integration response. The status code must map to an existing <a>MethodResponse</a>, and parameters and templates can be used to transform the back-end response.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Creating an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct IntegrationResponse {
     /// <p>Specifies how to handle response payload content type conversions. Supported values are <code>CONVERT_TO_BINARY</code> and <code>CONVERT_TO_TEXT</code>, with the following behaviors:</p> <ul> <li><p><code>CONVERT_TO_BINARY</code>: Converts a response payload from a Base64-encoded string to the corresponding binary blob.</p></li> <li><p><code>CONVERT_TO_TEXT</code>: Converts a response payload from a binary blob to a Base64-encoded string.</p></li> </ul> <p>If this property is not defined, the response payload will be passed through from the integration response to the method response without modification.</p>
     #[serde(rename = "contentHandling")]
@@ -2023,6 +2047,7 @@ pub struct IntegrationResponse {
 
 /// <p><p> Represents a client-facing interface by which the client calls the API to access back-end resources. A <b>Method</b> resource is integrated with an <a>Integration</a> resource. Both consist of a request and one or more responses. The method request takes the client input that is passed to the back end through the integration request. A method response returns the output from the back end to the client through an integration response. A method request is embodied in a <b>Method</b> resource, whereas an integration request is embodied in an <a>Integration</a> resource. On the other hand, a method response is represented by a <a>MethodResponse</a> resource, whereas an integration response is represented by an <a>IntegrationResponse</a> resource. </p> <div class="remarks"> <p/> <h4>Example: Retrive the GET method on a specified resource</h4> <h5>Request</h5> <p>The following example request retrieves the information about the GET method on an API resource (<code>3kzxbg5sa2</code>) of an API (<code>fugvjdxtri</code>). </p> <pre><code>GET /restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET HTTP/1.1 Content-Type: application/json Host: apigateway.us-east-1.amazonaws.com X-Amz-Date: 20160603T210259Z Authorization: AWS4-HMAC-SHA256 Credential={access<em>key</em>ID}/20160603/us-east-1/apigateway/aws4<em>request, SignedHeaders=content-type;host;x-amz-date, Signature={sig4</em>hash}</code></pre> <h5>Response</h5> <p>The successful response returns a <code>200 OK</code> status code and a payload similar to the following:</p> <pre><code>{ &quot;<em>links&quot;: { &quot;curies&quot;: [ { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-integration-{rel}.html&quot;, &quot;name&quot;: &quot;integration&quot;, &quot;templated&quot;: true }, { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-integration-response-{rel}.html&quot;, &quot;name&quot;: &quot;integrationresponse&quot;, &quot;templated&quot;: true }, { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-method-{rel}.html&quot;, &quot;name&quot;: &quot;method&quot;, &quot;templated&quot;: true }, { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-method-response-{rel}.html&quot;, &quot;name&quot;: &quot;methodresponse&quot;, &quot;templated&quot;: true } ], &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET&quot;, &quot;name&quot;: &quot;GET&quot;, &quot;title&quot;: &quot;GET&quot; }, &quot;integration:put&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration&quot; }, &quot;method:delete&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET&quot; }, &quot;method:integration&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration&quot; }, &quot;method:responses&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot;, &quot;name&quot;: &quot;200&quot;, &quot;title&quot;: &quot;200&quot; }, &quot;method:update&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET&quot; }, &quot;methodresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/{status</em>code}&quot;, &quot;templated&quot;: true } }, &quot;apiKeyRequired&quot;: true, &quot;authorizationType&quot;: &quot;NONE&quot;, &quot;httpMethod&quot;: &quot;GET&quot;, &quot;<em>embedded&quot;: { &quot;method:integration&quot;: { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration&quot; }, &quot;integration:delete&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration&quot; }, &quot;integration:responses&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration/responses/200&quot;, &quot;name&quot;: &quot;200&quot;, &quot;title&quot;: &quot;200&quot; }, &quot;integration:update&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration&quot; }, &quot;integrationresponse:put&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration/responses/{status<em>code}&quot;, &quot;templated&quot;: true } }, &quot;cacheKeyParameters&quot;: [], &quot;cacheNamespace&quot;: &quot;3kzxbg5sa2&quot;, &quot;credentials&quot;: &quot;arn:aws:iam::123456789012:role/apigAwsProxyRole&quot;, &quot;httpMethod&quot;: &quot;POST&quot;, &quot;passthroughBehavior&quot;: &quot;WHEN</em>NO<em>MATCH&quot;, &quot;requestParameters&quot;: { &quot;integration.request.header.Content-Type&quot;: &quot;&#39;application/x-amz-json-1.1&#39;&quot; }, &quot;requestTemplates&quot;: { &quot;application/json&quot;: &quot;{\n}&quot; }, &quot;type&quot;: &quot;AWS&quot;, &quot;uri&quot;: &quot;arn:aws:apigateway:us-east-1:kinesis:action/ListStreams&quot;, &quot;</em>embedded&quot;: { &quot;integration:responses&quot;: { &quot;<em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration/responses/200&quot;, &quot;name&quot;: &quot;200&quot;, &quot;title&quot;: &quot;200&quot; }, &quot;integrationresponse:delete&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration/responses/200&quot; }, &quot;integrationresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/integration/responses/200&quot; } }, &quot;responseParameters&quot;: { &quot;method.response.header.Content-Type&quot;: &quot;&#39;application/xml&#39;&quot; }, &quot;responseTemplates&quot;: { &quot;application/json&quot;: &quot;$util.urlDecode(&quot;%3CkinesisStreams%3E%23foreach(%24stream%20in%20%24input.path(%27%24.StreamNames%27))%3Cstream%3E%3Cname%3E%24stream%3C%2Fname%3E%3C%2Fstream%3E%23end%3C%2FkinesisStreams%3E&quot;)&quot; }, &quot;statusCode&quot;: &quot;200&quot; } } }, &quot;method:responses&quot;: { &quot;</em>links&quot;: { &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot;, &quot;name&quot;: &quot;200&quot;, &quot;title&quot;: &quot;200&quot; }, &quot;methodresponse:delete&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot; }, &quot;methodresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot; } }, &quot;responseModels&quot;: { &quot;application/json&quot;: &quot;Empty&quot; }, &quot;responseParameters&quot;: { &quot;method.response.header.Content-Type&quot;: false }, &quot;statusCode&quot;: &quot;200&quot; } } }</code></pre> <p>In the example above, the response template for the <code>200 OK</code> response maps the JSON output from the <code>ListStreams</code> action in the back end to an XML output. The mapping template is URL-encoded as <code>%3CkinesisStreams%3E%23foreach(%24stream%20in%20%24input.path(%27%24.StreamNames%27))%3Cstream%3E%3Cname%3E%24stream%3C%2Fname%3E%3C%2Fstream%3E%23end%3C%2FkinesisStreams%3E</code> and the output is decoded using the <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html#util-templat-reference">$util.urlDecode()</a> helper function.</p> </div> <div class="seeAlso"> <a>MethodResponse</a>, <a>Integration</a>, <a>IntegrationResponse</a>, <a>Resource</a>, <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-method-settings.html">Set up an API&#39;s method</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Method {
     /// <p>A boolean flag specifying whether a valid <a>ApiKey</a> is required to invoke this method.</p>
     #[serde(rename = "apiKeyRequired")]
@@ -2072,6 +2097,7 @@ pub struct Method {
 
 /// <p><p>Represents a method response of a given HTTP status code returned to the client. The method response is passed from the back end through the associated integration response that can be transformed using a mapping template. </p> <div class="remarks"> <p/> <h4>Example: A <b>MethodResponse</b> instance of an API</h4> <h5>Request</h5> <p>The example request retrieves a <b>MethodResponse</b> of the 200 status code.</p> <pre><code>GET /restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200 HTTP/1.1 Content-Type: application/json Host: apigateway.us-east-1.amazonaws.com X-Amz-Date: 20160603T222952Z Authorization: AWS4-HMAC-SHA256 Credential={access<em>key</em>ID}/20160603/us-east-1/apigateway/aws4<em>request, SignedHeaders=content-type;host;x-amz-date, Signature={sig4</em>hash}</code></pre> <h5>Response</h5> <p>The successful response returns <code>200 OK</code> status and a payload as follows:</p> <pre><code>{ &quot;_links&quot;: { &quot;curies&quot;: { &quot;href&quot;: &quot;http://docs.aws.amazon.com/apigateway/latest/developerguide/restapi-method-response-{rel}.html&quot;, &quot;name&quot;: &quot;methodresponse&quot;, &quot;templated&quot;: true }, &quot;self&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot;, &quot;title&quot;: &quot;200&quot; }, &quot;methodresponse:delete&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot; }, &quot;methodresponse:update&quot;: { &quot;href&quot;: &quot;/restapis/fugvjdxtri/resources/3kzxbg5sa2/methods/GET/responses/200&quot; } }, &quot;responseModels&quot;: { &quot;application/json&quot;: &quot;Empty&quot; }, &quot;responseParameters&quot;: { &quot;method.response.header.Content-Type&quot;: false }, &quot;statusCode&quot;: &quot;200&quot; }</code></pre> <p/> </div> <div class="seeAlso"> <a>Method</a>, <a>IntegrationResponse</a>, <a>Integration</a> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Creating an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MethodResponse {
     /// <p>Specifies the <a>Model</a> resources used for the response's content-type. Response models are represented as a key/value map, with a content-type as the key and a <a>Model</a> name as the value.</p>
     #[serde(rename = "responseModels")]
@@ -2089,6 +2115,7 @@ pub struct MethodResponse {
 
 /// <p>Specifies the method setting properties.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MethodSetting {
     /// <p>Specifies whether the cached responses are encrypted. The PATCH path for this setting is <code>/{method_setting_key}/caching/dataEncrypted</code>, and the value is a Boolean.</p>
     #[serde(rename = "cacheDataEncrypted")]
@@ -2134,6 +2161,7 @@ pub struct MethodSetting {
 
 /// <p>Represents a summary of a <a>Method</a> resource, given a particular date and time.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MethodSnapshot {
     /// <p>Specifies whether the method requires a valid <a>ApiKey</a>.</p>
     #[serde(rename = "apiKeyRequired")]
@@ -2147,6 +2175,7 @@ pub struct MethodSnapshot {
 
 /// <p><p>Represents the data structure of a method&#39;s request or response payload.</p> <div class="remarks"> <p>A request model defines the data structure of the client-supplied request payload. A response model defines the data structure of the response payload returned by the back end. Although not required, models are useful for mapping payloads between the front end and back end.</p> <p>A model is used for generating an API&#39;s SDK, validating the input request body, and creating a skeletal mapping template.</p> </div> <div class="seeAlso"> <a>Method</a>, <a>MethodResponse</a>, <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/models-mappings.html">Models and Mappings</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Model {
     /// <p>The content-type for the model.</p>
     #[serde(rename = "contentType")]
@@ -2172,6 +2201,7 @@ pub struct Model {
 
 /// <p><p>Represents a collection of <a>Model</a> resources.</p> <div class="seeAlso"> <a>Method</a>, <a>MethodResponse</a>, <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/models-mappings.html">Models and Mappings</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Models {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -2402,7 +2432,7 @@ pub struct PutRestApiRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub body: Vec<u8>,
     /// <p>A query parameter to indicate whether to rollback the API update (<code>true</code>) or not (<code>false</code>) when a warning is encountered. The default value is <code>false</code>.</p>
@@ -2441,6 +2471,7 @@ pub struct QuotaSettings {
 
 /// <p><p>A set of validation rules for incoming <a>Method</a> requests.</p> <div class="remarks"> <p>In Swagger, a <a>RequestValidator</a> of an API is defined by the <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions.html#api-gateway-swagger-extensions-request-validators.requestValidator.html">x-amazon-apigateway-request-validators.requestValidator</a> object. It the referenced using the <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions.html#api-gateway-swagger-extensions-request-validator">x-amazon-apigateway-request-validator</a> property.</p> </div> <div class="seeAlso"><a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html">Enable Basic Request Validation in API Gateway</a></div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestValidator {
     /// <p>The identifier of this <a>RequestValidator</a>.</p>
     #[serde(rename = "id")]
@@ -2462,6 +2493,7 @@ pub struct RequestValidator {
 
 /// <p><p>A collection of <a>RequestValidator</a> resources of a given <a>RestApi</a>.</p> <div class="remarks"> <p>In Swagger, the <a>RequestValidators</a> of an API is defined by the <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions.html#api-gateway-swagger-extensions-request-validators.html">x-amazon-apigateway-request-validators</a> extension.</p> </div> <div class="seeAlso"><a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html">Enable Basic Request Validation in API Gateway</a></div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestValidators {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -2474,6 +2506,7 @@ pub struct RequestValidators {
 
 /// <p><p>Represents an API resource.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Create an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Resource {
     /// <p>The resource's identifier.</p>
     #[serde(rename = "id")]
@@ -2499,6 +2532,7 @@ pub struct Resource {
 
 /// <p><p>Represents a collection of <a>Resource</a> resources.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Create an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Resources {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -2511,6 +2545,7 @@ pub struct Resources {
 
 /// <p><p>Represents a REST API.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Create an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RestApi {
     /// <p>The source of the API key for metering requests according to a usage plan. Valid values are: <ul><li><code>HEADER</code> to read the API key from the <code>X-API-Key</code> header of a request. </li><li><code>AUTHORIZER</code> to read the API key from the <code>UsageIdentifierKey</code> from a custom authorizer.</li></ul> </p>
     #[serde(rename = "apiKeySource")]
@@ -2560,6 +2595,7 @@ pub struct RestApi {
 
 /// <p><p>Contains references to your APIs and links that guide you in how to interact with your collection. A collection offers a paginated view of your APIs.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html">Create an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RestApis {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -2572,6 +2608,7 @@ pub struct RestApis {
 
 /// <p>A configuration property of an SDK type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SdkConfigurationProperty {
     /// <p>The default value of an <a>SdkType</a> configuration property.</p>
     #[serde(rename = "defaultValue")]
@@ -2608,6 +2645,7 @@ pub struct SdkResponse {
 
 /// <p>A type of SDK that API Gateway can generate.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SdkType {
     /// <p>A list of configuration properties of an <a>SdkType</a>.</p>
     #[serde(rename = "configurationProperties")]
@@ -2629,6 +2667,7 @@ pub struct SdkType {
 
 /// <p>The collection of <a>SdkType</a> instances.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SdkTypes {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -2641,6 +2680,7 @@ pub struct SdkTypes {
 
 /// <p><p>Represents a unique identifier for a version of a deployed <a>RestApi</a> that is callable by users.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-deploy-api.html">Deploy an API</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Stage {
     /// <p>Settings for logging access in this stage.</p>
     #[serde(rename = "accessLogSettings")]
@@ -2719,6 +2759,7 @@ pub struct StageKey {
 
 /// <p><p>A list of <a>Stage</a> resources that are associated with the <a>ApiKey</a> resource.</p> <div class="seeAlso"><a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/stages.html">Deploying API in Stages</a></div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Stages {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "item")]
@@ -2739,6 +2780,7 @@ pub struct TagResourceRequest {
 
 /// <p>The collection of tags. Each tag element is associated with a given resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Tags {
     /// <p>The collection of tags. Each tag element is associated with a given resource.</p>
     #[serde(rename = "tags")]
@@ -2748,6 +2790,7 @@ pub struct Tags {
 
 /// <p><p>Represents a mapping template used to transform a payload.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/models-mappings.html#models-mappings-mappings">Mapping Templates</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Template {
     /// <p>The Apache <a href="http://velocity.apache.org/engine/devel/vtl-reference-guide.html" target="_blank">Velocity Template Language (VTL)</a> template content used for the template resource.</p>
     #[serde(rename = "value")]
@@ -2788,6 +2831,7 @@ pub struct TestInvokeAuthorizerRequest {
 
 /// <p>Represents the response of the test invoke request for a custom <a>Authorizer</a></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TestInvokeAuthorizerResponse {
     #[serde(rename = "authorization")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -2854,6 +2898,7 @@ pub struct TestInvokeMethodRequest {
 
 /// <p><p>Represents the response of the test invoke request in the HTTP method.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-test-method.html#how-to-test-method-console">Test API using the API Gateway console</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TestInvokeMethodResponse {
     /// <p>The body of the HTTP response.</p>
     #[serde(rename = "body")]
@@ -3227,6 +3272,7 @@ pub struct UpdateVpcLinkRequest {
 
 /// <p><p>Represents the usage data of a usage plan.</p> <div class="remarks"/> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html">Create and Use Usage Plans</a>, <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-create-usage-plans-with-console.html#api-gateway-usage-plan-manage-usage">Manage Usage in a Usage Plan</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Usage {
     /// <p>The ending date of the usage data.</p>
     #[serde(rename = "endDate")]
@@ -3251,6 +3297,7 @@ pub struct Usage {
 
 /// <p><p>Represents a usage plan than can specify who can assess associated API stages with specified request limits and quotas.</p> <div class="remarks"> <p>In a usage plan, you associate an API by specifying the API&#39;s Id and a stage name of the specified API. You add plan customers by adding API keys to the plan. </p> </div> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html">Create and Use Usage Plans</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UsagePlan {
     /// <p>The associated API stages of a usage plan.</p>
     #[serde(rename = "apiStages")]
@@ -3284,6 +3331,7 @@ pub struct UsagePlan {
 
 /// <p><p>Represents a usage plan key to identify a plan customer.</p> <div class="remarks"> <p>To associate an API stage with a selected API key in a usage plan, you must create a UsagePlanKey resource to represent the selected <a>ApiKey</a>.</p> </div>&quot; <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html">Create and Use Usage Plans</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UsagePlanKey {
     /// <p>The Id of a usage plan key.</p>
     #[serde(rename = "id")]
@@ -3305,6 +3353,7 @@ pub struct UsagePlanKey {
 
 /// <p><p>Represents the collection of usage plan keys added to usage plans for the associated API keys and, possibly, other types of keys.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html">Create and Use Usage Plans</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UsagePlanKeys {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -3317,6 +3366,7 @@ pub struct UsagePlanKeys {
 
 /// <p><p>Represents a collection of usage plans for an AWS account.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-api-usage-plans.html">Create and Use Usage Plans</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UsagePlans {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -3329,6 +3379,7 @@ pub struct UsagePlans {
 
 /// <p><p>A API Gateway VPC link for a <a>RestApi</a> to access resources in an Amazon Virtual Private Cloud (VPC).</p> <div class="remarks"> <p><p>To enable access to a resource in an Amazon Virtual Private Cloud through Amazon API Gateway, you, as an API developer, create a <a>VpcLink</a> resource targeted for one or more network load balancers of the VPC and then integrate an API method with a private integration that uses the <a>VpcLink</a>. The private integration has an integration type of <code>HTTP</code> or <code>HTTP<em>PROXY</code> and has a connection type of <code>VPC</em>LINK</code>. The integration uses the <code>connectionId</code> property to identify the <a>VpcLink</a> used.</p> </p> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VpcLink {
     /// <p>The description of the VPC link.</p>
     #[serde(rename = "description")]
@@ -3358,6 +3409,7 @@ pub struct VpcLink {
 
 /// <p><p>The collection of VPC links under the caller&#39;s account in a region.</p> <div class="seeAlso"> <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/getting-started-with-private-integration.html">Getting Started with Private Integrations</a>, <a href="http://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-private-integration.html">Set up Private Integrations</a> </div></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VpcLinks {
     /// <p>The current page of elements from this collection.</p>
     #[serde(rename = "items")]
@@ -3389,52 +3441,70 @@ pub enum CreateApiKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateApiKeyError {
-    pub fn from_body(body: &str) -> CreateApiKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateApiKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateApiKeyError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => CreateApiKeyError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        CreateApiKeyError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => CreateApiKeyError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateApiKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateApiKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateApiKeyError::Validation(error_message.to_string())
-                    }
-                    _ => CreateApiKeyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateApiKeyError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateApiKeyError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateApiKeyError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateApiKeyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateApiKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateApiKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateApiKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateApiKeyError::Unknown(String::from(body)),
         }
+        return CreateApiKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateApiKeyError {
     fn from(err: serde_json::error::Error) -> CreateApiKeyError {
-        CreateApiKeyError::Unknown(err.description().to_string())
+        CreateApiKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateApiKeyError {
@@ -3469,7 +3539,8 @@ impl Error for CreateApiKeyError {
             CreateApiKeyError::Validation(ref cause) => cause,
             CreateApiKeyError::Credentials(ref err) => err.description(),
             CreateApiKeyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateApiKeyError::Unknown(ref cause) => cause,
+            CreateApiKeyError::ParseError(ref cause) => cause,
+            CreateApiKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3492,53 +3563,67 @@ pub enum CreateAuthorizerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateAuthorizerError {
-    pub fn from_body(body: &str) -> CreateAuthorizerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateAuthorizerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateAuthorizerError::BadRequest(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateAuthorizerError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateAuthorizerError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateAuthorizerError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateAuthorizerError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateAuthorizerError::Validation(error_message.to_string())
-                    }
-                    _ => CreateAuthorizerError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateAuthorizerError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return CreateAuthorizerError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateAuthorizerError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateAuthorizerError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateAuthorizerError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateAuthorizerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateAuthorizerError::Unknown(String::from(body)),
         }
+        return CreateAuthorizerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateAuthorizerError {
     fn from(err: serde_json::error::Error) -> CreateAuthorizerError {
-        CreateAuthorizerError::Unknown(err.description().to_string())
+        CreateAuthorizerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateAuthorizerError {
@@ -3572,7 +3657,8 @@ impl Error for CreateAuthorizerError {
             CreateAuthorizerError::Validation(ref cause) => cause,
             CreateAuthorizerError::Credentials(ref err) => err.description(),
             CreateAuthorizerError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateAuthorizerError::Unknown(ref cause) => cause,
+            CreateAuthorizerError::ParseError(ref cause) => cause,
+            CreateAuthorizerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3595,53 +3681,67 @@ pub enum CreateBasePathMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateBasePathMappingError {
-    pub fn from_body(body: &str) -> CreateBasePathMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateBasePathMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateBasePathMappingError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateBasePathMappingError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateBasePathMappingError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateBasePathMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateBasePathMappingError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateBasePathMappingError::Validation(error_message.to_string())
-                    }
-                    _ => CreateBasePathMappingError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateBasePathMappingError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateBasePathMappingError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateBasePathMappingError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateBasePathMappingError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateBasePathMappingError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateBasePathMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateBasePathMappingError::Unknown(String::from(body)),
         }
+        return CreateBasePathMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateBasePathMappingError {
     fn from(err: serde_json::error::Error) -> CreateBasePathMappingError {
-        CreateBasePathMappingError::Unknown(err.description().to_string())
+        CreateBasePathMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateBasePathMappingError {
@@ -3677,7 +3777,8 @@ impl Error for CreateBasePathMappingError {
             CreateBasePathMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateBasePathMappingError::Unknown(ref cause) => cause,
+            CreateBasePathMappingError::ParseError(ref cause) => cause,
+            CreateBasePathMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3704,59 +3805,73 @@ pub enum CreateDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDeploymentError {
-    pub fn from_body(body: &str) -> CreateDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateDeploymentError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateDeploymentError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateDeploymentError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateDeploymentError::NotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateDeploymentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateDeploymentError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateDeploymentError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDeploymentError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateDeploymentError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateDeploymentError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateDeploymentError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateDeploymentError::NotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateDeploymentError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateDeploymentError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateDeploymentError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDeploymentError::Unknown(String::from(body)),
         }
+        return CreateDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDeploymentError {
     fn from(err: serde_json::error::Error) -> CreateDeploymentError {
-        CreateDeploymentError::Unknown(err.description().to_string())
+        CreateDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDeploymentError {
@@ -3792,7 +3907,8 @@ impl Error for CreateDeploymentError {
             CreateDeploymentError::Validation(ref cause) => cause,
             CreateDeploymentError::Credentials(ref err) => err.description(),
             CreateDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateDeploymentError::Unknown(ref cause) => cause,
+            CreateDeploymentError::ParseError(ref cause) => cause,
+            CreateDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3817,56 +3933,72 @@ pub enum CreateDocumentationPartError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDocumentationPartError {
-    pub fn from_body(body: &str) -> CreateDocumentationPartError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDocumentationPartError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateDocumentationPartError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateDocumentationPartError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateDocumentationPartError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateDocumentationPartError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateDocumentationPartError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateDocumentationPartError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDocumentationPartError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDocumentationPartError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateDocumentationPartError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateDocumentationPartError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateDocumentationPartError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateDocumentationPartError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateDocumentationPartError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return CreateDocumentationPartError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateDocumentationPartError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDocumentationPartError::Unknown(String::from(body)),
         }
+        return CreateDocumentationPartError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDocumentationPartError {
     fn from(err: serde_json::error::Error) -> CreateDocumentationPartError {
-        CreateDocumentationPartError::Unknown(err.description().to_string())
+        CreateDocumentationPartError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDocumentationPartError {
@@ -3903,7 +4035,8 @@ impl Error for CreateDocumentationPartError {
             CreateDocumentationPartError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateDocumentationPartError::Unknown(ref cause) => cause,
+            CreateDocumentationPartError::ParseError(ref cause) => cause,
+            CreateDocumentationPartError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3928,56 +4061,76 @@ pub enum CreateDocumentationVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDocumentationVersionError {
-    pub fn from_body(body: &str) -> CreateDocumentationVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDocumentationVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateDocumentationVersionError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateDocumentationVersionError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateDocumentationVersionError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateDocumentationVersionError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => CreateDocumentationVersionError::TooManyRequests(
-                        String::from(error_message),
-                    ),
-                    "UnauthorizedException" => {
-                        CreateDocumentationVersionError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDocumentationVersionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDocumentationVersionError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateDocumentationVersionError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateDocumentationVersionError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateDocumentationVersionError::LimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "NotFoundException" => {
+                    return CreateDocumentationVersionError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateDocumentationVersionError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return CreateDocumentationVersionError::Unauthorized(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateDocumentationVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDocumentationVersionError::Unknown(String::from(body)),
         }
+        return CreateDocumentationVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDocumentationVersionError {
     fn from(err: serde_json::error::Error) -> CreateDocumentationVersionError {
-        CreateDocumentationVersionError::Unknown(err.description().to_string())
+        CreateDocumentationVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDocumentationVersionError {
@@ -4014,7 +4167,8 @@ impl Error for CreateDocumentationVersionError {
             CreateDocumentationVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateDocumentationVersionError::Unknown(ref cause) => cause,
+            CreateDocumentationVersionError::ParseError(ref cause) => cause,
+            CreateDocumentationVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4035,50 +4189,64 @@ pub enum CreateDomainNameError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDomainNameError {
-    pub fn from_body(body: &str) -> CreateDomainNameError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDomainNameError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateDomainNameError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateDomainNameError::Conflict(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateDomainNameError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateDomainNameError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDomainNameError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDomainNameError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateDomainNameError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateDomainNameError::Conflict(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateDomainNameError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateDomainNameError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateDomainNameError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDomainNameError::Unknown(String::from(body)),
         }
+        return CreateDomainNameError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDomainNameError {
     fn from(err: serde_json::error::Error) -> CreateDomainNameError {
-        CreateDomainNameError::Unknown(err.description().to_string())
+        CreateDomainNameError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDomainNameError {
@@ -4111,7 +4279,8 @@ impl Error for CreateDomainNameError {
             CreateDomainNameError::Validation(ref cause) => cause,
             CreateDomainNameError::Credentials(ref err) => err.description(),
             CreateDomainNameError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateDomainNameError::Unknown(ref cause) => cause,
+            CreateDomainNameError::ParseError(ref cause) => cause,
+            CreateDomainNameError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4136,52 +4305,70 @@ pub enum CreateModelError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateModelError {
-    pub fn from_body(body: &str) -> CreateModelError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateModelError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateModelError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => CreateModelError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        CreateModelError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => CreateModelError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateModelError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateModelError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateModelError::Validation(error_message.to_string())
-                    }
-                    _ => CreateModelError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateModelError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateModelError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateModelError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateModelError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateModelError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateModelError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateModelError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateModelError::Unknown(String::from(body)),
         }
+        return CreateModelError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateModelError {
     fn from(err: serde_json::error::Error) -> CreateModelError {
-        CreateModelError::Unknown(err.description().to_string())
+        CreateModelError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateModelError {
@@ -4216,7 +4403,8 @@ impl Error for CreateModelError {
             CreateModelError::Validation(ref cause) => cause,
             CreateModelError::Credentials(ref err) => err.description(),
             CreateModelError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateModelError::Unknown(ref cause) => cause,
+            CreateModelError::ParseError(ref cause) => cause,
+            CreateModelError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4239,53 +4427,67 @@ pub enum CreateRequestValidatorError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateRequestValidatorError {
-    pub fn from_body(body: &str) -> CreateRequestValidatorError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateRequestValidatorError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateRequestValidatorError::BadRequest(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateRequestValidatorError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateRequestValidatorError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateRequestValidatorError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateRequestValidatorError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateRequestValidatorError::Validation(error_message.to_string())
-                    }
-                    _ => CreateRequestValidatorError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateRequestValidatorError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return CreateRequestValidatorError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateRequestValidatorError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateRequestValidatorError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateRequestValidatorError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateRequestValidatorError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateRequestValidatorError::Unknown(String::from(body)),
         }
+        return CreateRequestValidatorError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateRequestValidatorError {
     fn from(err: serde_json::error::Error) -> CreateRequestValidatorError {
-        CreateRequestValidatorError::Unknown(err.description().to_string())
+        CreateRequestValidatorError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateRequestValidatorError {
@@ -4321,7 +4523,8 @@ impl Error for CreateRequestValidatorError {
             CreateRequestValidatorError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateRequestValidatorError::Unknown(ref cause) => cause,
+            CreateRequestValidatorError::ParseError(ref cause) => cause,
+            CreateRequestValidatorError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4346,56 +4549,70 @@ pub enum CreateResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateResourceError {
-    pub fn from_body(body: &str) -> CreateResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateResourceError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateResourceError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateResourceError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateResourceError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateResourceError::Validation(error_message.to_string())
-                    }
-                    _ => CreateResourceError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateResourceError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateResourceError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateResourceError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateResourceError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateResourceError::Unknown(String::from(body)),
         }
+        return CreateResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateResourceError {
     fn from(err: serde_json::error::Error) -> CreateResourceError {
-        CreateResourceError::Unknown(err.description().to_string())
+        CreateResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateResourceError {
@@ -4430,7 +4647,8 @@ impl Error for CreateResourceError {
             CreateResourceError::Validation(ref cause) => cause,
             CreateResourceError::Credentials(ref err) => err.description(),
             CreateResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateResourceError::Unknown(ref cause) => cause,
+            CreateResourceError::ParseError(ref cause) => cause,
+            CreateResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4451,50 +4669,64 @@ pub enum CreateRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateRestApiError {
-    pub fn from_body(body: &str) -> CreateRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateRestApiError::BadRequest(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateRestApiError::LimitExceeded(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateRestApiError::Validation(error_message.to_string())
-                    }
-                    _ => CreateRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateRestApiError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return CreateRestApiError::LimitExceeded(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateRestApiError::Unknown(String::from(body)),
         }
+        return CreateRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateRestApiError {
     fn from(err: serde_json::error::Error) -> CreateRestApiError {
-        CreateRestApiError::Unknown(err.description().to_string())
+        CreateRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateRestApiError {
@@ -4527,7 +4759,8 @@ impl Error for CreateRestApiError {
             CreateRestApiError::Validation(ref cause) => cause,
             CreateRestApiError::Credentials(ref err) => err.description(),
             CreateRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateRestApiError::Unknown(ref cause) => cause,
+            CreateRestApiError::ParseError(ref cause) => cause,
+            CreateRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4552,52 +4785,70 @@ pub enum CreateStageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateStageError {
-    pub fn from_body(body: &str) -> CreateStageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateStageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateStageError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => CreateStageError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        CreateStageError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => CreateStageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateStageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateStageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateStageError::Validation(error_message.to_string())
-                    }
-                    _ => CreateStageError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateStageError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateStageError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateStageError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateStageError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateStageError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateStageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateStageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateStageError::Unknown(String::from(body)),
         }
+        return CreateStageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateStageError {
     fn from(err: serde_json::error::Error) -> CreateStageError {
-        CreateStageError::Unknown(err.description().to_string())
+        CreateStageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateStageError {
@@ -4632,7 +4883,8 @@ impl Error for CreateStageError {
             CreateStageError::Validation(ref cause) => cause,
             CreateStageError::Credentials(ref err) => err.description(),
             CreateStageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateStageError::Unknown(ref cause) => cause,
+            CreateStageError::ParseError(ref cause) => cause,
+            CreateStageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4657,56 +4909,70 @@ pub enum CreateUsagePlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateUsagePlanError {
-    pub fn from_body(body: &str) -> CreateUsagePlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateUsagePlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateUsagePlanError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateUsagePlanError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateUsagePlanError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateUsagePlanError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateUsagePlanError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateUsagePlanError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateUsagePlanError::Validation(error_message.to_string())
-                    }
-                    _ => CreateUsagePlanError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateUsagePlanError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateUsagePlanError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateUsagePlanError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateUsagePlanError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateUsagePlanError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateUsagePlanError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateUsagePlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateUsagePlanError::Unknown(String::from(body)),
         }
+        return CreateUsagePlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateUsagePlanError {
     fn from(err: serde_json::error::Error) -> CreateUsagePlanError {
-        CreateUsagePlanError::Unknown(err.description().to_string())
+        CreateUsagePlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateUsagePlanError {
@@ -4741,7 +5007,8 @@ impl Error for CreateUsagePlanError {
             CreateUsagePlanError::Validation(ref cause) => cause,
             CreateUsagePlanError::Credentials(ref err) => err.description(),
             CreateUsagePlanError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateUsagePlanError::Unknown(ref cause) => cause,
+            CreateUsagePlanError::ParseError(ref cause) => cause,
+            CreateUsagePlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4764,53 +5031,67 @@ pub enum CreateUsagePlanKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateUsagePlanKeyError {
-    pub fn from_body(body: &str) -> CreateUsagePlanKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateUsagePlanKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateUsagePlanKeyError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateUsagePlanKeyError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        CreateUsagePlanKeyError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateUsagePlanKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateUsagePlanKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateUsagePlanKeyError::Validation(error_message.to_string())
-                    }
-                    _ => CreateUsagePlanKeyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateUsagePlanKeyError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateUsagePlanKeyError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return CreateUsagePlanKeyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateUsagePlanKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateUsagePlanKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateUsagePlanKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateUsagePlanKeyError::Unknown(String::from(body)),
         }
+        return CreateUsagePlanKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateUsagePlanKeyError {
     fn from(err: serde_json::error::Error) -> CreateUsagePlanKeyError {
-        CreateUsagePlanKeyError::Unknown(err.description().to_string())
+        CreateUsagePlanKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateUsagePlanKeyError {
@@ -4846,7 +5127,8 @@ impl Error for CreateUsagePlanKeyError {
             CreateUsagePlanKeyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateUsagePlanKeyError::Unknown(ref cause) => cause,
+            CreateUsagePlanKeyError::ParseError(ref cause) => cause,
+            CreateUsagePlanKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4865,47 +5147,61 @@ pub enum CreateVpcLinkError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateVpcLinkError {
-    pub fn from_body(body: &str) -> CreateVpcLinkError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateVpcLinkError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateVpcLinkError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateVpcLinkError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        CreateVpcLinkError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateVpcLinkError::Validation(error_message.to_string())
-                    }
-                    _ => CreateVpcLinkError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateVpcLinkError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return CreateVpcLinkError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return CreateVpcLinkError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateVpcLinkError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateVpcLinkError::Unknown(String::from(body)),
         }
+        return CreateVpcLinkError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateVpcLinkError {
     fn from(err: serde_json::error::Error) -> CreateVpcLinkError {
-        CreateVpcLinkError::Unknown(err.description().to_string())
+        CreateVpcLinkError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateVpcLinkError {
@@ -4937,7 +5233,8 @@ impl Error for CreateVpcLinkError {
             CreateVpcLinkError::Validation(ref cause) => cause,
             CreateVpcLinkError::Credentials(ref err) => err.description(),
             CreateVpcLinkError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateVpcLinkError::Unknown(ref cause) => cause,
+            CreateVpcLinkError::ParseError(ref cause) => cause,
+            CreateVpcLinkError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4956,45 +5253,61 @@ pub enum DeleteApiKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApiKeyError {
-    pub fn from_body(body: &str) -> DeleteApiKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApiKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => DeleteApiKeyError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteApiKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteApiKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteApiKeyError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteApiKeyError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return DeleteApiKeyError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return DeleteApiKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteApiKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteApiKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteApiKeyError::Unknown(String::from(body)),
         }
+        return DeleteApiKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApiKeyError {
     fn from(err: serde_json::error::Error) -> DeleteApiKeyError {
-        DeleteApiKeyError::Unknown(err.description().to_string())
+        DeleteApiKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApiKeyError {
@@ -5026,7 +5339,8 @@ impl Error for DeleteApiKeyError {
             DeleteApiKeyError::Validation(ref cause) => cause,
             DeleteApiKeyError::Credentials(ref err) => err.description(),
             DeleteApiKeyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteApiKeyError::Unknown(ref cause) => cause,
+            DeleteApiKeyError::ParseError(ref cause) => cause,
+            DeleteApiKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5049,53 +5363,67 @@ pub enum DeleteAuthorizerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteAuthorizerError {
-    pub fn from_body(body: &str) -> DeleteAuthorizerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteAuthorizerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteAuthorizerError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteAuthorizerError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteAuthorizerError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteAuthorizerError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteAuthorizerError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteAuthorizerError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteAuthorizerError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteAuthorizerError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteAuthorizerError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteAuthorizerError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteAuthorizerError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteAuthorizerError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteAuthorizerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteAuthorizerError::Unknown(String::from(body)),
         }
+        return DeleteAuthorizerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteAuthorizerError {
     fn from(err: serde_json::error::Error) -> DeleteAuthorizerError {
-        DeleteAuthorizerError::Unknown(err.description().to_string())
+        DeleteAuthorizerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteAuthorizerError {
@@ -5129,7 +5457,8 @@ impl Error for DeleteAuthorizerError {
             DeleteAuthorizerError::Validation(ref cause) => cause,
             DeleteAuthorizerError::Credentials(ref err) => err.description(),
             DeleteAuthorizerError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteAuthorizerError::Unknown(ref cause) => cause,
+            DeleteAuthorizerError::ParseError(ref cause) => cause,
+            DeleteAuthorizerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5152,53 +5481,67 @@ pub enum DeleteBasePathMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteBasePathMappingError {
-    pub fn from_body(body: &str) -> DeleteBasePathMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteBasePathMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteBasePathMappingError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteBasePathMappingError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteBasePathMappingError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteBasePathMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteBasePathMappingError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteBasePathMappingError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteBasePathMappingError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteBasePathMappingError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteBasePathMappingError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteBasePathMappingError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteBasePathMappingError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteBasePathMappingError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteBasePathMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteBasePathMappingError::Unknown(String::from(body)),
         }
+        return DeleteBasePathMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteBasePathMappingError {
     fn from(err: serde_json::error::Error) -> DeleteBasePathMappingError {
-        DeleteBasePathMappingError::Unknown(err.description().to_string())
+        DeleteBasePathMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteBasePathMappingError {
@@ -5234,7 +5577,8 @@ impl Error for DeleteBasePathMappingError {
             DeleteBasePathMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteBasePathMappingError::Unknown(ref cause) => cause,
+            DeleteBasePathMappingError::ParseError(ref cause) => cause,
+            DeleteBasePathMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5255,50 +5599,66 @@ pub enum DeleteClientCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteClientCertificateError {
-    pub fn from_body(body: &str) -> DeleteClientCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteClientCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteClientCertificateError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteClientCertificateError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteClientCertificateError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteClientCertificateError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteClientCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteClientCertificateError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteClientCertificateError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteClientCertificateError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteClientCertificateError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return DeleteClientCertificateError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteClientCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteClientCertificateError::Unknown(String::from(body)),
         }
+        return DeleteClientCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteClientCertificateError {
     fn from(err: serde_json::error::Error) -> DeleteClientCertificateError {
-        DeleteClientCertificateError::Unknown(err.description().to_string())
+        DeleteClientCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteClientCertificateError {
@@ -5333,7 +5693,8 @@ impl Error for DeleteClientCertificateError {
             DeleteClientCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteClientCertificateError::Unknown(ref cause) => cause,
+            DeleteClientCertificateError::ParseError(ref cause) => cause,
+            DeleteClientCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5354,50 +5715,64 @@ pub enum DeleteDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDeploymentError {
-    pub fn from_body(body: &str) -> DeleteDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteDeploymentError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteDeploymentError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteDeploymentError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteDeploymentError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDeploymentError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteDeploymentError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteDeploymentError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteDeploymentError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteDeploymentError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDeploymentError::Unknown(String::from(body)),
         }
+        return DeleteDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDeploymentError {
     fn from(err: serde_json::error::Error) -> DeleteDeploymentError {
-        DeleteDeploymentError::Unknown(err.description().to_string())
+        DeleteDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDeploymentError {
@@ -5430,7 +5805,8 @@ impl Error for DeleteDeploymentError {
             DeleteDeploymentError::Validation(ref cause) => cause,
             DeleteDeploymentError::Credentials(ref err) => err.description(),
             DeleteDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteDeploymentError::Unknown(ref cause) => cause,
+            DeleteDeploymentError::ParseError(ref cause) => cause,
+            DeleteDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5453,53 +5829,69 @@ pub enum DeleteDocumentationPartError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDocumentationPartError {
-    pub fn from_body(body: &str) -> DeleteDocumentationPartError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDocumentationPartError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteDocumentationPartError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteDocumentationPartError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteDocumentationPartError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteDocumentationPartError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteDocumentationPartError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDocumentationPartError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDocumentationPartError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteDocumentationPartError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteDocumentationPartError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteDocumentationPartError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteDocumentationPartError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return DeleteDocumentationPartError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteDocumentationPartError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDocumentationPartError::Unknown(String::from(body)),
         }
+        return DeleteDocumentationPartError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDocumentationPartError {
     fn from(err: serde_json::error::Error) -> DeleteDocumentationPartError {
-        DeleteDocumentationPartError::Unknown(err.description().to_string())
+        DeleteDocumentationPartError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDocumentationPartError {
@@ -5535,7 +5927,8 @@ impl Error for DeleteDocumentationPartError {
             DeleteDocumentationPartError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteDocumentationPartError::Unknown(ref cause) => cause,
+            DeleteDocumentationPartError::ParseError(ref cause) => cause,
+            DeleteDocumentationPartError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5558,53 +5951,71 @@ pub enum DeleteDocumentationVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDocumentationVersionError {
-    pub fn from_body(body: &str) -> DeleteDocumentationVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDocumentationVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteDocumentationVersionError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteDocumentationVersionError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteDocumentationVersionError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => DeleteDocumentationVersionError::TooManyRequests(
-                        String::from(error_message),
-                    ),
-                    "UnauthorizedException" => {
-                        DeleteDocumentationVersionError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDocumentationVersionError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDocumentationVersionError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteDocumentationVersionError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteDocumentationVersionError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteDocumentationVersionError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteDocumentationVersionError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return DeleteDocumentationVersionError::Unauthorized(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteDocumentationVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDocumentationVersionError::Unknown(String::from(body)),
         }
+        return DeleteDocumentationVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDocumentationVersionError {
     fn from(err: serde_json::error::Error) -> DeleteDocumentationVersionError {
-        DeleteDocumentationVersionError::Unknown(err.description().to_string())
+        DeleteDocumentationVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDocumentationVersionError {
@@ -5640,7 +6051,8 @@ impl Error for DeleteDocumentationVersionError {
             DeleteDocumentationVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteDocumentationVersionError::Unknown(ref cause) => cause,
+            DeleteDocumentationVersionError::ParseError(ref cause) => cause,
+            DeleteDocumentationVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5659,47 +6071,61 @@ pub enum DeleteDomainNameError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDomainNameError {
-    pub fn from_body(body: &str) -> DeleteDomainNameError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDomainNameError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        DeleteDomainNameError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteDomainNameError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteDomainNameError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDomainNameError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDomainNameError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return DeleteDomainNameError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return DeleteDomainNameError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteDomainNameError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteDomainNameError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDomainNameError::Unknown(String::from(body)),
         }
+        return DeleteDomainNameError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDomainNameError {
     fn from(err: serde_json::error::Error) -> DeleteDomainNameError {
-        DeleteDomainNameError::Unknown(err.description().to_string())
+        DeleteDomainNameError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDomainNameError {
@@ -5731,7 +6157,8 @@ impl Error for DeleteDomainNameError {
             DeleteDomainNameError::Validation(ref cause) => cause,
             DeleteDomainNameError::Credentials(ref err) => err.description(),
             DeleteDomainNameError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteDomainNameError::Unknown(ref cause) => cause,
+            DeleteDomainNameError::ParseError(ref cause) => cause,
+            DeleteDomainNameError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5754,53 +6181,67 @@ pub enum DeleteGatewayResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteGatewayResponseError {
-    pub fn from_body(body: &str) -> DeleteGatewayResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteGatewayResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteGatewayResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteGatewayResponseError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteGatewayResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteGatewayResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteGatewayResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteGatewayResponseError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteGatewayResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteGatewayResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteGatewayResponseError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteGatewayResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteGatewayResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteGatewayResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteGatewayResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteGatewayResponseError::Unknown(String::from(body)),
         }
+        return DeleteGatewayResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteGatewayResponseError {
     fn from(err: serde_json::error::Error) -> DeleteGatewayResponseError {
-        DeleteGatewayResponseError::Unknown(err.description().to_string())
+        DeleteGatewayResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteGatewayResponseError {
@@ -5836,7 +6277,8 @@ impl Error for DeleteGatewayResponseError {
             DeleteGatewayResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteGatewayResponseError::Unknown(ref cause) => cause,
+            DeleteGatewayResponseError::ParseError(ref cause) => cause,
+            DeleteGatewayResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5857,50 +6299,64 @@ pub enum DeleteIntegrationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteIntegrationError {
-    pub fn from_body(body: &str) -> DeleteIntegrationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteIntegrationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConflictException" => {
-                        DeleteIntegrationError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteIntegrationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteIntegrationError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteIntegrationError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteIntegrationError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteIntegrationError::Unknown(String::from(body)),
+            match error_type {
+                "ConflictException" => {
+                    return DeleteIntegrationError::Conflict(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteIntegrationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteIntegrationError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteIntegrationError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteIntegrationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteIntegrationError::Unknown(String::from(body)),
         }
+        return DeleteIntegrationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteIntegrationError {
     fn from(err: serde_json::error::Error) -> DeleteIntegrationError {
-        DeleteIntegrationError::Unknown(err.description().to_string())
+        DeleteIntegrationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteIntegrationError {
@@ -5935,7 +6391,8 @@ impl Error for DeleteIntegrationError {
             DeleteIntegrationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteIntegrationError::Unknown(ref cause) => cause,
+            DeleteIntegrationError::ParseError(ref cause) => cause,
+            DeleteIntegrationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5958,53 +6415,69 @@ pub enum DeleteIntegrationResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteIntegrationResponseError {
-    pub fn from_body(body: &str) -> DeleteIntegrationResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteIntegrationResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteIntegrationResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteIntegrationResponseError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteIntegrationResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteIntegrationResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteIntegrationResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteIntegrationResponseError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteIntegrationResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteIntegrationResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteIntegrationResponseError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteIntegrationResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteIntegrationResponseError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return DeleteIntegrationResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteIntegrationResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteIntegrationResponseError::Unknown(String::from(body)),
         }
+        return DeleteIntegrationResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteIntegrationResponseError {
     fn from(err: serde_json::error::Error) -> DeleteIntegrationResponseError {
-        DeleteIntegrationResponseError::Unknown(err.description().to_string())
+        DeleteIntegrationResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteIntegrationResponseError {
@@ -6040,7 +6513,8 @@ impl Error for DeleteIntegrationResponseError {
             DeleteIntegrationResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteIntegrationResponseError::Unknown(ref cause) => cause,
+            DeleteIntegrationResponseError::ParseError(ref cause) => cause,
+            DeleteIntegrationResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6061,46 +6535,64 @@ pub enum DeleteMethodError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteMethodError {
-    pub fn from_body(body: &str) -> DeleteMethodError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteMethodError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConflictException" => DeleteMethodError::Conflict(String::from(error_message)),
-                    "NotFoundException" => DeleteMethodError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteMethodError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteMethodError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteMethodError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteMethodError::Unknown(String::from(body)),
+            match error_type {
+                "ConflictException" => {
+                    return DeleteMethodError::Conflict(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteMethodError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteMethodError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteMethodError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteMethodError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteMethodError::Unknown(String::from(body)),
         }
+        return DeleteMethodError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteMethodError {
     fn from(err: serde_json::error::Error) -> DeleteMethodError {
-        DeleteMethodError::Unknown(err.description().to_string())
+        DeleteMethodError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteMethodError {
@@ -6133,7 +6625,8 @@ impl Error for DeleteMethodError {
             DeleteMethodError::Validation(ref cause) => cause,
             DeleteMethodError::Credentials(ref err) => err.description(),
             DeleteMethodError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteMethodError::Unknown(ref cause) => cause,
+            DeleteMethodError::ParseError(ref cause) => cause,
+            DeleteMethodError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6156,53 +6649,67 @@ pub enum DeleteMethodResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteMethodResponseError {
-    pub fn from_body(body: &str) -> DeleteMethodResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteMethodResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteMethodResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteMethodResponseError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteMethodResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteMethodResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteMethodResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteMethodResponseError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteMethodResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteMethodResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteMethodResponseError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteMethodResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteMethodResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteMethodResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteMethodResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteMethodResponseError::Unknown(String::from(body)),
         }
+        return DeleteMethodResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteMethodResponseError {
     fn from(err: serde_json::error::Error) -> DeleteMethodResponseError {
-        DeleteMethodResponseError::Unknown(err.description().to_string())
+        DeleteMethodResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteMethodResponseError {
@@ -6238,7 +6745,8 @@ impl Error for DeleteMethodResponseError {
             DeleteMethodResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteMethodResponseError::Unknown(ref cause) => cause,
+            DeleteMethodResponseError::ParseError(ref cause) => cause,
+            DeleteMethodResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6261,49 +6769,67 @@ pub enum DeleteModelError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteModelError {
-    pub fn from_body(body: &str) -> DeleteModelError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteModelError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteModelError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => DeleteModelError::Conflict(String::from(error_message)),
-                    "NotFoundException" => DeleteModelError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteModelError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteModelError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteModelError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteModelError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteModelError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteModelError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteModelError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteModelError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteModelError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteModelError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteModelError::Unknown(String::from(body)),
         }
+        return DeleteModelError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteModelError {
     fn from(err: serde_json::error::Error) -> DeleteModelError {
-        DeleteModelError::Unknown(err.description().to_string())
+        DeleteModelError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteModelError {
@@ -6337,7 +6863,8 @@ impl Error for DeleteModelError {
             DeleteModelError::Validation(ref cause) => cause,
             DeleteModelError::Credentials(ref err) => err.description(),
             DeleteModelError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteModelError::Unknown(ref cause) => cause,
+            DeleteModelError::ParseError(ref cause) => cause,
+            DeleteModelError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6360,53 +6887,67 @@ pub enum DeleteRequestValidatorError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteRequestValidatorError {
-    pub fn from_body(body: &str) -> DeleteRequestValidatorError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteRequestValidatorError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteRequestValidatorError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteRequestValidatorError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteRequestValidatorError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteRequestValidatorError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteRequestValidatorError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteRequestValidatorError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteRequestValidatorError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteRequestValidatorError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteRequestValidatorError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteRequestValidatorError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteRequestValidatorError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteRequestValidatorError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteRequestValidatorError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteRequestValidatorError::Unknown(String::from(body)),
         }
+        return DeleteRequestValidatorError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteRequestValidatorError {
     fn from(err: serde_json::error::Error) -> DeleteRequestValidatorError {
-        DeleteRequestValidatorError::Unknown(err.description().to_string())
+        DeleteRequestValidatorError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteRequestValidatorError {
@@ -6442,7 +6983,8 @@ impl Error for DeleteRequestValidatorError {
             DeleteRequestValidatorError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteRequestValidatorError::Unknown(ref cause) => cause,
+            DeleteRequestValidatorError::ParseError(ref cause) => cause,
+            DeleteRequestValidatorError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6465,53 +7007,67 @@ pub enum DeleteResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteResourceError {
-    pub fn from_body(body: &str) -> DeleteResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteResourceError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteResourceError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteResourceError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteResourceError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteResourceError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteResourceError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteResourceError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteResourceError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteResourceError::Unknown(String::from(body)),
         }
+        return DeleteResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteResourceError {
     fn from(err: serde_json::error::Error) -> DeleteResourceError {
-        DeleteResourceError::Unknown(err.description().to_string())
+        DeleteResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteResourceError {
@@ -6545,7 +7101,8 @@ impl Error for DeleteResourceError {
             DeleteResourceError::Validation(ref cause) => cause,
             DeleteResourceError::Credentials(ref err) => err.description(),
             DeleteResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteResourceError::Unknown(ref cause) => cause,
+            DeleteResourceError::ParseError(ref cause) => cause,
+            DeleteResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6566,50 +7123,64 @@ pub enum DeleteRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteRestApiError {
-    pub fn from_body(body: &str) -> DeleteRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteRestApiError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteRestApiError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteRestApiError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteRestApiError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteRestApiError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteRestApiError::Unknown(String::from(body)),
         }
+        return DeleteRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteRestApiError {
     fn from(err: serde_json::error::Error) -> DeleteRestApiError {
-        DeleteRestApiError::Unknown(err.description().to_string())
+        DeleteRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteRestApiError {
@@ -6642,7 +7213,8 @@ impl Error for DeleteRestApiError {
             DeleteRestApiError::Validation(ref cause) => cause,
             DeleteRestApiError::Credentials(ref err) => err.description(),
             DeleteRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteRestApiError::Unknown(ref cause) => cause,
+            DeleteRestApiError::ParseError(ref cause) => cause,
+            DeleteRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6663,48 +7235,64 @@ pub enum DeleteStageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteStageError {
-    pub fn from_body(body: &str) -> DeleteStageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteStageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteStageError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => DeleteStageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteStageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteStageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteStageError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteStageError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteStageError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteStageError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteStageError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteStageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteStageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteStageError::Unknown(String::from(body)),
         }
+        return DeleteStageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteStageError {
     fn from(err: serde_json::error::Error) -> DeleteStageError {
-        DeleteStageError::Unknown(err.description().to_string())
+        DeleteStageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteStageError {
@@ -6737,7 +7325,8 @@ impl Error for DeleteStageError {
             DeleteStageError::Validation(ref cause) => cause,
             DeleteStageError::Credentials(ref err) => err.description(),
             DeleteStageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteStageError::Unknown(ref cause) => cause,
+            DeleteStageError::ParseError(ref cause) => cause,
+            DeleteStageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6758,50 +7347,64 @@ pub enum DeleteUsagePlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteUsagePlanError {
-    pub fn from_body(body: &str) -> DeleteUsagePlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteUsagePlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteUsagePlanError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteUsagePlanError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteUsagePlanError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteUsagePlanError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteUsagePlanError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteUsagePlanError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteUsagePlanError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteUsagePlanError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteUsagePlanError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteUsagePlanError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteUsagePlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteUsagePlanError::Unknown(String::from(body)),
         }
+        return DeleteUsagePlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteUsagePlanError {
     fn from(err: serde_json::error::Error) -> DeleteUsagePlanError {
-        DeleteUsagePlanError::Unknown(err.description().to_string())
+        DeleteUsagePlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteUsagePlanError {
@@ -6834,7 +7437,8 @@ impl Error for DeleteUsagePlanError {
             DeleteUsagePlanError::Validation(ref cause) => cause,
             DeleteUsagePlanError::Credentials(ref err) => err.description(),
             DeleteUsagePlanError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteUsagePlanError::Unknown(ref cause) => cause,
+            DeleteUsagePlanError::ParseError(ref cause) => cause,
+            DeleteUsagePlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6857,53 +7461,67 @@ pub enum DeleteUsagePlanKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteUsagePlanKeyError {
-    pub fn from_body(body: &str) -> DeleteUsagePlanKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteUsagePlanKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteUsagePlanKeyError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteUsagePlanKeyError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteUsagePlanKeyError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteUsagePlanKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteUsagePlanKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteUsagePlanKeyError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteUsagePlanKeyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteUsagePlanKeyError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteUsagePlanKeyError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteUsagePlanKeyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteUsagePlanKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteUsagePlanKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteUsagePlanKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteUsagePlanKeyError::Unknown(String::from(body)),
         }
+        return DeleteUsagePlanKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteUsagePlanKeyError {
     fn from(err: serde_json::error::Error) -> DeleteUsagePlanKeyError {
-        DeleteUsagePlanKeyError::Unknown(err.description().to_string())
+        DeleteUsagePlanKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteUsagePlanKeyError {
@@ -6939,7 +7557,8 @@ impl Error for DeleteUsagePlanKeyError {
             DeleteUsagePlanKeyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteUsagePlanKeyError::Unknown(ref cause) => cause,
+            DeleteUsagePlanKeyError::ParseError(ref cause) => cause,
+            DeleteUsagePlanKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6960,50 +7579,64 @@ pub enum DeleteVpcLinkError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteVpcLinkError {
-    pub fn from_body(body: &str) -> DeleteVpcLinkError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteVpcLinkError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteVpcLinkError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteVpcLinkError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteVpcLinkError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        DeleteVpcLinkError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteVpcLinkError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteVpcLinkError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteVpcLinkError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return DeleteVpcLinkError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteVpcLinkError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return DeleteVpcLinkError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteVpcLinkError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteVpcLinkError::Unknown(String::from(body)),
         }
+        return DeleteVpcLinkError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteVpcLinkError {
     fn from(err: serde_json::error::Error) -> DeleteVpcLinkError {
-        DeleteVpcLinkError::Unknown(err.description().to_string())
+        DeleteVpcLinkError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteVpcLinkError {
@@ -7036,7 +7669,8 @@ impl Error for DeleteVpcLinkError {
             DeleteVpcLinkError::Validation(ref cause) => cause,
             DeleteVpcLinkError::Credentials(ref err) => err.description(),
             DeleteVpcLinkError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteVpcLinkError::Unknown(ref cause) => cause,
+            DeleteVpcLinkError::ParseError(ref cause) => cause,
+            DeleteVpcLinkError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7057,50 +7691,68 @@ pub enum FlushStageAuthorizersCacheError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl FlushStageAuthorizersCacheError {
-    pub fn from_body(body: &str) -> FlushStageAuthorizersCacheError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> FlushStageAuthorizersCacheError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        FlushStageAuthorizersCacheError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        FlushStageAuthorizersCacheError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => FlushStageAuthorizersCacheError::TooManyRequests(
-                        String::from(error_message),
-                    ),
-                    "UnauthorizedException" => {
-                        FlushStageAuthorizersCacheError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        FlushStageAuthorizersCacheError::Validation(error_message.to_string())
-                    }
-                    _ => FlushStageAuthorizersCacheError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return FlushStageAuthorizersCacheError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return FlushStageAuthorizersCacheError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return FlushStageAuthorizersCacheError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return FlushStageAuthorizersCacheError::Unauthorized(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return FlushStageAuthorizersCacheError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => FlushStageAuthorizersCacheError::Unknown(String::from(body)),
         }
+        return FlushStageAuthorizersCacheError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for FlushStageAuthorizersCacheError {
     fn from(err: serde_json::error::Error) -> FlushStageAuthorizersCacheError {
-        FlushStageAuthorizersCacheError::Unknown(err.description().to_string())
+        FlushStageAuthorizersCacheError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for FlushStageAuthorizersCacheError {
@@ -7135,7 +7787,8 @@ impl Error for FlushStageAuthorizersCacheError {
             FlushStageAuthorizersCacheError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            FlushStageAuthorizersCacheError::Unknown(ref cause) => cause,
+            FlushStageAuthorizersCacheError::ParseError(ref cause) => cause,
+            FlushStageAuthorizersCacheError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7156,50 +7809,64 @@ pub enum FlushStageCacheError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl FlushStageCacheError {
-    pub fn from_body(body: &str) -> FlushStageCacheError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> FlushStageCacheError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        FlushStageCacheError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        FlushStageCacheError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        FlushStageCacheError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        FlushStageCacheError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        FlushStageCacheError::Validation(error_message.to_string())
-                    }
-                    _ => FlushStageCacheError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return FlushStageCacheError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return FlushStageCacheError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return FlushStageCacheError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return FlushStageCacheError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return FlushStageCacheError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => FlushStageCacheError::Unknown(String::from(body)),
         }
+        return FlushStageCacheError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for FlushStageCacheError {
     fn from(err: serde_json::error::Error) -> FlushStageCacheError {
-        FlushStageCacheError::Unknown(err.description().to_string())
+        FlushStageCacheError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for FlushStageCacheError {
@@ -7232,7 +7899,8 @@ impl Error for FlushStageCacheError {
             FlushStageCacheError::Validation(ref cause) => cause,
             FlushStageCacheError::Credentials(ref err) => err.description(),
             FlushStageCacheError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            FlushStageCacheError::Unknown(ref cause) => cause,
+            FlushStageCacheError::ParseError(ref cause) => cause,
+            FlushStageCacheError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7251,47 +7919,65 @@ pub enum GenerateClientCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GenerateClientCertificateError {
-    pub fn from_body(body: &str) -> GenerateClientCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GenerateClientCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "LimitExceededException" => {
-                        GenerateClientCertificateError::LimitExceeded(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GenerateClientCertificateError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GenerateClientCertificateError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GenerateClientCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => GenerateClientCertificateError::Unknown(String::from(body)),
+            match error_type {
+                "LimitExceededException" => {
+                    return GenerateClientCertificateError::LimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "TooManyRequestsException" => {
+                    return GenerateClientCertificateError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return GenerateClientCertificateError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GenerateClientCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GenerateClientCertificateError::Unknown(String::from(body)),
         }
+        return GenerateClientCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GenerateClientCertificateError {
     fn from(err: serde_json::error::Error) -> GenerateClientCertificateError {
-        GenerateClientCertificateError::Unknown(err.description().to_string())
+        GenerateClientCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GenerateClientCertificateError {
@@ -7325,7 +8011,8 @@ impl Error for GenerateClientCertificateError {
             GenerateClientCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GenerateClientCertificateError::Unknown(ref cause) => cause,
+            GenerateClientCertificateError::ParseError(ref cause) => cause,
+            GenerateClientCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7344,43 +8031,61 @@ pub enum GetAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAccountError {
-    pub fn from_body(body: &str) -> GetAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetAccountError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetAccountError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetAccountError::Validation(error_message.to_string()),
-                    _ => GetAccountError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetAccountError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetAccountError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetAccountError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAccountError::Unknown(String::from(body)),
         }
+        return GetAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAccountError {
     fn from(err: serde_json::error::Error) -> GetAccountError {
-        GetAccountError::Unknown(err.description().to_string())
+        GetAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAccountError {
@@ -7412,7 +8117,8 @@ impl Error for GetAccountError {
             GetAccountError::Validation(ref cause) => cause,
             GetAccountError::Credentials(ref err) => err.description(),
             GetAccountError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetAccountError::Unknown(ref cause) => cause,
+            GetAccountError::ParseError(ref cause) => cause,
+            GetAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7431,43 +8137,59 @@ pub enum GetApiKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApiKeyError {
-    pub fn from_body(body: &str) -> GetApiKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetApiKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetApiKeyError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetApiKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetApiKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetApiKeyError::Validation(error_message.to_string()),
-                    _ => GetApiKeyError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => return GetApiKeyError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetApiKeyError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetApiKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetApiKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApiKeyError::Unknown(String::from(body)),
         }
+        return GetApiKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApiKeyError {
     fn from(err: serde_json::error::Error) -> GetApiKeyError {
-        GetApiKeyError::Unknown(err.description().to_string())
+        GetApiKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApiKeyError {
@@ -7499,7 +8221,8 @@ impl Error for GetApiKeyError {
             GetApiKeyError::Validation(ref cause) => cause,
             GetApiKeyError::Credentials(ref err) => err.description(),
             GetApiKeyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetApiKeyError::Unknown(ref cause) => cause,
+            GetApiKeyError::ParseError(ref cause) => cause,
+            GetApiKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7518,45 +8241,61 @@ pub enum GetApiKeysError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApiKeysError {
-    pub fn from_body(body: &str) -> GetApiKeysError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetApiKeysError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetApiKeysError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetApiKeysError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetApiKeysError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetApiKeysError::Validation(error_message.to_string()),
-                    _ => GetApiKeysError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetApiKeysError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetApiKeysError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetApiKeysError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetApiKeysError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApiKeysError::Unknown(String::from(body)),
         }
+        return GetApiKeysError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApiKeysError {
     fn from(err: serde_json::error::Error) -> GetApiKeysError {
-        GetApiKeysError::Unknown(err.description().to_string())
+        GetApiKeysError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApiKeysError {
@@ -7588,7 +8327,8 @@ impl Error for GetApiKeysError {
             GetApiKeysError::Validation(ref cause) => cause,
             GetApiKeysError::Credentials(ref err) => err.description(),
             GetApiKeysError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetApiKeysError::Unknown(ref cause) => cause,
+            GetApiKeysError::ParseError(ref cause) => cause,
+            GetApiKeysError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7607,47 +8347,61 @@ pub enum GetAuthorizerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAuthorizerError {
-    pub fn from_body(body: &str) -> GetAuthorizerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetAuthorizerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetAuthorizerError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetAuthorizerError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetAuthorizerError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAuthorizerError::Validation(error_message.to_string())
-                    }
-                    _ => GetAuthorizerError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetAuthorizerError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetAuthorizerError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetAuthorizerError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAuthorizerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAuthorizerError::Unknown(String::from(body)),
         }
+        return GetAuthorizerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAuthorizerError {
     fn from(err: serde_json::error::Error) -> GetAuthorizerError {
-        GetAuthorizerError::Unknown(err.description().to_string())
+        GetAuthorizerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAuthorizerError {
@@ -7679,7 +8433,8 @@ impl Error for GetAuthorizerError {
             GetAuthorizerError::Validation(ref cause) => cause,
             GetAuthorizerError::Credentials(ref err) => err.description(),
             GetAuthorizerError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetAuthorizerError::Unknown(ref cause) => cause,
+            GetAuthorizerError::ParseError(ref cause) => cause,
+            GetAuthorizerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7700,50 +8455,64 @@ pub enum GetAuthorizersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAuthorizersError {
-    pub fn from_body(body: &str) -> GetAuthorizersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetAuthorizersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetAuthorizersError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetAuthorizersError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetAuthorizersError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetAuthorizersError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAuthorizersError::Validation(error_message.to_string())
-                    }
-                    _ => GetAuthorizersError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetAuthorizersError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetAuthorizersError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetAuthorizersError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetAuthorizersError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAuthorizersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAuthorizersError::Unknown(String::from(body)),
         }
+        return GetAuthorizersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAuthorizersError {
     fn from(err: serde_json::error::Error) -> GetAuthorizersError {
-        GetAuthorizersError::Unknown(err.description().to_string())
+        GetAuthorizersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAuthorizersError {
@@ -7776,7 +8545,8 @@ impl Error for GetAuthorizersError {
             GetAuthorizersError::Validation(ref cause) => cause,
             GetAuthorizersError::Credentials(ref err) => err.description(),
             GetAuthorizersError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetAuthorizersError::Unknown(ref cause) => cause,
+            GetAuthorizersError::ParseError(ref cause) => cause,
+            GetAuthorizersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7795,47 +8565,61 @@ pub enum GetBasePathMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetBasePathMappingError {
-    pub fn from_body(body: &str) -> GetBasePathMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetBasePathMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetBasePathMappingError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetBasePathMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetBasePathMappingError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetBasePathMappingError::Validation(error_message.to_string())
-                    }
-                    _ => GetBasePathMappingError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetBasePathMappingError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetBasePathMappingError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetBasePathMappingError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetBasePathMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetBasePathMappingError::Unknown(String::from(body)),
         }
+        return GetBasePathMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetBasePathMappingError {
     fn from(err: serde_json::error::Error) -> GetBasePathMappingError {
-        GetBasePathMappingError::Unknown(err.description().to_string())
+        GetBasePathMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetBasePathMappingError {
@@ -7869,7 +8653,8 @@ impl Error for GetBasePathMappingError {
             GetBasePathMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetBasePathMappingError::Unknown(ref cause) => cause,
+            GetBasePathMappingError::ParseError(ref cause) => cause,
+            GetBasePathMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7888,47 +8673,61 @@ pub enum GetBasePathMappingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetBasePathMappingsError {
-    pub fn from_body(body: &str) -> GetBasePathMappingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetBasePathMappingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetBasePathMappingsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetBasePathMappingsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetBasePathMappingsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetBasePathMappingsError::Validation(error_message.to_string())
-                    }
-                    _ => GetBasePathMappingsError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetBasePathMappingsError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetBasePathMappingsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetBasePathMappingsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetBasePathMappingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetBasePathMappingsError::Unknown(String::from(body)),
         }
+        return GetBasePathMappingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetBasePathMappingsError {
     fn from(err: serde_json::error::Error) -> GetBasePathMappingsError {
-        GetBasePathMappingsError::Unknown(err.description().to_string())
+        GetBasePathMappingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetBasePathMappingsError {
@@ -7962,7 +8761,8 @@ impl Error for GetBasePathMappingsError {
             GetBasePathMappingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetBasePathMappingsError::Unknown(ref cause) => cause,
+            GetBasePathMappingsError::ParseError(ref cause) => cause,
+            GetBasePathMappingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7981,47 +8781,61 @@ pub enum GetClientCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetClientCertificateError {
-    pub fn from_body(body: &str) -> GetClientCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetClientCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetClientCertificateError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetClientCertificateError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetClientCertificateError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetClientCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => GetClientCertificateError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetClientCertificateError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetClientCertificateError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetClientCertificateError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetClientCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetClientCertificateError::Unknown(String::from(body)),
         }
+        return GetClientCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetClientCertificateError {
     fn from(err: serde_json::error::Error) -> GetClientCertificateError {
-        GetClientCertificateError::Unknown(err.description().to_string())
+        GetClientCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetClientCertificateError {
@@ -8055,7 +8869,8 @@ impl Error for GetClientCertificateError {
             GetClientCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetClientCertificateError::Unknown(ref cause) => cause,
+            GetClientCertificateError::ParseError(ref cause) => cause,
+            GetClientCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8074,47 +8889,61 @@ pub enum GetClientCertificatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetClientCertificatesError {
-    pub fn from_body(body: &str) -> GetClientCertificatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetClientCertificatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetClientCertificatesError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetClientCertificatesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetClientCertificatesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetClientCertificatesError::Validation(error_message.to_string())
-                    }
-                    _ => GetClientCertificatesError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetClientCertificatesError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetClientCertificatesError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetClientCertificatesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetClientCertificatesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetClientCertificatesError::Unknown(String::from(body)),
         }
+        return GetClientCertificatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetClientCertificatesError {
     fn from(err: serde_json::error::Error) -> GetClientCertificatesError {
-        GetClientCertificatesError::Unknown(err.description().to_string())
+        GetClientCertificatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetClientCertificatesError {
@@ -8148,7 +8977,8 @@ impl Error for GetClientCertificatesError {
             GetClientCertificatesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetClientCertificatesError::Unknown(ref cause) => cause,
+            GetClientCertificatesError::ParseError(ref cause) => cause,
+            GetClientCertificatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8169,50 +8999,64 @@ pub enum GetDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentError {
-    pub fn from_body(body: &str) -> GetDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetDeploymentError::NotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDeploymentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDeploymentError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDeploymentError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetDeploymentError::NotFound(String::from(error_message))
                 }
+                "ServiceUnavailableException" => {
+                    return GetDeploymentError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetDeploymentError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDeploymentError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentError::Unknown(String::from(body)),
         }
+        return GetDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentError {
     fn from(err: serde_json::error::Error) -> GetDeploymentError {
-        GetDeploymentError::Unknown(err.description().to_string())
+        GetDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentError {
@@ -8245,7 +9089,8 @@ impl Error for GetDeploymentError {
             GetDeploymentError::Validation(ref cause) => cause,
             GetDeploymentError::Credentials(ref err) => err.description(),
             GetDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDeploymentError::Unknown(ref cause) => cause,
+            GetDeploymentError::ParseError(ref cause) => cause,
+            GetDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8266,50 +9111,64 @@ pub enum GetDeploymentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDeploymentsError {
-    pub fn from_body(body: &str) -> GetDeploymentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDeploymentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetDeploymentsError::BadRequest(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDeploymentsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDeploymentsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDeploymentsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDeploymentsError::Validation(error_message.to_string())
-                    }
-                    _ => GetDeploymentsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetDeploymentsError::BadRequest(String::from(error_message))
                 }
+                "ServiceUnavailableException" => {
+                    return GetDeploymentsError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetDeploymentsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDeploymentsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDeploymentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDeploymentsError::Unknown(String::from(body)),
         }
+        return GetDeploymentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDeploymentsError {
     fn from(err: serde_json::error::Error) -> GetDeploymentsError {
-        GetDeploymentsError::Unknown(err.description().to_string())
+        GetDeploymentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDeploymentsError {
@@ -8342,7 +9201,8 @@ impl Error for GetDeploymentsError {
             GetDeploymentsError::Validation(ref cause) => cause,
             GetDeploymentsError::Credentials(ref err) => err.description(),
             GetDeploymentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDeploymentsError::Unknown(ref cause) => cause,
+            GetDeploymentsError::ParseError(ref cause) => cause,
+            GetDeploymentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8361,47 +9221,61 @@ pub enum GetDocumentationPartError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentationPartError {
-    pub fn from_body(body: &str) -> GetDocumentationPartError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentationPartError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetDocumentationPartError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDocumentationPartError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDocumentationPartError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDocumentationPartError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentationPartError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetDocumentationPartError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetDocumentationPartError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDocumentationPartError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDocumentationPartError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentationPartError::Unknown(String::from(body)),
         }
+        return GetDocumentationPartError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentationPartError {
     fn from(err: serde_json::error::Error) -> GetDocumentationPartError {
-        GetDocumentationPartError::Unknown(err.description().to_string())
+        GetDocumentationPartError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentationPartError {
@@ -8435,7 +9309,8 @@ impl Error for GetDocumentationPartError {
             GetDocumentationPartError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDocumentationPartError::Unknown(ref cause) => cause,
+            GetDocumentationPartError::ParseError(ref cause) => cause,
+            GetDocumentationPartError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8456,50 +9331,64 @@ pub enum GetDocumentationPartsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentationPartsError {
-    pub fn from_body(body: &str) -> GetDocumentationPartsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentationPartsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetDocumentationPartsError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetDocumentationPartsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDocumentationPartsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDocumentationPartsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDocumentationPartsError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentationPartsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetDocumentationPartsError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetDocumentationPartsError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetDocumentationPartsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDocumentationPartsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDocumentationPartsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentationPartsError::Unknown(String::from(body)),
         }
+        return GetDocumentationPartsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentationPartsError {
     fn from(err: serde_json::error::Error) -> GetDocumentationPartsError {
-        GetDocumentationPartsError::Unknown(err.description().to_string())
+        GetDocumentationPartsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentationPartsError {
@@ -8534,7 +9423,8 @@ impl Error for GetDocumentationPartsError {
             GetDocumentationPartsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDocumentationPartsError::Unknown(ref cause) => cause,
+            GetDocumentationPartsError::ParseError(ref cause) => cause,
+            GetDocumentationPartsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8553,47 +9443,63 @@ pub enum GetDocumentationVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentationVersionError {
-    pub fn from_body(body: &str) -> GetDocumentationVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentationVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetDocumentationVersionError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDocumentationVersionError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDocumentationVersionError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDocumentationVersionError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentationVersionError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetDocumentationVersionError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetDocumentationVersionError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return GetDocumentationVersionError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDocumentationVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentationVersionError::Unknown(String::from(body)),
         }
+        return GetDocumentationVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentationVersionError {
     fn from(err: serde_json::error::Error) -> GetDocumentationVersionError {
-        GetDocumentationVersionError::Unknown(err.description().to_string())
+        GetDocumentationVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentationVersionError {
@@ -8627,7 +9533,8 @@ impl Error for GetDocumentationVersionError {
             GetDocumentationVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDocumentationVersionError::Unknown(ref cause) => cause,
+            GetDocumentationVersionError::ParseError(ref cause) => cause,
+            GetDocumentationVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8648,50 +9555,66 @@ pub enum GetDocumentationVersionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentationVersionsError {
-    pub fn from_body(body: &str) -> GetDocumentationVersionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentationVersionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetDocumentationVersionsError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetDocumentationVersionsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDocumentationVersionsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDocumentationVersionsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDocumentationVersionsError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentationVersionsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetDocumentationVersionsError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetDocumentationVersionsError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetDocumentationVersionsError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return GetDocumentationVersionsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDocumentationVersionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentationVersionsError::Unknown(String::from(body)),
         }
+        return GetDocumentationVersionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentationVersionsError {
     fn from(err: serde_json::error::Error) -> GetDocumentationVersionsError {
-        GetDocumentationVersionsError::Unknown(err.description().to_string())
+        GetDocumentationVersionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentationVersionsError {
@@ -8726,7 +9649,8 @@ impl Error for GetDocumentationVersionsError {
             GetDocumentationVersionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDocumentationVersionsError::Unknown(ref cause) => cause,
+            GetDocumentationVersionsError::ParseError(ref cause) => cause,
+            GetDocumentationVersionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8747,50 +9671,64 @@ pub enum GetDomainNameError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDomainNameError {
-    pub fn from_body(body: &str) -> GetDomainNameError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDomainNameError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetDomainNameError::NotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDomainNameError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDomainNameError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDomainNameError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDomainNameError::Validation(error_message.to_string())
-                    }
-                    _ => GetDomainNameError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetDomainNameError::NotFound(String::from(error_message))
                 }
+                "ServiceUnavailableException" => {
+                    return GetDomainNameError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetDomainNameError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDomainNameError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDomainNameError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDomainNameError::Unknown(String::from(body)),
         }
+        return GetDomainNameError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDomainNameError {
     fn from(err: serde_json::error::Error) -> GetDomainNameError {
-        GetDomainNameError::Unknown(err.description().to_string())
+        GetDomainNameError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDomainNameError {
@@ -8823,7 +9761,8 @@ impl Error for GetDomainNameError {
             GetDomainNameError::Validation(ref cause) => cause,
             GetDomainNameError::Credentials(ref err) => err.description(),
             GetDomainNameError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDomainNameError::Unknown(ref cause) => cause,
+            GetDomainNameError::ParseError(ref cause) => cause,
+            GetDomainNameError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8842,47 +9781,61 @@ pub enum GetDomainNamesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDomainNamesError {
-    pub fn from_body(body: &str) -> GetDomainNamesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDomainNamesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetDomainNamesError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetDomainNamesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetDomainNamesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDomainNamesError::Validation(error_message.to_string())
-                    }
-                    _ => GetDomainNamesError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetDomainNamesError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetDomainNamesError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetDomainNamesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDomainNamesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDomainNamesError::Unknown(String::from(body)),
         }
+        return GetDomainNamesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDomainNamesError {
     fn from(err: serde_json::error::Error) -> GetDomainNamesError {
-        GetDomainNamesError::Unknown(err.description().to_string())
+        GetDomainNamesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDomainNamesError {
@@ -8914,7 +9867,8 @@ impl Error for GetDomainNamesError {
             GetDomainNamesError::Validation(ref cause) => cause,
             GetDomainNamesError::Credentials(ref err) => err.description(),
             GetDomainNamesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDomainNamesError::Unknown(ref cause) => cause,
+            GetDomainNamesError::ParseError(ref cause) => cause,
+            GetDomainNamesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -8937,47 +9891,63 @@ pub enum GetExportError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetExportError {
-    pub fn from_body(body: &str) -> GetExportError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetExportError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetExportError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => GetExportError::Conflict(String::from(error_message)),
-                    "NotFoundException" => GetExportError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetExportError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetExportError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetExportError::Validation(error_message.to_string()),
-                    _ => GetExportError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetExportError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => return GetExportError::Conflict(String::from(error_message)),
+                "NotFoundException" => return GetExportError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetExportError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetExportError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetExportError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetExportError::Unknown(String::from(body)),
         }
+        return GetExportError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetExportError {
     fn from(err: serde_json::error::Error) -> GetExportError {
-        GetExportError::Unknown(err.description().to_string())
+        GetExportError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetExportError {
@@ -9011,7 +9981,8 @@ impl Error for GetExportError {
             GetExportError::Validation(ref cause) => cause,
             GetExportError::Credentials(ref err) => err.description(),
             GetExportError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetExportError::Unknown(ref cause) => cause,
+            GetExportError::ParseError(ref cause) => cause,
+            GetExportError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9030,47 +10001,61 @@ pub enum GetGatewayResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetGatewayResponseError {
-    pub fn from_body(body: &str) -> GetGatewayResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetGatewayResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetGatewayResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetGatewayResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetGatewayResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetGatewayResponseError::Validation(error_message.to_string())
-                    }
-                    _ => GetGatewayResponseError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetGatewayResponseError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetGatewayResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetGatewayResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetGatewayResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetGatewayResponseError::Unknown(String::from(body)),
         }
+        return GetGatewayResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetGatewayResponseError {
     fn from(err: serde_json::error::Error) -> GetGatewayResponseError {
-        GetGatewayResponseError::Unknown(err.description().to_string())
+        GetGatewayResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetGatewayResponseError {
@@ -9104,7 +10089,8 @@ impl Error for GetGatewayResponseError {
             GetGatewayResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetGatewayResponseError::Unknown(ref cause) => cause,
+            GetGatewayResponseError::ParseError(ref cause) => cause,
+            GetGatewayResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9125,50 +10111,64 @@ pub enum GetGatewayResponsesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetGatewayResponsesError {
-    pub fn from_body(body: &str) -> GetGatewayResponsesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetGatewayResponsesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetGatewayResponsesError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetGatewayResponsesError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetGatewayResponsesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetGatewayResponsesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetGatewayResponsesError::Validation(error_message.to_string())
-                    }
-                    _ => GetGatewayResponsesError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetGatewayResponsesError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetGatewayResponsesError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetGatewayResponsesError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetGatewayResponsesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetGatewayResponsesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetGatewayResponsesError::Unknown(String::from(body)),
         }
+        return GetGatewayResponsesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetGatewayResponsesError {
     fn from(err: serde_json::error::Error) -> GetGatewayResponsesError {
-        GetGatewayResponsesError::Unknown(err.description().to_string())
+        GetGatewayResponsesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetGatewayResponsesError {
@@ -9203,7 +10203,8 @@ impl Error for GetGatewayResponsesError {
             GetGatewayResponsesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetGatewayResponsesError::Unknown(ref cause) => cause,
+            GetGatewayResponsesError::ParseError(ref cause) => cause,
+            GetGatewayResponsesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9222,47 +10223,61 @@ pub enum GetIntegrationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetIntegrationError {
-    pub fn from_body(body: &str) -> GetIntegrationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetIntegrationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetIntegrationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetIntegrationError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetIntegrationError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetIntegrationError::Validation(error_message.to_string())
-                    }
-                    _ => GetIntegrationError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetIntegrationError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetIntegrationError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetIntegrationError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetIntegrationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetIntegrationError::Unknown(String::from(body)),
         }
+        return GetIntegrationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetIntegrationError {
     fn from(err: serde_json::error::Error) -> GetIntegrationError {
-        GetIntegrationError::Unknown(err.description().to_string())
+        GetIntegrationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetIntegrationError {
@@ -9294,7 +10309,8 @@ impl Error for GetIntegrationError {
             GetIntegrationError::Validation(ref cause) => cause,
             GetIntegrationError::Credentials(ref err) => err.description(),
             GetIntegrationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetIntegrationError::Unknown(ref cause) => cause,
+            GetIntegrationError::ParseError(ref cause) => cause,
+            GetIntegrationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9313,47 +10329,61 @@ pub enum GetIntegrationResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetIntegrationResponseError {
-    pub fn from_body(body: &str) -> GetIntegrationResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetIntegrationResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetIntegrationResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetIntegrationResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetIntegrationResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetIntegrationResponseError::Validation(error_message.to_string())
-                    }
-                    _ => GetIntegrationResponseError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetIntegrationResponseError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetIntegrationResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetIntegrationResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetIntegrationResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetIntegrationResponseError::Unknown(String::from(body)),
         }
+        return GetIntegrationResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetIntegrationResponseError {
     fn from(err: serde_json::error::Error) -> GetIntegrationResponseError {
-        GetIntegrationResponseError::Unknown(err.description().to_string())
+        GetIntegrationResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetIntegrationResponseError {
@@ -9387,7 +10417,8 @@ impl Error for GetIntegrationResponseError {
             GetIntegrationResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetIntegrationResponseError::Unknown(ref cause) => cause,
+            GetIntegrationResponseError::ParseError(ref cause) => cause,
+            GetIntegrationResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9406,43 +10437,59 @@ pub enum GetMethodError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetMethodError {
-    pub fn from_body(body: &str) -> GetMethodError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetMethodError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetMethodError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetMethodError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetMethodError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetMethodError::Validation(error_message.to_string()),
-                    _ => GetMethodError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => return GetMethodError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetMethodError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetMethodError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetMethodError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetMethodError::Unknown(String::from(body)),
         }
+        return GetMethodError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetMethodError {
     fn from(err: serde_json::error::Error) -> GetMethodError {
-        GetMethodError::Unknown(err.description().to_string())
+        GetMethodError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetMethodError {
@@ -9474,7 +10521,8 @@ impl Error for GetMethodError {
             GetMethodError::Validation(ref cause) => cause,
             GetMethodError::Credentials(ref err) => err.description(),
             GetMethodError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetMethodError::Unknown(ref cause) => cause,
+            GetMethodError::ParseError(ref cause) => cause,
+            GetMethodError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9493,47 +10541,61 @@ pub enum GetMethodResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetMethodResponseError {
-    pub fn from_body(body: &str) -> GetMethodResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetMethodResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetMethodResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetMethodResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetMethodResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetMethodResponseError::Validation(error_message.to_string())
-                    }
-                    _ => GetMethodResponseError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetMethodResponseError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetMethodResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetMethodResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetMethodResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetMethodResponseError::Unknown(String::from(body)),
         }
+        return GetMethodResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetMethodResponseError {
     fn from(err: serde_json::error::Error) -> GetMethodResponseError {
-        GetMethodResponseError::Unknown(err.description().to_string())
+        GetMethodResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetMethodResponseError {
@@ -9567,7 +10629,8 @@ impl Error for GetMethodResponseError {
             GetMethodResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetMethodResponseError::Unknown(ref cause) => cause,
+            GetMethodResponseError::ParseError(ref cause) => cause,
+            GetMethodResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9586,43 +10649,59 @@ pub enum GetModelError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetModelError {
-    pub fn from_body(body: &str) -> GetModelError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetModelError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetModelError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetModelError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetModelError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetModelError::Validation(error_message.to_string()),
-                    _ => GetModelError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => return GetModelError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetModelError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetModelError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetModelError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetModelError::Unknown(String::from(body)),
         }
+        return GetModelError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetModelError {
     fn from(err: serde_json::error::Error) -> GetModelError {
-        GetModelError::Unknown(err.description().to_string())
+        GetModelError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetModelError {
@@ -9654,7 +10733,8 @@ impl Error for GetModelError {
             GetModelError::Validation(ref cause) => cause,
             GetModelError::Credentials(ref err) => err.description(),
             GetModelError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetModelError::Unknown(ref cause) => cause,
+            GetModelError::ParseError(ref cause) => cause,
+            GetModelError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9675,50 +10755,64 @@ pub enum GetModelTemplateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetModelTemplateError {
-    pub fn from_body(body: &str) -> GetModelTemplateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetModelTemplateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetModelTemplateError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetModelTemplateError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetModelTemplateError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetModelTemplateError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetModelTemplateError::Validation(error_message.to_string())
-                    }
-                    _ => GetModelTemplateError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetModelTemplateError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetModelTemplateError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetModelTemplateError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetModelTemplateError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetModelTemplateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetModelTemplateError::Unknown(String::from(body)),
         }
+        return GetModelTemplateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetModelTemplateError {
     fn from(err: serde_json::error::Error) -> GetModelTemplateError {
-        GetModelTemplateError::Unknown(err.description().to_string())
+        GetModelTemplateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetModelTemplateError {
@@ -9751,7 +10845,8 @@ impl Error for GetModelTemplateError {
             GetModelTemplateError::Validation(ref cause) => cause,
             GetModelTemplateError::Credentials(ref err) => err.description(),
             GetModelTemplateError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetModelTemplateError::Unknown(ref cause) => cause,
+            GetModelTemplateError::ParseError(ref cause) => cause,
+            GetModelTemplateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9772,46 +10867,62 @@ pub enum GetModelsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetModelsError {
-    pub fn from_body(body: &str) -> GetModelsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetModelsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetModelsError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => GetModelsError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetModelsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetModelsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetModelsError::Validation(error_message.to_string()),
-                    _ => GetModelsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetModelsError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => return GetModelsError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetModelsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetModelsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetModelsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetModelsError::Unknown(String::from(body)),
         }
+        return GetModelsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetModelsError {
     fn from(err: serde_json::error::Error) -> GetModelsError {
-        GetModelsError::Unknown(err.description().to_string())
+        GetModelsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetModelsError {
@@ -9844,7 +10955,8 @@ impl Error for GetModelsError {
             GetModelsError::Validation(ref cause) => cause,
             GetModelsError::Credentials(ref err) => err.description(),
             GetModelsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetModelsError::Unknown(ref cause) => cause,
+            GetModelsError::ParseError(ref cause) => cause,
+            GetModelsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9863,47 +10975,61 @@ pub enum GetRequestValidatorError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRequestValidatorError {
-    pub fn from_body(body: &str) -> GetRequestValidatorError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetRequestValidatorError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => {
-                        GetRequestValidatorError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetRequestValidatorError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetRequestValidatorError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetRequestValidatorError::Validation(error_message.to_string())
-                    }
-                    _ => GetRequestValidatorError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetRequestValidatorError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetRequestValidatorError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetRequestValidatorError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRequestValidatorError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRequestValidatorError::Unknown(String::from(body)),
         }
+        return GetRequestValidatorError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRequestValidatorError {
     fn from(err: serde_json::error::Error) -> GetRequestValidatorError {
-        GetRequestValidatorError::Unknown(err.description().to_string())
+        GetRequestValidatorError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRequestValidatorError {
@@ -9937,7 +11063,8 @@ impl Error for GetRequestValidatorError {
             GetRequestValidatorError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetRequestValidatorError::Unknown(ref cause) => cause,
+            GetRequestValidatorError::ParseError(ref cause) => cause,
+            GetRequestValidatorError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -9958,50 +11085,64 @@ pub enum GetRequestValidatorsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRequestValidatorsError {
-    pub fn from_body(body: &str) -> GetRequestValidatorsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetRequestValidatorsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetRequestValidatorsError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetRequestValidatorsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetRequestValidatorsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetRequestValidatorsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetRequestValidatorsError::Validation(error_message.to_string())
-                    }
-                    _ => GetRequestValidatorsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetRequestValidatorsError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetRequestValidatorsError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetRequestValidatorsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetRequestValidatorsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRequestValidatorsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRequestValidatorsError::Unknown(String::from(body)),
         }
+        return GetRequestValidatorsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRequestValidatorsError {
     fn from(err: serde_json::error::Error) -> GetRequestValidatorsError {
-        GetRequestValidatorsError::Unknown(err.description().to_string())
+        GetRequestValidatorsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRequestValidatorsError {
@@ -10036,7 +11177,8 @@ impl Error for GetRequestValidatorsError {
             GetRequestValidatorsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetRequestValidatorsError::Unknown(ref cause) => cause,
+            GetRequestValidatorsError::ParseError(ref cause) => cause,
+            GetRequestValidatorsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10055,45 +11197,61 @@ pub enum GetResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetResourceError {
-    pub fn from_body(body: &str) -> GetResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetResourceError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetResourceError::Validation(error_message.to_string())
-                    }
-                    _ => GetResourceError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetResourceError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetResourceError::Unknown(String::from(body)),
         }
+        return GetResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetResourceError {
     fn from(err: serde_json::error::Error) -> GetResourceError {
-        GetResourceError::Unknown(err.description().to_string())
+        GetResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetResourceError {
@@ -10125,7 +11283,8 @@ impl Error for GetResourceError {
             GetResourceError::Validation(ref cause) => cause,
             GetResourceError::Credentials(ref err) => err.description(),
             GetResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetResourceError::Unknown(ref cause) => cause,
+            GetResourceError::ParseError(ref cause) => cause,
+            GetResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10146,48 +11305,64 @@ pub enum GetResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetResourcesError {
-    pub fn from_body(body: &str) -> GetResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetResourcesError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => GetResourcesError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetResourcesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetResourcesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => GetResourcesError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetResourcesError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetResourcesError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetResourcesError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetResourcesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetResourcesError::Unknown(String::from(body)),
         }
+        return GetResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetResourcesError {
     fn from(err: serde_json::error::Error) -> GetResourcesError {
-        GetResourcesError::Unknown(err.description().to_string())
+        GetResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetResourcesError {
@@ -10220,7 +11395,8 @@ impl Error for GetResourcesError {
             GetResourcesError::Validation(ref cause) => cause,
             GetResourcesError::Credentials(ref err) => err.description(),
             GetResourcesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetResourcesError::Unknown(ref cause) => cause,
+            GetResourcesError::ParseError(ref cause) => cause,
+            GetResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10239,43 +11415,61 @@ pub enum GetRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRestApiError {
-    pub fn from_body(body: &str) -> GetRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetRestApiError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetRestApiError::Validation(error_message.to_string()),
-                    _ => GetRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetRestApiError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRestApiError::Unknown(String::from(body)),
         }
+        return GetRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRestApiError {
     fn from(err: serde_json::error::Error) -> GetRestApiError {
-        GetRestApiError::Unknown(err.description().to_string())
+        GetRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRestApiError {
@@ -10307,7 +11501,8 @@ impl Error for GetRestApiError {
             GetRestApiError::Validation(ref cause) => cause,
             GetRestApiError::Credentials(ref err) => err.description(),
             GetRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetRestApiError::Unknown(ref cause) => cause,
+            GetRestApiError::ParseError(ref cause) => cause,
+            GetRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10326,47 +11521,61 @@ pub enum GetRestApisError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRestApisError {
-    pub fn from_body(body: &str) -> GetRestApisError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetRestApisError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetRestApisError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetRestApisError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetRestApisError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetRestApisError::Validation(error_message.to_string())
-                    }
-                    _ => GetRestApisError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetRestApisError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetRestApisError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetRestApisError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRestApisError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRestApisError::Unknown(String::from(body)),
         }
+        return GetRestApisError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRestApisError {
     fn from(err: serde_json::error::Error) -> GetRestApisError {
-        GetRestApisError::Unknown(err.description().to_string())
+        GetRestApisError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRestApisError {
@@ -10398,7 +11607,8 @@ impl Error for GetRestApisError {
             GetRestApisError::Validation(ref cause) => cause,
             GetRestApisError::Credentials(ref err) => err.description(),
             GetRestApisError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetRestApisError::Unknown(ref cause) => cause,
+            GetRestApisError::ParseError(ref cause) => cause,
+            GetRestApisError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10421,45 +11631,61 @@ pub enum GetSdkError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetSdkError {
-    pub fn from_body(body: &str) -> GetSdkError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetSdkError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => GetSdkError::BadRequest(String::from(error_message)),
-                    "ConflictException" => GetSdkError::Conflict(String::from(error_message)),
-                    "NotFoundException" => GetSdkError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetSdkError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetSdkError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetSdkError::Validation(error_message.to_string()),
-                    _ => GetSdkError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetSdkError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => return GetSdkError::Conflict(String::from(error_message)),
+                "NotFoundException" => return GetSdkError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetSdkError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetSdkError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => return GetSdkError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => GetSdkError::Unknown(String::from(body)),
         }
+        return GetSdkError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetSdkError {
     fn from(err: serde_json::error::Error) -> GetSdkError {
-        GetSdkError::Unknown(err.description().to_string())
+        GetSdkError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetSdkError {
@@ -10493,7 +11719,8 @@ impl Error for GetSdkError {
             GetSdkError::Validation(ref cause) => cause,
             GetSdkError::Credentials(ref err) => err.description(),
             GetSdkError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetSdkError::Unknown(ref cause) => cause,
+            GetSdkError::ParseError(ref cause) => cause,
+            GetSdkError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10512,43 +11739,61 @@ pub enum GetSdkTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetSdkTypeError {
-    pub fn from_body(body: &str) -> GetSdkTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetSdkTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetSdkTypeError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetSdkTypeError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetSdkTypeError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetSdkTypeError::Validation(error_message.to_string()),
-                    _ => GetSdkTypeError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetSdkTypeError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetSdkTypeError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetSdkTypeError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetSdkTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetSdkTypeError::Unknown(String::from(body)),
         }
+        return GetSdkTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetSdkTypeError {
     fn from(err: serde_json::error::Error) -> GetSdkTypeError {
-        GetSdkTypeError::Unknown(err.description().to_string())
+        GetSdkTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetSdkTypeError {
@@ -10580,7 +11825,8 @@ impl Error for GetSdkTypeError {
             GetSdkTypeError::Validation(ref cause) => cause,
             GetSdkTypeError::Credentials(ref err) => err.description(),
             GetSdkTypeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetSdkTypeError::Unknown(ref cause) => cause,
+            GetSdkTypeError::ParseError(ref cause) => cause,
+            GetSdkTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10597,44 +11843,58 @@ pub enum GetSdkTypesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetSdkTypesError {
-    pub fn from_body(body: &str) -> GetSdkTypesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetSdkTypesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "TooManyRequestsException" => {
-                        GetSdkTypesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetSdkTypesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetSdkTypesError::Validation(error_message.to_string())
-                    }
-                    _ => GetSdkTypesError::Unknown(String::from(body)),
+            match error_type {
+                "TooManyRequestsException" => {
+                    return GetSdkTypesError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetSdkTypesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetSdkTypesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetSdkTypesError::Unknown(String::from(body)),
         }
+        return GetSdkTypesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetSdkTypesError {
     fn from(err: serde_json::error::Error) -> GetSdkTypesError {
-        GetSdkTypesError::Unknown(err.description().to_string())
+        GetSdkTypesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetSdkTypesError {
@@ -10665,7 +11925,8 @@ impl Error for GetSdkTypesError {
             GetSdkTypesError::Validation(ref cause) => cause,
             GetSdkTypesError::Credentials(ref err) => err.description(),
             GetSdkTypesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetSdkTypesError::Unknown(ref cause) => cause,
+            GetSdkTypesError::ParseError(ref cause) => cause,
+            GetSdkTypesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10684,43 +11945,59 @@ pub enum GetStageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetStageError {
-    pub fn from_body(body: &str) -> GetStageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetStageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetStageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetStageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetStageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetStageError::Validation(error_message.to_string()),
-                    _ => GetStageError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => return GetStageError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetStageError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetStageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetStageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetStageError::Unknown(String::from(body)),
         }
+        return GetStageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetStageError {
     fn from(err: serde_json::error::Error) -> GetStageError {
-        GetStageError::Unknown(err.description().to_string())
+        GetStageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetStageError {
@@ -10752,7 +12029,8 @@ impl Error for GetStageError {
             GetStageError::Validation(ref cause) => cause,
             GetStageError::Credentials(ref err) => err.description(),
             GetStageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetStageError::Unknown(ref cause) => cause,
+            GetStageError::ParseError(ref cause) => cause,
+            GetStageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10771,43 +12049,59 @@ pub enum GetStagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetStagesError {
-    pub fn from_body(body: &str) -> GetStagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetStagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetStagesError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetStagesError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetStagesError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetStagesError::Validation(error_message.to_string()),
-                    _ => GetStagesError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => return GetStagesError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetStagesError::TooManyRequests(String::from(error_message))
                 }
+                "UnauthorizedException" => {
+                    return GetStagesError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetStagesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetStagesError::Unknown(String::from(body)),
         }
+        return GetStagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetStagesError {
     fn from(err: serde_json::error::Error) -> GetStagesError {
-        GetStagesError::Unknown(err.description().to_string())
+        GetStagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetStagesError {
@@ -10839,7 +12133,8 @@ impl Error for GetStagesError {
             GetStagesError::Validation(ref cause) => cause,
             GetStagesError::Credentials(ref err) => err.description(),
             GetStagesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetStagesError::Unknown(ref cause) => cause,
+            GetStagesError::ParseError(ref cause) => cause,
+            GetStagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10862,47 +12157,63 @@ pub enum GetTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetTagsError {
-    pub fn from_body(body: &str) -> GetTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => GetTagsError::BadRequest(String::from(error_message)),
-                    "LimitExceededException" => {
-                        GetTagsError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => GetTagsError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetTagsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetTagsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetTagsError::Validation(error_message.to_string()),
-                    _ => GetTagsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetTagsError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return GetTagsError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => return GetTagsError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetTagsError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetTagsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => return GetTagsError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => GetTagsError::Unknown(String::from(body)),
         }
+        return GetTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetTagsError {
     fn from(err: serde_json::error::Error) -> GetTagsError {
-        GetTagsError::Unknown(err.description().to_string())
+        GetTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetTagsError {
@@ -10936,7 +12247,8 @@ impl Error for GetTagsError {
             GetTagsError::Validation(ref cause) => cause,
             GetTagsError::Credentials(ref err) => err.description(),
             GetTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetTagsError::Unknown(ref cause) => cause,
+            GetTagsError::ParseError(ref cause) => cause,
+            GetTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -10957,44 +12269,62 @@ pub enum GetUsageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetUsageError {
-    pub fn from_body(body: &str) -> GetUsageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetUsageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => GetUsageError::BadRequest(String::from(error_message)),
-                    "NotFoundException" => GetUsageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetUsageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetUsageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetUsageError::Validation(error_message.to_string()),
-                    _ => GetUsageError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetUsageError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => return GetUsageError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetUsageError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetUsageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetUsageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetUsageError::Unknown(String::from(body)),
         }
+        return GetUsageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetUsageError {
     fn from(err: serde_json::error::Error) -> GetUsageError {
-        GetUsageError::Unknown(err.description().to_string())
+        GetUsageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetUsageError {
@@ -11027,7 +12357,8 @@ impl Error for GetUsageError {
             GetUsageError::Validation(ref cause) => cause,
             GetUsageError::Credentials(ref err) => err.description(),
             GetUsageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetUsageError::Unknown(ref cause) => cause,
+            GetUsageError::ParseError(ref cause) => cause,
+            GetUsageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11048,48 +12379,64 @@ pub enum GetUsagePlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetUsagePlanError {
-    pub fn from_body(body: &str) -> GetUsagePlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetUsagePlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetUsagePlanError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => GetUsagePlanError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetUsagePlanError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetUsagePlanError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetUsagePlanError::Validation(error_message.to_string())
-                    }
-                    _ => GetUsagePlanError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetUsagePlanError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetUsagePlanError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetUsagePlanError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetUsagePlanError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetUsagePlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetUsagePlanError::Unknown(String::from(body)),
         }
+        return GetUsagePlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetUsagePlanError {
     fn from(err: serde_json::error::Error) -> GetUsagePlanError {
-        GetUsagePlanError::Unknown(err.description().to_string())
+        GetUsagePlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetUsagePlanError {
@@ -11122,7 +12469,8 @@ impl Error for GetUsagePlanError {
             GetUsagePlanError::Validation(ref cause) => cause,
             GetUsagePlanError::Credentials(ref err) => err.description(),
             GetUsagePlanError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetUsagePlanError::Unknown(ref cause) => cause,
+            GetUsagePlanError::ParseError(ref cause) => cause,
+            GetUsagePlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11143,50 +12491,64 @@ pub enum GetUsagePlanKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetUsagePlanKeyError {
-    pub fn from_body(body: &str) -> GetUsagePlanKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetUsagePlanKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetUsagePlanKeyError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetUsagePlanKeyError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetUsagePlanKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetUsagePlanKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetUsagePlanKeyError::Validation(error_message.to_string())
-                    }
-                    _ => GetUsagePlanKeyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetUsagePlanKeyError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetUsagePlanKeyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetUsagePlanKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetUsagePlanKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetUsagePlanKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetUsagePlanKeyError::Unknown(String::from(body)),
         }
+        return GetUsagePlanKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetUsagePlanKeyError {
     fn from(err: serde_json::error::Error) -> GetUsagePlanKeyError {
-        GetUsagePlanKeyError::Unknown(err.description().to_string())
+        GetUsagePlanKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetUsagePlanKeyError {
@@ -11219,7 +12581,8 @@ impl Error for GetUsagePlanKeyError {
             GetUsagePlanKeyError::Validation(ref cause) => cause,
             GetUsagePlanKeyError::Credentials(ref err) => err.description(),
             GetUsagePlanKeyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetUsagePlanKeyError::Unknown(ref cause) => cause,
+            GetUsagePlanKeyError::ParseError(ref cause) => cause,
+            GetUsagePlanKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11240,50 +12603,64 @@ pub enum GetUsagePlanKeysError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetUsagePlanKeysError {
-    pub fn from_body(body: &str) -> GetUsagePlanKeysError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetUsagePlanKeysError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetUsagePlanKeysError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetUsagePlanKeysError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetUsagePlanKeysError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetUsagePlanKeysError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetUsagePlanKeysError::Validation(error_message.to_string())
-                    }
-                    _ => GetUsagePlanKeysError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetUsagePlanKeysError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return GetUsagePlanKeysError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetUsagePlanKeysError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetUsagePlanKeysError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetUsagePlanKeysError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetUsagePlanKeysError::Unknown(String::from(body)),
         }
+        return GetUsagePlanKeysError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetUsagePlanKeysError {
     fn from(err: serde_json::error::Error) -> GetUsagePlanKeysError {
-        GetUsagePlanKeysError::Unknown(err.description().to_string())
+        GetUsagePlanKeysError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetUsagePlanKeysError {
@@ -11316,7 +12693,8 @@ impl Error for GetUsagePlanKeysError {
             GetUsagePlanKeysError::Validation(ref cause) => cause,
             GetUsagePlanKeysError::Credentials(ref err) => err.description(),
             GetUsagePlanKeysError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetUsagePlanKeysError::Unknown(ref cause) => cause,
+            GetUsagePlanKeysError::ParseError(ref cause) => cause,
+            GetUsagePlanKeysError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11339,53 +12717,67 @@ pub enum GetUsagePlansError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetUsagePlansError {
-    pub fn from_body(body: &str) -> GetUsagePlansError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetUsagePlansError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetUsagePlansError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        GetUsagePlansError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetUsagePlansError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetUsagePlansError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetUsagePlansError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetUsagePlansError::Validation(error_message.to_string())
-                    }
-                    _ => GetUsagePlansError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetUsagePlansError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return GetUsagePlansError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return GetUsagePlansError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetUsagePlansError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetUsagePlansError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetUsagePlansError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetUsagePlansError::Unknown(String::from(body)),
         }
+        return GetUsagePlansError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetUsagePlansError {
     fn from(err: serde_json::error::Error) -> GetUsagePlansError {
-        GetUsagePlansError::Unknown(err.description().to_string())
+        GetUsagePlansError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetUsagePlansError {
@@ -11419,7 +12811,8 @@ impl Error for GetUsagePlansError {
             GetUsagePlansError::Validation(ref cause) => cause,
             GetUsagePlansError::Credentials(ref err) => err.description(),
             GetUsagePlansError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetUsagePlansError::Unknown(ref cause) => cause,
+            GetUsagePlansError::ParseError(ref cause) => cause,
+            GetUsagePlansError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11438,43 +12831,61 @@ pub enum GetVpcLinkError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetVpcLinkError {
-    pub fn from_body(body: &str) -> GetVpcLinkError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetVpcLinkError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "NotFoundException" => GetVpcLinkError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetVpcLinkError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetVpcLinkError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => GetVpcLinkError::Validation(error_message.to_string()),
-                    _ => GetVpcLinkError::Unknown(String::from(body)),
+            match error_type {
+                "NotFoundException" => {
+                    return GetVpcLinkError::NotFound(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetVpcLinkError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetVpcLinkError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetVpcLinkError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetVpcLinkError::Unknown(String::from(body)),
         }
+        return GetVpcLinkError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetVpcLinkError {
     fn from(err: serde_json::error::Error) -> GetVpcLinkError {
-        GetVpcLinkError::Unknown(err.description().to_string())
+        GetVpcLinkError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetVpcLinkError {
@@ -11506,7 +12917,8 @@ impl Error for GetVpcLinkError {
             GetVpcLinkError::Validation(ref cause) => cause,
             GetVpcLinkError::Credentials(ref err) => err.description(),
             GetVpcLinkError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetVpcLinkError::Unknown(ref cause) => cause,
+            GetVpcLinkError::ParseError(ref cause) => cause,
+            GetVpcLinkError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11525,47 +12937,61 @@ pub enum GetVpcLinksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetVpcLinksError {
-    pub fn from_body(body: &str) -> GetVpcLinksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetVpcLinksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetVpcLinksError::BadRequest(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetVpcLinksError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        GetVpcLinksError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetVpcLinksError::Validation(error_message.to_string())
-                    }
-                    _ => GetVpcLinksError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetVpcLinksError::BadRequest(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetVpcLinksError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return GetVpcLinksError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetVpcLinksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetVpcLinksError::Unknown(String::from(body)),
         }
+        return GetVpcLinksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetVpcLinksError {
     fn from(err: serde_json::error::Error) -> GetVpcLinksError {
-        GetVpcLinksError::Unknown(err.description().to_string())
+        GetVpcLinksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetVpcLinksError {
@@ -11597,7 +13023,8 @@ impl Error for GetVpcLinksError {
             GetVpcLinksError::Validation(ref cause) => cause,
             GetVpcLinksError::Credentials(ref err) => err.description(),
             GetVpcLinksError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetVpcLinksError::Unknown(ref cause) => cause,
+            GetVpcLinksError::ParseError(ref cause) => cause,
+            GetVpcLinksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11622,56 +13049,70 @@ pub enum ImportApiKeysError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ImportApiKeysError {
-    pub fn from_body(body: &str) -> ImportApiKeysError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ImportApiKeysError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        ImportApiKeysError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        ImportApiKeysError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        ImportApiKeysError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        ImportApiKeysError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ImportApiKeysError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        ImportApiKeysError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ImportApiKeysError::Validation(error_message.to_string())
-                    }
-                    _ => ImportApiKeysError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return ImportApiKeysError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return ImportApiKeysError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return ImportApiKeysError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return ImportApiKeysError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ImportApiKeysError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return ImportApiKeysError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ImportApiKeysError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ImportApiKeysError::Unknown(String::from(body)),
         }
+        return ImportApiKeysError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ImportApiKeysError {
     fn from(err: serde_json::error::Error) -> ImportApiKeysError {
-        ImportApiKeysError::Unknown(err.description().to_string())
+        ImportApiKeysError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ImportApiKeysError {
@@ -11706,7 +13147,8 @@ impl Error for ImportApiKeysError {
             ImportApiKeysError::Validation(ref cause) => cause,
             ImportApiKeysError::Credentials(ref err) => err.description(),
             ImportApiKeysError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ImportApiKeysError::Unknown(ref cause) => cause,
+            ImportApiKeysError::ParseError(ref cause) => cause,
+            ImportApiKeysError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11729,53 +13171,69 @@ pub enum ImportDocumentationPartsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ImportDocumentationPartsError {
-    pub fn from_body(body: &str) -> ImportDocumentationPartsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ImportDocumentationPartsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        ImportDocumentationPartsError::BadRequest(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        ImportDocumentationPartsError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        ImportDocumentationPartsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ImportDocumentationPartsError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        ImportDocumentationPartsError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ImportDocumentationPartsError::Validation(error_message.to_string())
-                    }
-                    _ => ImportDocumentationPartsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return ImportDocumentationPartsError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return ImportDocumentationPartsError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return ImportDocumentationPartsError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ImportDocumentationPartsError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return ImportDocumentationPartsError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ImportDocumentationPartsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ImportDocumentationPartsError::Unknown(String::from(body)),
         }
+        return ImportDocumentationPartsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ImportDocumentationPartsError {
     fn from(err: serde_json::error::Error) -> ImportDocumentationPartsError {
-        ImportDocumentationPartsError::Unknown(err.description().to_string())
+        ImportDocumentationPartsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ImportDocumentationPartsError {
@@ -11811,7 +13269,8 @@ impl Error for ImportDocumentationPartsError {
             ImportDocumentationPartsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ImportDocumentationPartsError::Unknown(ref cause) => cause,
+            ImportDocumentationPartsError::ParseError(ref cause) => cause,
+            ImportDocumentationPartsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11834,53 +13293,67 @@ pub enum ImportRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ImportRestApiError {
-    pub fn from_body(body: &str) -> ImportRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ImportRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        ImportRestApiError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        ImportRestApiError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        ImportRestApiError::LimitExceeded(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ImportRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        ImportRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ImportRestApiError::Validation(error_message.to_string())
-                    }
-                    _ => ImportRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return ImportRestApiError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return ImportRestApiError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return ImportRestApiError::LimitExceeded(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ImportRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return ImportRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ImportRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ImportRestApiError::Unknown(String::from(body)),
         }
+        return ImportRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ImportRestApiError {
     fn from(err: serde_json::error::Error) -> ImportRestApiError {
-        ImportRestApiError::Unknown(err.description().to_string())
+        ImportRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ImportRestApiError {
@@ -11914,7 +13387,8 @@ impl Error for ImportRestApiError {
             ImportRestApiError::Validation(ref cause) => cause,
             ImportRestApiError::Credentials(ref err) => err.description(),
             ImportRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ImportRestApiError::Unknown(ref cause) => cause,
+            ImportRestApiError::ParseError(ref cause) => cause,
+            ImportRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -11937,53 +13411,67 @@ pub enum PutGatewayResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutGatewayResponseError {
-    pub fn from_body(body: &str) -> PutGatewayResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutGatewayResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutGatewayResponseError::BadRequest(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        PutGatewayResponseError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        PutGatewayResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutGatewayResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutGatewayResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutGatewayResponseError::Validation(error_message.to_string())
-                    }
-                    _ => PutGatewayResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutGatewayResponseError::BadRequest(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return PutGatewayResponseError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return PutGatewayResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutGatewayResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutGatewayResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutGatewayResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutGatewayResponseError::Unknown(String::from(body)),
         }
+        return PutGatewayResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutGatewayResponseError {
     fn from(err: serde_json::error::Error) -> PutGatewayResponseError {
-        PutGatewayResponseError::Unknown(err.description().to_string())
+        PutGatewayResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutGatewayResponseError {
@@ -12019,7 +13507,8 @@ impl Error for PutGatewayResponseError {
             PutGatewayResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutGatewayResponseError::Unknown(ref cause) => cause,
+            PutGatewayResponseError::ParseError(ref cause) => cause,
+            PutGatewayResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12042,53 +13531,67 @@ pub enum PutIntegrationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutIntegrationError {
-    pub fn from_body(body: &str) -> PutIntegrationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutIntegrationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutIntegrationError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        PutIntegrationError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        PutIntegrationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutIntegrationError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutIntegrationError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutIntegrationError::Validation(error_message.to_string())
-                    }
-                    _ => PutIntegrationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutIntegrationError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return PutIntegrationError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return PutIntegrationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutIntegrationError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutIntegrationError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutIntegrationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutIntegrationError::Unknown(String::from(body)),
         }
+        return PutIntegrationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutIntegrationError {
     fn from(err: serde_json::error::Error) -> PutIntegrationError {
-        PutIntegrationError::Unknown(err.description().to_string())
+        PutIntegrationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutIntegrationError {
@@ -12122,7 +13625,8 @@ impl Error for PutIntegrationError {
             PutIntegrationError::Validation(ref cause) => cause,
             PutIntegrationError::Credentials(ref err) => err.description(),
             PutIntegrationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutIntegrationError::Unknown(ref cause) => cause,
+            PutIntegrationError::ParseError(ref cause) => cause,
+            PutIntegrationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12147,56 +13651,70 @@ pub enum PutIntegrationResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutIntegrationResponseError {
-    pub fn from_body(body: &str) -> PutIntegrationResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutIntegrationResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutIntegrationResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        PutIntegrationResponseError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        PutIntegrationResponseError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        PutIntegrationResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutIntegrationResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutIntegrationResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutIntegrationResponseError::Validation(error_message.to_string())
-                    }
-                    _ => PutIntegrationResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutIntegrationResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return PutIntegrationResponseError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return PutIntegrationResponseError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return PutIntegrationResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutIntegrationResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutIntegrationResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutIntegrationResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutIntegrationResponseError::Unknown(String::from(body)),
         }
+        return PutIntegrationResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutIntegrationResponseError {
     fn from(err: serde_json::error::Error) -> PutIntegrationResponseError {
-        PutIntegrationResponseError::Unknown(err.description().to_string())
+        PutIntegrationResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutIntegrationResponseError {
@@ -12233,7 +13751,8 @@ impl Error for PutIntegrationResponseError {
             PutIntegrationResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutIntegrationResponseError::Unknown(ref cause) => cause,
+            PutIntegrationResponseError::ParseError(ref cause) => cause,
+            PutIntegrationResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12258,50 +13777,66 @@ pub enum PutMethodError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutMethodError {
-    pub fn from_body(body: &str) -> PutMethodError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutMethodError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutMethodError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => PutMethodError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        PutMethodError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => PutMethodError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        PutMethodError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutMethodError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => PutMethodError::Validation(error_message.to_string()),
-                    _ => PutMethodError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutMethodError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => return PutMethodError::Conflict(String::from(error_message)),
+                "LimitExceededException" => {
+                    return PutMethodError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => return PutMethodError::NotFound(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return PutMethodError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutMethodError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutMethodError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutMethodError::Unknown(String::from(body)),
         }
+        return PutMethodError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutMethodError {
     fn from(err: serde_json::error::Error) -> PutMethodError {
-        PutMethodError::Unknown(err.description().to_string())
+        PutMethodError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutMethodError {
@@ -12336,7 +13871,8 @@ impl Error for PutMethodError {
             PutMethodError::Validation(ref cause) => cause,
             PutMethodError::Credentials(ref err) => err.description(),
             PutMethodError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutMethodError::Unknown(ref cause) => cause,
+            PutMethodError::ParseError(ref cause) => cause,
+            PutMethodError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12361,56 +13897,70 @@ pub enum PutMethodResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutMethodResponseError {
-    pub fn from_body(body: &str) -> PutMethodResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutMethodResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutMethodResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        PutMethodResponseError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        PutMethodResponseError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        PutMethodResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutMethodResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutMethodResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutMethodResponseError::Validation(error_message.to_string())
-                    }
-                    _ => PutMethodResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutMethodResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return PutMethodResponseError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return PutMethodResponseError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return PutMethodResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutMethodResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutMethodResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutMethodResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutMethodResponseError::Unknown(String::from(body)),
         }
+        return PutMethodResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutMethodResponseError {
     fn from(err: serde_json::error::Error) -> PutMethodResponseError {
-        PutMethodResponseError::Unknown(err.description().to_string())
+        PutMethodResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutMethodResponseError {
@@ -12447,7 +13997,8 @@ impl Error for PutMethodResponseError {
             PutMethodResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutMethodResponseError::Unknown(ref cause) => cause,
+            PutMethodResponseError::ParseError(ref cause) => cause,
+            PutMethodResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12472,50 +14023,70 @@ pub enum PutRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutRestApiError {
-    pub fn from_body(body: &str) -> PutRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutRestApiError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => PutRestApiError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        PutRestApiError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => PutRestApiError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        PutRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        PutRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => PutRestApiError::Validation(error_message.to_string()),
-                    _ => PutRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutRestApiError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return PutRestApiError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return PutRestApiError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return PutRestApiError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return PutRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutRestApiError::Unknown(String::from(body)),
         }
+        return PutRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutRestApiError {
     fn from(err: serde_json::error::Error) -> PutRestApiError {
-        PutRestApiError::Unknown(err.description().to_string())
+        PutRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutRestApiError {
@@ -12550,7 +14121,8 @@ impl Error for PutRestApiError {
             PutRestApiError::Validation(ref cause) => cause,
             PutRestApiError::Credentials(ref err) => err.description(),
             PutRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutRestApiError::Unknown(ref cause) => cause,
+            PutRestApiError::ParseError(ref cause) => cause,
+            PutRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12575,52 +14147,70 @@ pub enum TagResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TagResourceError {
-    pub fn from_body(body: &str) -> TagResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> TagResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        TagResourceError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => TagResourceError::Conflict(String::from(error_message)),
-                    "LimitExceededException" => {
-                        TagResourceError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => TagResourceError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        TagResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        TagResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TagResourceError::Validation(error_message.to_string())
-                    }
-                    _ => TagResourceError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return TagResourceError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return TagResourceError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return TagResourceError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return TagResourceError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return TagResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return TagResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TagResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TagResourceError::Unknown(String::from(body)),
         }
+        return TagResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TagResourceError {
     fn from(err: serde_json::error::Error) -> TagResourceError {
-        TagResourceError::Unknown(err.description().to_string())
+        TagResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TagResourceError {
@@ -12655,7 +14245,8 @@ impl Error for TagResourceError {
             TagResourceError::Validation(ref cause) => cause,
             TagResourceError::Credentials(ref err) => err.description(),
             TagResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            TagResourceError::Unknown(ref cause) => cause,
+            TagResourceError::ParseError(ref cause) => cause,
+            TagResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12676,50 +14267,64 @@ pub enum TestInvokeAuthorizerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TestInvokeAuthorizerError {
-    pub fn from_body(body: &str) -> TestInvokeAuthorizerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> TestInvokeAuthorizerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        TestInvokeAuthorizerError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        TestInvokeAuthorizerError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        TestInvokeAuthorizerError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        TestInvokeAuthorizerError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TestInvokeAuthorizerError::Validation(error_message.to_string())
-                    }
-                    _ => TestInvokeAuthorizerError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return TestInvokeAuthorizerError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return TestInvokeAuthorizerError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return TestInvokeAuthorizerError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return TestInvokeAuthorizerError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TestInvokeAuthorizerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TestInvokeAuthorizerError::Unknown(String::from(body)),
         }
+        return TestInvokeAuthorizerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TestInvokeAuthorizerError {
     fn from(err: serde_json::error::Error) -> TestInvokeAuthorizerError {
-        TestInvokeAuthorizerError::Unknown(err.description().to_string())
+        TestInvokeAuthorizerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TestInvokeAuthorizerError {
@@ -12754,7 +14359,8 @@ impl Error for TestInvokeAuthorizerError {
             TestInvokeAuthorizerError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            TestInvokeAuthorizerError::Unknown(ref cause) => cause,
+            TestInvokeAuthorizerError::ParseError(ref cause) => cause,
+            TestInvokeAuthorizerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12775,50 +14381,64 @@ pub enum TestInvokeMethodError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TestInvokeMethodError {
-    pub fn from_body(body: &str) -> TestInvokeMethodError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> TestInvokeMethodError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        TestInvokeMethodError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        TestInvokeMethodError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        TestInvokeMethodError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        TestInvokeMethodError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TestInvokeMethodError::Validation(error_message.to_string())
-                    }
-                    _ => TestInvokeMethodError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return TestInvokeMethodError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return TestInvokeMethodError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return TestInvokeMethodError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return TestInvokeMethodError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TestInvokeMethodError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TestInvokeMethodError::Unknown(String::from(body)),
         }
+        return TestInvokeMethodError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TestInvokeMethodError {
     fn from(err: serde_json::error::Error) -> TestInvokeMethodError {
-        TestInvokeMethodError::Unknown(err.description().to_string())
+        TestInvokeMethodError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TestInvokeMethodError {
@@ -12851,7 +14471,8 @@ impl Error for TestInvokeMethodError {
             TestInvokeMethodError::Validation(ref cause) => cause,
             TestInvokeMethodError::Credentials(ref err) => err.description(),
             TestInvokeMethodError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            TestInvokeMethodError::Unknown(ref cause) => cause,
+            TestInvokeMethodError::ParseError(ref cause) => cause,
+            TestInvokeMethodError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12874,53 +14495,67 @@ pub enum UntagResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UntagResourceError {
-    pub fn from_body(body: &str) -> UntagResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UntagResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UntagResourceError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UntagResourceError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UntagResourceError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UntagResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UntagResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UntagResourceError::Validation(error_message.to_string())
-                    }
-                    _ => UntagResourceError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UntagResourceError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UntagResourceError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UntagResourceError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UntagResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UntagResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UntagResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UntagResourceError::Unknown(String::from(body)),
         }
+        return UntagResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UntagResourceError {
     fn from(err: serde_json::error::Error) -> UntagResourceError {
-        UntagResourceError::Unknown(err.description().to_string())
+        UntagResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UntagResourceError {
@@ -12954,7 +14589,8 @@ impl Error for UntagResourceError {
             UntagResourceError::Validation(ref cause) => cause,
             UntagResourceError::Credentials(ref err) => err.description(),
             UntagResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UntagResourceError::Unknown(ref cause) => cause,
+            UntagResourceError::ParseError(ref cause) => cause,
+            UntagResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -12975,50 +14611,64 @@ pub enum UpdateAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateAccountError {
-    pub fn from_body(body: &str) -> UpdateAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateAccountError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateAccountError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateAccountError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateAccountError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateAccountError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateAccountError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateAccountError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateAccountError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateAccountError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateAccountError::Unknown(String::from(body)),
         }
+        return UpdateAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateAccountError {
     fn from(err: serde_json::error::Error) -> UpdateAccountError {
-        UpdateAccountError::Unknown(err.description().to_string())
+        UpdateAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateAccountError {
@@ -13051,7 +14701,8 @@ impl Error for UpdateAccountError {
             UpdateAccountError::Validation(ref cause) => cause,
             UpdateAccountError::Credentials(ref err) => err.description(),
             UpdateAccountError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateAccountError::Unknown(ref cause) => cause,
+            UpdateAccountError::ParseError(ref cause) => cause,
+            UpdateAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13074,49 +14725,67 @@ pub enum UpdateApiKeyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateApiKeyError {
-    pub fn from_body(body: &str) -> UpdateApiKeyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateApiKeyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateApiKeyError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => UpdateApiKeyError::Conflict(String::from(error_message)),
-                    "NotFoundException" => UpdateApiKeyError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateApiKeyError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateApiKeyError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateApiKeyError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateApiKeyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateApiKeyError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateApiKeyError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateApiKeyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateApiKeyError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateApiKeyError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateApiKeyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateApiKeyError::Unknown(String::from(body)),
         }
+        return UpdateApiKeyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateApiKeyError {
     fn from(err: serde_json::error::Error) -> UpdateApiKeyError {
-        UpdateApiKeyError::Unknown(err.description().to_string())
+        UpdateApiKeyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateApiKeyError {
@@ -13150,7 +14819,8 @@ impl Error for UpdateApiKeyError {
             UpdateApiKeyError::Validation(ref cause) => cause,
             UpdateApiKeyError::Credentials(ref err) => err.description(),
             UpdateApiKeyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateApiKeyError::Unknown(ref cause) => cause,
+            UpdateApiKeyError::ParseError(ref cause) => cause,
+            UpdateApiKeyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13171,50 +14841,64 @@ pub enum UpdateAuthorizerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateAuthorizerError {
-    pub fn from_body(body: &str) -> UpdateAuthorizerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateAuthorizerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateAuthorizerError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateAuthorizerError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateAuthorizerError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateAuthorizerError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateAuthorizerError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateAuthorizerError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateAuthorizerError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateAuthorizerError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateAuthorizerError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateAuthorizerError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateAuthorizerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateAuthorizerError::Unknown(String::from(body)),
         }
+        return UpdateAuthorizerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateAuthorizerError {
     fn from(err: serde_json::error::Error) -> UpdateAuthorizerError {
-        UpdateAuthorizerError::Unknown(err.description().to_string())
+        UpdateAuthorizerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateAuthorizerError {
@@ -13247,7 +14931,8 @@ impl Error for UpdateAuthorizerError {
             UpdateAuthorizerError::Validation(ref cause) => cause,
             UpdateAuthorizerError::Credentials(ref err) => err.description(),
             UpdateAuthorizerError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateAuthorizerError::Unknown(ref cause) => cause,
+            UpdateAuthorizerError::ParseError(ref cause) => cause,
+            UpdateAuthorizerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13270,53 +14955,67 @@ pub enum UpdateBasePathMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateBasePathMappingError {
-    pub fn from_body(body: &str) -> UpdateBasePathMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateBasePathMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateBasePathMappingError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateBasePathMappingError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateBasePathMappingError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateBasePathMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateBasePathMappingError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateBasePathMappingError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateBasePathMappingError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateBasePathMappingError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateBasePathMappingError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateBasePathMappingError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateBasePathMappingError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateBasePathMappingError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateBasePathMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateBasePathMappingError::Unknown(String::from(body)),
         }
+        return UpdateBasePathMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateBasePathMappingError {
     fn from(err: serde_json::error::Error) -> UpdateBasePathMappingError {
-        UpdateBasePathMappingError::Unknown(err.description().to_string())
+        UpdateBasePathMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateBasePathMappingError {
@@ -13352,7 +15051,8 @@ impl Error for UpdateBasePathMappingError {
             UpdateBasePathMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateBasePathMappingError::Unknown(ref cause) => cause,
+            UpdateBasePathMappingError::ParseError(ref cause) => cause,
+            UpdateBasePathMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13373,50 +15073,66 @@ pub enum UpdateClientCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateClientCertificateError {
-    pub fn from_body(body: &str) -> UpdateClientCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateClientCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateClientCertificateError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateClientCertificateError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateClientCertificateError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateClientCertificateError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateClientCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateClientCertificateError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateClientCertificateError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateClientCertificateError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateClientCertificateError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return UpdateClientCertificateError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateClientCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateClientCertificateError::Unknown(String::from(body)),
         }
+        return UpdateClientCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateClientCertificateError {
     fn from(err: serde_json::error::Error) -> UpdateClientCertificateError {
-        UpdateClientCertificateError::Unknown(err.description().to_string())
+        UpdateClientCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateClientCertificateError {
@@ -13451,7 +15167,8 @@ impl Error for UpdateClientCertificateError {
             UpdateClientCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateClientCertificateError::Unknown(ref cause) => cause,
+            UpdateClientCertificateError::ParseError(ref cause) => cause,
+            UpdateClientCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13474,53 +15191,67 @@ pub enum UpdateDeploymentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDeploymentError {
-    pub fn from_body(body: &str) -> UpdateDeploymentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDeploymentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateDeploymentError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateDeploymentError::NotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        UpdateDeploymentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateDeploymentError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateDeploymentError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDeploymentError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDeploymentError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateDeploymentError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateDeploymentError::NotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return UpdateDeploymentError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateDeploymentError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateDeploymentError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateDeploymentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDeploymentError::Unknown(String::from(body)),
         }
+        return UpdateDeploymentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDeploymentError {
     fn from(err: serde_json::error::Error) -> UpdateDeploymentError {
-        UpdateDeploymentError::Unknown(err.description().to_string())
+        UpdateDeploymentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDeploymentError {
@@ -13554,7 +15285,8 @@ impl Error for UpdateDeploymentError {
             UpdateDeploymentError::Validation(ref cause) => cause,
             UpdateDeploymentError::Credentials(ref err) => err.description(),
             UpdateDeploymentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateDeploymentError::Unknown(ref cause) => cause,
+            UpdateDeploymentError::ParseError(ref cause) => cause,
+            UpdateDeploymentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13579,56 +15311,72 @@ pub enum UpdateDocumentationPartError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDocumentationPartError {
-    pub fn from_body(body: &str) -> UpdateDocumentationPartError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDocumentationPartError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateDocumentationPartError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateDocumentationPartError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UpdateDocumentationPartError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateDocumentationPartError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateDocumentationPartError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateDocumentationPartError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDocumentationPartError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDocumentationPartError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateDocumentationPartError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateDocumentationPartError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UpdateDocumentationPartError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateDocumentationPartError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateDocumentationPartError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return UpdateDocumentationPartError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateDocumentationPartError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDocumentationPartError::Unknown(String::from(body)),
         }
+        return UpdateDocumentationPartError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDocumentationPartError {
     fn from(err: serde_json::error::Error) -> UpdateDocumentationPartError {
-        UpdateDocumentationPartError::Unknown(err.description().to_string())
+        UpdateDocumentationPartError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDocumentationPartError {
@@ -13665,7 +15413,8 @@ impl Error for UpdateDocumentationPartError {
             UpdateDocumentationPartError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDocumentationPartError::Unknown(ref cause) => cause,
+            UpdateDocumentationPartError::ParseError(ref cause) => cause,
+            UpdateDocumentationPartError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13688,53 +15437,71 @@ pub enum UpdateDocumentationVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDocumentationVersionError {
-    pub fn from_body(body: &str) -> UpdateDocumentationVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDocumentationVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateDocumentationVersionError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateDocumentationVersionError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateDocumentationVersionError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => UpdateDocumentationVersionError::TooManyRequests(
-                        String::from(error_message),
-                    ),
-                    "UnauthorizedException" => {
-                        UpdateDocumentationVersionError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDocumentationVersionError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDocumentationVersionError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateDocumentationVersionError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateDocumentationVersionError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateDocumentationVersionError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateDocumentationVersionError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return UpdateDocumentationVersionError::Unauthorized(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateDocumentationVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDocumentationVersionError::Unknown(String::from(body)),
         }
+        return UpdateDocumentationVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDocumentationVersionError {
     fn from(err: serde_json::error::Error) -> UpdateDocumentationVersionError {
-        UpdateDocumentationVersionError::Unknown(err.description().to_string())
+        UpdateDocumentationVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDocumentationVersionError {
@@ -13770,7 +15537,8 @@ impl Error for UpdateDocumentationVersionError {
             UpdateDocumentationVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDocumentationVersionError::Unknown(ref cause) => cause,
+            UpdateDocumentationVersionError::ParseError(ref cause) => cause,
+            UpdateDocumentationVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13793,53 +15561,67 @@ pub enum UpdateDomainNameError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDomainNameError {
-    pub fn from_body(body: &str) -> UpdateDomainNameError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDomainNameError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateDomainNameError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateDomainNameError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateDomainNameError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateDomainNameError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateDomainNameError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDomainNameError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDomainNameError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateDomainNameError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateDomainNameError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateDomainNameError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateDomainNameError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateDomainNameError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateDomainNameError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDomainNameError::Unknown(String::from(body)),
         }
+        return UpdateDomainNameError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDomainNameError {
     fn from(err: serde_json::error::Error) -> UpdateDomainNameError {
-        UpdateDomainNameError::Unknown(err.description().to_string())
+        UpdateDomainNameError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDomainNameError {
@@ -13873,7 +15655,8 @@ impl Error for UpdateDomainNameError {
             UpdateDomainNameError::Validation(ref cause) => cause,
             UpdateDomainNameError::Credentials(ref err) => err.description(),
             UpdateDomainNameError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateDomainNameError::Unknown(ref cause) => cause,
+            UpdateDomainNameError::ParseError(ref cause) => cause,
+            UpdateDomainNameError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13894,50 +15677,64 @@ pub enum UpdateGatewayResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateGatewayResponseError {
-    pub fn from_body(body: &str) -> UpdateGatewayResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateGatewayResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateGatewayResponseError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateGatewayResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateGatewayResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateGatewayResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateGatewayResponseError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateGatewayResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateGatewayResponseError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateGatewayResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateGatewayResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateGatewayResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateGatewayResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateGatewayResponseError::Unknown(String::from(body)),
         }
+        return UpdateGatewayResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateGatewayResponseError {
     fn from(err: serde_json::error::Error) -> UpdateGatewayResponseError {
-        UpdateGatewayResponseError::Unknown(err.description().to_string())
+        UpdateGatewayResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateGatewayResponseError {
@@ -13972,7 +15769,8 @@ impl Error for UpdateGatewayResponseError {
             UpdateGatewayResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateGatewayResponseError::Unknown(ref cause) => cause,
+            UpdateGatewayResponseError::ParseError(ref cause) => cause,
+            UpdateGatewayResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -13995,53 +15793,67 @@ pub enum UpdateIntegrationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateIntegrationError {
-    pub fn from_body(body: &str) -> UpdateIntegrationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateIntegrationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateIntegrationError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateIntegrationError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateIntegrationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateIntegrationError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateIntegrationError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateIntegrationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateIntegrationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateIntegrationError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateIntegrationError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateIntegrationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateIntegrationError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateIntegrationError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateIntegrationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateIntegrationError::Unknown(String::from(body)),
         }
+        return UpdateIntegrationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateIntegrationError {
     fn from(err: serde_json::error::Error) -> UpdateIntegrationError {
-        UpdateIntegrationError::Unknown(err.description().to_string())
+        UpdateIntegrationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateIntegrationError {
@@ -14077,7 +15889,8 @@ impl Error for UpdateIntegrationError {
             UpdateIntegrationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateIntegrationError::Unknown(ref cause) => cause,
+            UpdateIntegrationError::ParseError(ref cause) => cause,
+            UpdateIntegrationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14100,53 +15913,69 @@ pub enum UpdateIntegrationResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateIntegrationResponseError {
-    pub fn from_body(body: &str) -> UpdateIntegrationResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateIntegrationResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateIntegrationResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateIntegrationResponseError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateIntegrationResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateIntegrationResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateIntegrationResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateIntegrationResponseError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateIntegrationResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateIntegrationResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateIntegrationResponseError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateIntegrationResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateIntegrationResponseError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedException" => {
+                    return UpdateIntegrationResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateIntegrationResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateIntegrationResponseError::Unknown(String::from(body)),
         }
+        return UpdateIntegrationResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateIntegrationResponseError {
     fn from(err: serde_json::error::Error) -> UpdateIntegrationResponseError {
-        UpdateIntegrationResponseError::Unknown(err.description().to_string())
+        UpdateIntegrationResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateIntegrationResponseError {
@@ -14182,7 +16011,8 @@ impl Error for UpdateIntegrationResponseError {
             UpdateIntegrationResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateIntegrationResponseError::Unknown(ref cause) => cause,
+            UpdateIntegrationResponseError::ParseError(ref cause) => cause,
+            UpdateIntegrationResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14205,49 +16035,67 @@ pub enum UpdateMethodError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateMethodError {
-    pub fn from_body(body: &str) -> UpdateMethodError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateMethodError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateMethodError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => UpdateMethodError::Conflict(String::from(error_message)),
-                    "NotFoundException" => UpdateMethodError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateMethodError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateMethodError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateMethodError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateMethodError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateMethodError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateMethodError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateMethodError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateMethodError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateMethodError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateMethodError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateMethodError::Unknown(String::from(body)),
         }
+        return UpdateMethodError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateMethodError {
     fn from(err: serde_json::error::Error) -> UpdateMethodError {
-        UpdateMethodError::Unknown(err.description().to_string())
+        UpdateMethodError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateMethodError {
@@ -14281,7 +16129,8 @@ impl Error for UpdateMethodError {
             UpdateMethodError::Validation(ref cause) => cause,
             UpdateMethodError::Credentials(ref err) => err.description(),
             UpdateMethodError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateMethodError::Unknown(ref cause) => cause,
+            UpdateMethodError::ParseError(ref cause) => cause,
+            UpdateMethodError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14306,56 +16155,70 @@ pub enum UpdateMethodResponseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateMethodResponseError {
-    pub fn from_body(body: &str) -> UpdateMethodResponseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateMethodResponseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateMethodResponseError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateMethodResponseError::Conflict(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UpdateMethodResponseError::LimitExceeded(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateMethodResponseError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateMethodResponseError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateMethodResponseError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateMethodResponseError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateMethodResponseError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateMethodResponseError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateMethodResponseError::Conflict(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UpdateMethodResponseError::LimitExceeded(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateMethodResponseError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateMethodResponseError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateMethodResponseError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateMethodResponseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateMethodResponseError::Unknown(String::from(body)),
         }
+        return UpdateMethodResponseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateMethodResponseError {
     fn from(err: serde_json::error::Error) -> UpdateMethodResponseError {
-        UpdateMethodResponseError::Unknown(err.description().to_string())
+        UpdateMethodResponseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateMethodResponseError {
@@ -14392,7 +16255,8 @@ impl Error for UpdateMethodResponseError {
             UpdateMethodResponseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateMethodResponseError::Unknown(ref cause) => cause,
+            UpdateMethodResponseError::ParseError(ref cause) => cause,
+            UpdateMethodResponseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14415,49 +16279,67 @@ pub enum UpdateModelError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateModelError {
-    pub fn from_body(body: &str) -> UpdateModelError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateModelError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateModelError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => UpdateModelError::Conflict(String::from(error_message)),
-                    "NotFoundException" => UpdateModelError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateModelError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateModelError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateModelError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateModelError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateModelError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateModelError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateModelError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateModelError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateModelError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateModelError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateModelError::Unknown(String::from(body)),
         }
+        return UpdateModelError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateModelError {
     fn from(err: serde_json::error::Error) -> UpdateModelError {
-        UpdateModelError::Unknown(err.description().to_string())
+        UpdateModelError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateModelError {
@@ -14491,7 +16373,8 @@ impl Error for UpdateModelError {
             UpdateModelError::Validation(ref cause) => cause,
             UpdateModelError::Credentials(ref err) => err.description(),
             UpdateModelError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateModelError::Unknown(ref cause) => cause,
+            UpdateModelError::ParseError(ref cause) => cause,
+            UpdateModelError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14512,50 +16395,64 @@ pub enum UpdateRequestValidatorError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateRequestValidatorError {
-    pub fn from_body(body: &str) -> UpdateRequestValidatorError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateRequestValidatorError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateRequestValidatorError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateRequestValidatorError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateRequestValidatorError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateRequestValidatorError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateRequestValidatorError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateRequestValidatorError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateRequestValidatorError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateRequestValidatorError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateRequestValidatorError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateRequestValidatorError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateRequestValidatorError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateRequestValidatorError::Unknown(String::from(body)),
         }
+        return UpdateRequestValidatorError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateRequestValidatorError {
     fn from(err: serde_json::error::Error) -> UpdateRequestValidatorError {
-        UpdateRequestValidatorError::Unknown(err.description().to_string())
+        UpdateRequestValidatorError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateRequestValidatorError {
@@ -14590,7 +16487,8 @@ impl Error for UpdateRequestValidatorError {
             UpdateRequestValidatorError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateRequestValidatorError::Unknown(ref cause) => cause,
+            UpdateRequestValidatorError::ParseError(ref cause) => cause,
+            UpdateRequestValidatorError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14613,53 +16511,67 @@ pub enum UpdateResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateResourceError {
-    pub fn from_body(body: &str) -> UpdateResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateResourceError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateResourceError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateResourceError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateResourceError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateResourceError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateResourceError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateResourceError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateResourceError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateResourceError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateResourceError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateResourceError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateResourceError::Unknown(String::from(body)),
         }
+        return UpdateResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateResourceError {
     fn from(err: serde_json::error::Error) -> UpdateResourceError {
-        UpdateResourceError::Unknown(err.description().to_string())
+        UpdateResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateResourceError {
@@ -14693,7 +16605,8 @@ impl Error for UpdateResourceError {
             UpdateResourceError::Validation(ref cause) => cause,
             UpdateResourceError::Credentials(ref err) => err.description(),
             UpdateResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateResourceError::Unknown(ref cause) => cause,
+            UpdateResourceError::ParseError(ref cause) => cause,
+            UpdateResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14716,53 +16629,67 @@ pub enum UpdateRestApiError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateRestApiError {
-    pub fn from_body(body: &str) -> UpdateRestApiError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateRestApiError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateRestApiError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateRestApiError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateRestApiError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateRestApiError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateRestApiError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateRestApiError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateRestApiError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateRestApiError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateRestApiError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateRestApiError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateRestApiError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateRestApiError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateRestApiError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateRestApiError::Unknown(String::from(body)),
         }
+        return UpdateRestApiError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateRestApiError {
     fn from(err: serde_json::error::Error) -> UpdateRestApiError {
-        UpdateRestApiError::Unknown(err.description().to_string())
+        UpdateRestApiError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateRestApiError {
@@ -14796,7 +16723,8 @@ impl Error for UpdateRestApiError {
             UpdateRestApiError::Validation(ref cause) => cause,
             UpdateRestApiError::Credentials(ref err) => err.description(),
             UpdateRestApiError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateRestApiError::Unknown(ref cause) => cause,
+            UpdateRestApiError::ParseError(ref cause) => cause,
+            UpdateRestApiError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14819,49 +16747,67 @@ pub enum UpdateStageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateStageError {
-    pub fn from_body(body: &str) -> UpdateStageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateStageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateStageError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => UpdateStageError::Conflict(String::from(error_message)),
-                    "NotFoundException" => UpdateStageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateStageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateStageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateStageError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateStageError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateStageError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateStageError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateStageError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateStageError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateStageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateStageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateStageError::Unknown(String::from(body)),
         }
+        return UpdateStageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateStageError {
     fn from(err: serde_json::error::Error) -> UpdateStageError {
-        UpdateStageError::Unknown(err.description().to_string())
+        UpdateStageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateStageError {
@@ -14895,7 +16841,8 @@ impl Error for UpdateStageError {
             UpdateStageError::Validation(ref cause) => cause,
             UpdateStageError::Credentials(ref err) => err.description(),
             UpdateStageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateStageError::Unknown(ref cause) => cause,
+            UpdateStageError::ParseError(ref cause) => cause,
+            UpdateStageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -14916,48 +16863,64 @@ pub enum UpdateUsageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateUsageError {
-    pub fn from_body(body: &str) -> UpdateUsageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateUsageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateUsageError::BadRequest(String::from(error_message))
-                    }
-                    "NotFoundException" => UpdateUsageError::NotFound(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateUsageError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateUsageError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateUsageError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateUsageError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateUsageError::BadRequest(String::from(error_message))
                 }
+                "NotFoundException" => {
+                    return UpdateUsageError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateUsageError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateUsageError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateUsageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateUsageError::Unknown(String::from(body)),
         }
+        return UpdateUsageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateUsageError {
     fn from(err: serde_json::error::Error) -> UpdateUsageError {
-        UpdateUsageError::Unknown(err.description().to_string())
+        UpdateUsageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateUsageError {
@@ -14990,7 +16953,8 @@ impl Error for UpdateUsageError {
             UpdateUsageError::Validation(ref cause) => cause,
             UpdateUsageError::Credentials(ref err) => err.description(),
             UpdateUsageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateUsageError::Unknown(ref cause) => cause,
+            UpdateUsageError::ParseError(ref cause) => cause,
+            UpdateUsageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -15013,53 +16977,67 @@ pub enum UpdateUsagePlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateUsagePlanError {
-    pub fn from_body(body: &str) -> UpdateUsagePlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateUsagePlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateUsagePlanError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateUsagePlanError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateUsagePlanError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateUsagePlanError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateUsagePlanError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateUsagePlanError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateUsagePlanError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateUsagePlanError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateUsagePlanError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateUsagePlanError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateUsagePlanError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateUsagePlanError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateUsagePlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateUsagePlanError::Unknown(String::from(body)),
         }
+        return UpdateUsagePlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateUsagePlanError {
     fn from(err: serde_json::error::Error) -> UpdateUsagePlanError {
-        UpdateUsagePlanError::Unknown(err.description().to_string())
+        UpdateUsagePlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateUsagePlanError {
@@ -15093,7 +17071,8 @@ impl Error for UpdateUsagePlanError {
             UpdateUsagePlanError::Validation(ref cause) => cause,
             UpdateUsagePlanError::Credentials(ref err) => err.description(),
             UpdateUsagePlanError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateUsagePlanError::Unknown(ref cause) => cause,
+            UpdateUsagePlanError::ParseError(ref cause) => cause,
+            UpdateUsagePlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -15116,53 +17095,67 @@ pub enum UpdateVpcLinkError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateVpcLinkError {
-    pub fn from_body(body: &str) -> UpdateVpcLinkError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateVpcLinkError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateVpcLinkError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateVpcLinkError::Conflict(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateVpcLinkError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateVpcLinkError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnauthorizedException" => {
-                        UpdateVpcLinkError::Unauthorized(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateVpcLinkError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateVpcLinkError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateVpcLinkError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateVpcLinkError::Conflict(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateVpcLinkError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateVpcLinkError::TooManyRequests(String::from(error_message))
+                }
+                "UnauthorizedException" => {
+                    return UpdateVpcLinkError::Unauthorized(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateVpcLinkError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateVpcLinkError::Unknown(String::from(body)),
         }
+        return UpdateVpcLinkError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateVpcLinkError {
     fn from(err: serde_json::error::Error) -> UpdateVpcLinkError {
-        UpdateVpcLinkError::Unknown(err.description().to_string())
+        UpdateVpcLinkError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateVpcLinkError {
@@ -15196,7 +17189,8 @@ impl Error for UpdateVpcLinkError {
             UpdateVpcLinkError::Validation(ref cause) => cause,
             UpdateVpcLinkError::Credentials(ref err) => err.description(),
             UpdateVpcLinkError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateVpcLinkError::Unknown(ref cause) => cause,
+            UpdateVpcLinkError::ParseError(ref cause) => cause,
+            UpdateVpcLinkError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -15865,11 +17859,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateApiKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateApiKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -15906,11 +17901,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateAuthorizerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateAuthorizerError::from_response(response))),
+                )
             }
         })
     }
@@ -15947,11 +17943,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateBasePathMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateBasePathMappingError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -15988,11 +17984,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -16029,9 +18026,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDocumentationPartError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateDocumentationPartError::from_response(response))
                 }))
             }
         })
@@ -16069,9 +18064,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDocumentationVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateDocumentationVersionError::from_response(response))
                 }))
             }
         })
@@ -16106,11 +18099,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDomainNameError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateDomainNameError::from_response(response))),
+                )
             }
         })
     }
@@ -16144,11 +18138,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateModelError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateModelError::from_response(response))),
+                )
             }
         })
     }
@@ -16185,11 +18180,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateRequestValidatorError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateRequestValidatorError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -16227,11 +18222,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -16265,11 +18261,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -16303,11 +18300,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateStageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateStageError::from_response(response))),
+                )
             }
         })
     }
@@ -16341,11 +18339,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateUsagePlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateUsagePlanError::from_response(response))),
+                )
             }
         })
     }
@@ -16382,11 +18381,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateUsagePlanKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateUsagePlanKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -16420,11 +18420,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateVpcLinkError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateVpcLinkError::from_response(response))),
+                )
             }
         })
     }
@@ -16444,11 +18445,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApiKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteApiKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -16475,11 +18477,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteAuthorizerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteAuthorizerError::from_response(response))),
+                )
             }
         })
     }
@@ -16506,11 +18509,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteBasePathMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteBasePathMappingError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -16537,9 +18540,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteClientCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteClientCertificateError::from_response(response))
                 }))
             }
         })
@@ -16567,11 +18568,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -16598,9 +18600,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDocumentationPartError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteDocumentationPartError::from_response(response))
                 }))
             }
         })
@@ -16628,9 +18628,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDocumentationVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteDocumentationVersionError::from_response(response))
                 }))
             }
         })
@@ -16657,11 +18655,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDomainNameError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteDomainNameError::from_response(response))),
+                )
             }
         })
     }
@@ -16688,11 +18687,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteGatewayResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteGatewayResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -16720,11 +18719,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteIntegrationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteIntegrationError::from_response(response))),
+                )
             }
         })
     }
@@ -16748,9 +18748,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteIntegrationResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteIntegrationResponseError::from_response(response))
                 }))
             }
         })
@@ -16776,11 +18774,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteMethodError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteMethodError::from_response(response))),
+                )
             }
         })
     }
@@ -16803,11 +18802,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteMethodResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteMethodResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -16831,11 +18830,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteModelError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteModelError::from_response(response))),
+                )
             }
         })
     }
@@ -16862,11 +18862,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteRequestValidatorError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteRequestValidatorError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -16893,11 +18893,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -16917,11 +18918,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -16945,11 +18947,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteStageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteStageError::from_response(response))),
+                )
             }
         })
     }
@@ -16975,11 +18978,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteUsagePlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteUsagePlanError::from_response(response))),
+                )
             }
         })
     }
@@ -17006,11 +19010,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteUsagePlanKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteUsagePlanKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -17030,11 +19035,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteVpcLinkError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteVpcLinkError::from_response(response))),
+                )
             }
         })
     }
@@ -17062,9 +19068,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(FlushStageAuthorizersCacheError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(FlushStageAuthorizersCacheError::from_response(response))
                 }))
             }
         })
@@ -17092,11 +19096,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(FlushStageCacheError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(FlushStageCacheError::from_response(response))),
+                )
             }
         })
     }
@@ -17131,9 +19136,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GenerateClientCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GenerateClientCertificateError::from_response(response))
                 }))
             }
         })
@@ -17162,11 +19165,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAccountError::from_response(response))),
+                )
             }
         })
     }
@@ -17200,11 +19204,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApiKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetApiKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -17250,11 +19255,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApiKeysError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetApiKeysError::from_response(response))),
+                )
             }
         })
     }
@@ -17289,11 +19295,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAuthorizerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAuthorizerError::from_response(response))),
+                )
             }
         })
     }
@@ -17336,11 +19343,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAuthorizersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAuthorizersError::from_response(response))),
+                )
             }
         })
     }
@@ -17375,11 +19383,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetBasePathMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetBasePathMappingError::from_response(response))),
+                )
             }
         })
     }
@@ -17422,11 +19431,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetBasePathMappingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetBasePathMappingsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -17460,11 +19469,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetClientCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetClientCertificateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -17504,11 +19513,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetClientCertificatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetClientCertificatesError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -17551,11 +19560,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -17598,11 +19608,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDeploymentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDeploymentsError::from_response(response))),
+                )
             }
         })
     }
@@ -17636,11 +19647,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentationPartError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetDocumentationPartError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -17694,11 +19705,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentationPartsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetDocumentationPartsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -17733,9 +19744,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentationVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetDocumentationVersionError::from_response(response))
                 }))
             }
         })
@@ -17779,9 +19788,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentationVersionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetDocumentationVersionsError::from_response(response))
                 }))
             }
         })
@@ -17816,11 +19823,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDomainNameError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDomainNameError::from_response(response))),
+                )
             }
         })
     }
@@ -17860,11 +19868,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDomainNamesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDomainNamesError::from_response(response))),
+                )
             }
         })
     }
@@ -17910,11 +19919,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetExportError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetExportError::from_response(response))),
+                )
             }
         })
     }
@@ -17949,11 +19959,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetGatewayResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetGatewayResponseError::from_response(response))),
+                )
             }
         })
     }
@@ -17996,11 +20007,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetGatewayResponsesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetGatewayResponsesError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -18036,11 +20047,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetIntegrationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetIntegrationError::from_response(response))),
+                )
             }
         })
     }
@@ -18071,11 +20083,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetIntegrationResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetIntegrationResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -18108,11 +20120,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetMethodError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetMethodError::from_response(response))),
+                )
             }
         })
     }
@@ -18143,11 +20156,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetMethodResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetMethodResponseError::from_response(response))),
+                )
             }
         })
     }
@@ -18185,11 +20199,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetModelError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetModelError::from_response(response))),
+                )
             }
         })
     }
@@ -18224,11 +20239,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetModelTemplateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetModelTemplateError::from_response(response))),
+                )
             }
         })
     }
@@ -18268,11 +20284,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetModelsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetModelsError::from_response(response))),
+                )
             }
         })
     }
@@ -18307,11 +20324,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRequestValidatorError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetRequestValidatorError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -18354,11 +20371,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRequestValidatorsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetRequestValidatorsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -18398,11 +20415,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -18450,11 +20468,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetResourcesError::from_response(response))),
+                )
             }
         })
     }
@@ -18482,11 +20501,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -18523,11 +20543,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRestApisError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetRestApisError::from_response(response))),
+                )
             }
         })
     }
@@ -18570,11 +20591,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetSdkError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetSdkError::from_response(response))),
+                )
             }
         })
     }
@@ -18601,11 +20623,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetSdkTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetSdkTypeError::from_response(response))),
+                )
             }
         })
     }
@@ -18641,11 +20664,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetSdkTypesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetSdkTypesError::from_response(response))),
+                )
             }
         })
     }
@@ -18677,11 +20701,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetStageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetStageError::from_response(response))),
+                )
             }
         })
     }
@@ -18718,11 +20743,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetStagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetStagesError::from_response(response))),
+                )
             }
         })
     }
@@ -18759,11 +20785,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -18808,11 +20835,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetUsageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetUsageError::from_response(response))),
+                )
             }
         })
     }
@@ -18846,11 +20874,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetUsagePlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetUsagePlanError::from_response(response))),
+                )
             }
         })
     }
@@ -18885,11 +20914,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetUsagePlanKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetUsagePlanKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -18935,11 +20965,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetUsagePlanKeysError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetUsagePlanKeysError::from_response(response))),
+                )
             }
         })
     }
@@ -18982,11 +21013,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetUsagePlansError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetUsagePlansError::from_response(response))),
+                )
             }
         })
     }
@@ -19014,11 +21046,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetVpcLinkError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetVpcLinkError::from_response(response))),
+                )
             }
         })
     }
@@ -19055,11 +21088,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetVpcLinksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetVpcLinksError::from_response(response))),
+                )
             }
         })
     }
@@ -19101,11 +21135,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ImportApiKeysError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ImportApiKeysError::from_response(response))),
+                )
             }
         })
     }
@@ -19151,9 +21186,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ImportDocumentationPartsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ImportDocumentationPartsError::from_response(response))
                 }))
             }
         })
@@ -19200,11 +21233,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ImportRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ImportRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -19242,11 +21276,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutGatewayResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutGatewayResponseError::from_response(response))),
+                )
             }
         })
     }
@@ -19285,11 +21320,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutIntegrationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutIntegrationError::from_response(response))),
+                )
             }
         })
     }
@@ -19323,11 +21359,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutIntegrationResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutIntegrationResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -19363,11 +21399,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutMethodError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutMethodError::from_response(response))),
+                )
             }
         })
     }
@@ -19401,11 +21438,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutMethodResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutMethodResponseError::from_response(response))),
+                )
             }
         })
     }
@@ -19450,11 +21488,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -19477,11 +21516,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TagResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TagResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -19520,11 +21560,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TestInvokeAuthorizerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(TestInvokeAuthorizerError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -19563,11 +21603,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TestInvokeMethodError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TestInvokeMethodError::from_response(response))),
+                )
             }
         })
     }
@@ -19593,11 +21634,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UntagResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UntagResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -19631,11 +21673,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateAccountError::from_response(response))),
+                )
             }
         })
     }
@@ -19669,11 +21712,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateApiKeyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateApiKeyError::from_response(response))),
+                )
             }
         })
     }
@@ -19711,11 +21755,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateAuthorizerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateAuthorizerError::from_response(response))),
+                )
             }
         })
     }
@@ -19753,11 +21798,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateBasePathMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateBasePathMappingError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -19795,9 +21840,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateClientCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateClientCertificateError::from_response(response))
                 }))
             }
         })
@@ -19836,11 +21879,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDeploymentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateDeploymentError::from_response(response))),
+                )
             }
         })
     }
@@ -19878,9 +21922,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDocumentationPartError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateDocumentationPartError::from_response(response))
                 }))
             }
         })
@@ -19919,9 +21961,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDocumentationVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateDocumentationVersionError::from_response(response))
                 }))
             }
         })
@@ -19959,11 +21999,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDomainNameError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateDomainNameError::from_response(response))),
+                )
             }
         })
     }
@@ -20001,11 +22042,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateGatewayResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateGatewayResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -20044,11 +22085,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateIntegrationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateIntegrationError::from_response(response))),
+                )
             }
         })
     }
@@ -20083,9 +22125,7 @@ impl ApiGateway for ApiGatewayClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateIntegrationResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateIntegrationResponseError::from_response(response))
                 }))
             }
         })
@@ -20122,11 +22162,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateMethodError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateMethodError::from_response(response))),
+                )
             }
         })
     }
@@ -20160,11 +22201,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateMethodResponseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateMethodResponseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -20199,11 +22240,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateModelError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateModelError::from_response(response))),
+                )
             }
         })
     }
@@ -20241,11 +22283,11 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateRequestValidatorError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateRequestValidatorError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -20283,11 +22325,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -20321,11 +22364,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateRestApiError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateRestApiError::from_response(response))),
+                )
             }
         })
     }
@@ -20360,11 +22404,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateStageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateStageError::from_response(response))),
+                )
             }
         })
     }
@@ -20399,11 +22444,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateUsageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateUsageError::from_response(response))),
+                )
             }
         })
     }
@@ -20440,11 +22486,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateUsagePlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateUsagePlanError::from_response(response))),
+                )
             }
         })
     }
@@ -20478,11 +22525,12 @@ impl ApiGateway for ApiGatewayClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateVpcLinkError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateVpcLinkError::from_response(response))),
+                )
             }
         })
     }

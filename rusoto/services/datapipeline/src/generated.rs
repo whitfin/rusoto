@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Contains the parameters for ActivatePipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -46,6 +46,7 @@ pub struct ActivatePipelineInput {
 
 /// <p>Contains the output of ActivatePipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivatePipelineOutput {}
 
 /// <p>Contains the parameters for AddTags.</p>
@@ -61,6 +62,7 @@ pub struct AddTagsInput {
 
 /// <p>Contains the output of AddTags.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddTagsOutput {}
 
 /// <p>Contains the parameters for CreatePipeline.</p>
@@ -84,6 +86,7 @@ pub struct CreatePipelineInput {
 
 /// <p>Contains the output of CreatePipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreatePipelineOutput {
     /// <p>The ID that AWS Data Pipeline assigns the newly created pipeline. For example, <code>df-06372391ZG65EXAMPLE</code>.</p>
     #[serde(rename = "pipelineId")]
@@ -104,6 +107,7 @@ pub struct DeactivatePipelineInput {
 
 /// <p>Contains the output of DeactivatePipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeactivatePipelineOutput {}
 
 /// <p>Contains the parameters for DeletePipeline.</p>
@@ -135,6 +139,7 @@ pub struct DescribeObjectsInput {
 
 /// <p>Contains the output of DescribeObjects.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeObjectsOutput {
     /// <p>Indicates whether there are more results to return.</p>
     #[serde(rename = "hasMoreResults")]
@@ -159,6 +164,7 @@ pub struct DescribePipelinesInput {
 
 /// <p>Contains the output of DescribePipelines.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribePipelinesOutput {
     /// <p>An array of descriptions for the specified pipelines.</p>
     #[serde(rename = "pipelineDescriptionList")]
@@ -181,6 +187,7 @@ pub struct EvaluateExpressionInput {
 
 /// <p>Contains the output of EvaluateExpression.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EvaluateExpressionOutput {
     /// <p>The evaluated expression.</p>
     #[serde(rename = "evaluatedExpression")]
@@ -217,6 +224,7 @@ pub struct GetPipelineDefinitionInput {
 
 /// <p>Contains the output of GetPipelineDefinition.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetPipelineDefinitionOutput {
     /// <p>The parameter objects used in the pipeline definition.</p>
     #[serde(rename = "parameterObjects")]
@@ -256,6 +264,7 @@ pub struct ListPipelinesInput {
 
 /// <p>Contains the output of ListPipelines.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListPipelinesOutput {
     /// <p>Indicates whether there are more results that can be obtained by a subsequent call.</p>
     #[serde(rename = "hasMoreResults")]
@@ -318,6 +327,7 @@ pub struct ParameterValue {
 
 /// <p>Contains pipeline metadata.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PipelineDescription {
     /// <p>Description of the pipeline.</p>
     #[serde(rename = "description")]
@@ -340,6 +350,7 @@ pub struct PipelineDescription {
 
 /// <p>Contains the name and identifier of a pipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PipelineIdName {
     /// <p>The ID of the pipeline that was assigned by AWS Data Pipeline. This is a string of the form <code>df-297EG78HU43EEXAMPLE</code>.</p>
     #[serde(rename = "id")]
@@ -383,6 +394,7 @@ pub struct PollForTaskInput {
 
 /// <p>Contains the output of PollForTask.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PollForTaskOutput {
     /// <p>The information needed to complete the task that is being assigned to the task runner. One of the fields returned in this object is <code>taskId</code>, which contains an identifier for the task being assigned. The calling task runner uses <code>taskId</code> in subsequent calls to <a>ReportTaskProgress</a> and <a>SetTaskStatus</a>.</p>
     #[serde(rename = "taskObject")]
@@ -411,6 +423,7 @@ pub struct PutPipelineDefinitionInput {
 
 /// <p>Contains the output of PutPipelineDefinition.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutPipelineDefinitionOutput {
     /// <p>Indicates whether there were validation errors, and the pipeline definition is stored but cannot be activated until you correct the pipeline and call <code>PutPipelineDefinition</code> to commit the corrected pipeline.</p>
     #[serde(rename = "errored")]
@@ -459,6 +472,7 @@ pub struct QueryObjectsInput {
 
 /// <p>Contains the output of QueryObjects.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct QueryObjectsOutput {
     /// <p>Indicates whether there are more results that can be obtained by a subsequent call.</p>
     #[serde(rename = "hasMoreResults")]
@@ -487,6 +501,7 @@ pub struct RemoveTagsInput {
 
 /// <p>Contains the output of RemoveTags.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RemoveTagsOutput {}
 
 /// <p>Contains the parameters for ReportTaskProgress.</p>
@@ -503,6 +518,7 @@ pub struct ReportTaskProgressInput {
 
 /// <p>Contains the output of ReportTaskProgress.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ReportTaskProgressOutput {
     /// <p>If true, the calling task runner should cancel processing of the task. The task runner does not need to call <a>SetTaskStatus</a> for canceled tasks.</p>
     #[serde(rename = "canceled")]
@@ -527,6 +543,7 @@ pub struct ReportTaskRunnerHeartbeatInput {
 
 /// <p>Contains the output of ReportTaskRunnerHeartbeat.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ReportTaskRunnerHeartbeatOutput {
     /// <p>Indicates whether the calling task runner should terminate.</p>
     #[serde(rename = "terminate")]
@@ -584,6 +601,7 @@ pub struct SetTaskStatusInput {
 
 /// <p>Contains the output of SetTaskStatus.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SetTaskStatusOutput {}
 
 /// <p>Tags are key/value pairs defined by a user and associated with a pipeline to control access. AWS Data Pipeline allows you to associate ten tags per pipeline. For more information, see <a href="http://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-control-access.html">Controlling User Access to Pipelines</a> in the <i>AWS Data Pipeline Developer Guide</i>.</p>
@@ -599,6 +617,7 @@ pub struct Tag {
 
 /// <p>Contains information about a pipeline task that is assigned to a task runner.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TaskObject {
     /// <p>The ID of the pipeline task attempt object. AWS Data Pipeline uses this value to track how many times a task is attempted.</p>
     #[serde(rename = "attemptId")]
@@ -639,6 +658,7 @@ pub struct ValidatePipelineDefinitionInput {
 
 /// <p>Contains the output of ValidatePipelineDefinition.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ValidatePipelineDefinitionOutput {
     /// <p>Indicates whether there were validation errors.</p>
     #[serde(rename = "errored")]
@@ -655,6 +675,7 @@ pub struct ValidatePipelineDefinitionOutput {
 
 /// <p>Defines a validation error. Validation errors prevent pipeline activation. The set of validation errors that can be returned are defined by AWS Data Pipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ValidationError {
     /// <p>A description of the validation error.</p>
     #[serde(rename = "errors")]
@@ -668,6 +689,7 @@ pub struct ValidationError {
 
 /// <p>Defines a validation warning. Validation warnings do not prevent pipeline activation. The set of validation warnings that can be returned are defined by AWS Data Pipeline.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ValidationWarning {
     /// <p>The identifier of the object that contains the validation warning.</p>
     #[serde(rename = "id")]
@@ -696,50 +718,50 @@ pub enum ActivatePipelineError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ActivatePipelineError {
-    pub fn from_body(body: &str) -> ActivatePipelineError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ActivatePipelineError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        ActivatePipelineError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        ActivatePipelineError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        ActivatePipelineError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        ActivatePipelineError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ActivatePipelineError::Validation(error_message.to_string())
-                    }
-                    _ => ActivatePipelineError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return ActivatePipelineError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return ActivatePipelineError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return ActivatePipelineError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return ActivatePipelineError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ActivatePipelineError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ActivatePipelineError::Unknown(String::from(body)),
         }
+        return ActivatePipelineError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ActivatePipelineError {
     fn from(err: serde_json::error::Error) -> ActivatePipelineError {
-        ActivatePipelineError::Unknown(err.description().to_string())
+        ActivatePipelineError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ActivatePipelineError {
@@ -772,7 +794,8 @@ impl Error for ActivatePipelineError {
             ActivatePipelineError::Validation(ref cause) => cause,
             ActivatePipelineError::Credentials(ref err) => err.description(),
             ActivatePipelineError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ActivatePipelineError::Unknown(ref cause) => cause,
+            ActivatePipelineError::ParseError(ref cause) => cause,
+            ActivatePipelineError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -793,48 +816,48 @@ pub enum AddTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddTagsError {
-    pub fn from_body(body: &str) -> AddTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        AddTagsError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        AddTagsError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        AddTagsError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        AddTagsError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => AddTagsError::Validation(error_message.to_string()),
-                    _ => AddTagsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return AddTagsError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return AddTagsError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return AddTagsError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return AddTagsError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => return AddTagsError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => AddTagsError::Unknown(String::from(body)),
         }
+        return AddTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddTagsError {
     fn from(err: serde_json::error::Error) -> AddTagsError {
-        AddTagsError::Unknown(err.description().to_string())
+        AddTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddTagsError {
@@ -867,7 +890,8 @@ impl Error for AddTagsError {
             AddTagsError::Validation(ref cause) => cause,
             AddTagsError::Credentials(ref err) => err.description(),
             AddTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AddTagsError::Unknown(ref cause) => cause,
+            AddTagsError::ParseError(ref cause) => cause,
+            AddTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -884,44 +908,44 @@ pub enum CreatePipelineError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreatePipelineError {
-    pub fn from_body(body: &str) -> CreatePipelineError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreatePipelineError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        CreatePipelineError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        CreatePipelineError::InvalidRequest(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreatePipelineError::Validation(error_message.to_string())
-                    }
-                    _ => CreatePipelineError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return CreatePipelineError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return CreatePipelineError::InvalidRequest(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreatePipelineError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreatePipelineError::Unknown(String::from(body)),
         }
+        return CreatePipelineError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreatePipelineError {
     fn from(err: serde_json::error::Error) -> CreatePipelineError {
-        CreatePipelineError::Unknown(err.description().to_string())
+        CreatePipelineError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreatePipelineError {
@@ -952,7 +976,8 @@ impl Error for CreatePipelineError {
             CreatePipelineError::Validation(ref cause) => cause,
             CreatePipelineError::Credentials(ref err) => err.description(),
             CreatePipelineError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreatePipelineError::Unknown(ref cause) => cause,
+            CreatePipelineError::ParseError(ref cause) => cause,
+            CreatePipelineError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -973,50 +998,52 @@ pub enum DeactivatePipelineError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeactivatePipelineError {
-    pub fn from_body(body: &str) -> DeactivatePipelineError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeactivatePipelineError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        DeactivatePipelineError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        DeactivatePipelineError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        DeactivatePipelineError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        DeactivatePipelineError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeactivatePipelineError::Validation(error_message.to_string())
-                    }
-                    _ => DeactivatePipelineError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return DeactivatePipelineError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return DeactivatePipelineError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return DeactivatePipelineError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return DeactivatePipelineError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeactivatePipelineError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeactivatePipelineError::Unknown(String::from(body)),
         }
+        return DeactivatePipelineError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeactivatePipelineError {
     fn from(err: serde_json::error::Error) -> DeactivatePipelineError {
-        DeactivatePipelineError::Unknown(err.description().to_string())
+        DeactivatePipelineError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeactivatePipelineError {
@@ -1051,7 +1078,8 @@ impl Error for DeactivatePipelineError {
             DeactivatePipelineError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeactivatePipelineError::Unknown(ref cause) => cause,
+            DeactivatePipelineError::ParseError(ref cause) => cause,
+            DeactivatePipelineError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1070,47 +1098,47 @@ pub enum DeletePipelineError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeletePipelineError {
-    pub fn from_body(body: &str) -> DeletePipelineError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeletePipelineError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        DeletePipelineError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        DeletePipelineError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        DeletePipelineError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeletePipelineError::Validation(error_message.to_string())
-                    }
-                    _ => DeletePipelineError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return DeletePipelineError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return DeletePipelineError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return DeletePipelineError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeletePipelineError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeletePipelineError::Unknown(String::from(body)),
         }
+        return DeletePipelineError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeletePipelineError {
     fn from(err: serde_json::error::Error) -> DeletePipelineError {
-        DeletePipelineError::Unknown(err.description().to_string())
+        DeletePipelineError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeletePipelineError {
@@ -1142,7 +1170,8 @@ impl Error for DeletePipelineError {
             DeletePipelineError::Validation(ref cause) => cause,
             DeletePipelineError::Credentials(ref err) => err.description(),
             DeletePipelineError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeletePipelineError::Unknown(ref cause) => cause,
+            DeletePipelineError::ParseError(ref cause) => cause,
+            DeletePipelineError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1163,50 +1192,50 @@ pub enum DescribeObjectsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeObjectsError {
-    pub fn from_body(body: &str) -> DescribeObjectsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeObjectsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        DescribeObjectsError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        DescribeObjectsError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        DescribeObjectsError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        DescribeObjectsError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeObjectsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeObjectsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return DescribeObjectsError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return DescribeObjectsError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return DescribeObjectsError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return DescribeObjectsError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeObjectsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeObjectsError::Unknown(String::from(body)),
         }
+        return DescribeObjectsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeObjectsError {
     fn from(err: serde_json::error::Error) -> DescribeObjectsError {
-        DescribeObjectsError::Unknown(err.description().to_string())
+        DescribeObjectsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeObjectsError {
@@ -1239,7 +1268,8 @@ impl Error for DescribeObjectsError {
             DescribeObjectsError::Validation(ref cause) => cause,
             DescribeObjectsError::Credentials(ref err) => err.description(),
             DescribeObjectsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeObjectsError::Unknown(ref cause) => cause,
+            DescribeObjectsError::ParseError(ref cause) => cause,
+            DescribeObjectsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1260,50 +1290,50 @@ pub enum DescribePipelinesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribePipelinesError {
-    pub fn from_body(body: &str) -> DescribePipelinesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribePipelinesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        DescribePipelinesError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        DescribePipelinesError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        DescribePipelinesError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        DescribePipelinesError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribePipelinesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribePipelinesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return DescribePipelinesError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return DescribePipelinesError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return DescribePipelinesError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return DescribePipelinesError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribePipelinesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribePipelinesError::Unknown(String::from(body)),
         }
+        return DescribePipelinesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribePipelinesError {
     fn from(err: serde_json::error::Error) -> DescribePipelinesError {
-        DescribePipelinesError::Unknown(err.description().to_string())
+        DescribePipelinesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribePipelinesError {
@@ -1338,7 +1368,8 @@ impl Error for DescribePipelinesError {
             DescribePipelinesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribePipelinesError::Unknown(ref cause) => cause,
+            DescribePipelinesError::ParseError(ref cause) => cause,
+            DescribePipelinesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1361,53 +1392,55 @@ pub enum EvaluateExpressionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl EvaluateExpressionError {
-    pub fn from_body(body: &str) -> EvaluateExpressionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> EvaluateExpressionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        EvaluateExpressionError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        EvaluateExpressionError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        EvaluateExpressionError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        EvaluateExpressionError::PipelineNotFound(String::from(error_message))
-                    }
-                    "TaskNotFoundException" => {
-                        EvaluateExpressionError::TaskNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        EvaluateExpressionError::Validation(error_message.to_string())
-                    }
-                    _ => EvaluateExpressionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return EvaluateExpressionError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return EvaluateExpressionError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return EvaluateExpressionError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return EvaluateExpressionError::PipelineNotFound(String::from(error_message))
+                }
+                "TaskNotFoundException" => {
+                    return EvaluateExpressionError::TaskNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return EvaluateExpressionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => EvaluateExpressionError::Unknown(String::from(body)),
         }
+        return EvaluateExpressionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for EvaluateExpressionError {
     fn from(err: serde_json::error::Error) -> EvaluateExpressionError {
-        EvaluateExpressionError::Unknown(err.description().to_string())
+        EvaluateExpressionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for EvaluateExpressionError {
@@ -1443,7 +1476,8 @@ impl Error for EvaluateExpressionError {
             EvaluateExpressionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            EvaluateExpressionError::Unknown(ref cause) => cause,
+            EvaluateExpressionError::ParseError(ref cause) => cause,
+            EvaluateExpressionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1464,50 +1498,52 @@ pub enum GetPipelineDefinitionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetPipelineDefinitionError {
-    pub fn from_body(body: &str) -> GetPipelineDefinitionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetPipelineDefinitionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => GetPipelineDefinitionError::InternalServiceError(
-                        String::from(error_message),
-                    ),
-                    "InvalidRequestException" => {
-                        GetPipelineDefinitionError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        GetPipelineDefinitionError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        GetPipelineDefinitionError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetPipelineDefinitionError::Validation(error_message.to_string())
-                    }
-                    _ => GetPipelineDefinitionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return GetPipelineDefinitionError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return GetPipelineDefinitionError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return GetPipelineDefinitionError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return GetPipelineDefinitionError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetPipelineDefinitionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetPipelineDefinitionError::Unknown(String::from(body)),
         }
+        return GetPipelineDefinitionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetPipelineDefinitionError {
     fn from(err: serde_json::error::Error) -> GetPipelineDefinitionError {
-        GetPipelineDefinitionError::Unknown(err.description().to_string())
+        GetPipelineDefinitionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetPipelineDefinitionError {
@@ -1542,7 +1578,8 @@ impl Error for GetPipelineDefinitionError {
             GetPipelineDefinitionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetPipelineDefinitionError::Unknown(ref cause) => cause,
+            GetPipelineDefinitionError::ParseError(ref cause) => cause,
+            GetPipelineDefinitionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1559,44 +1596,44 @@ pub enum ListPipelinesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListPipelinesError {
-    pub fn from_body(body: &str) -> ListPipelinesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListPipelinesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        ListPipelinesError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        ListPipelinesError::InvalidRequest(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListPipelinesError::Validation(error_message.to_string())
-                    }
-                    _ => ListPipelinesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return ListPipelinesError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return ListPipelinesError::InvalidRequest(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListPipelinesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListPipelinesError::Unknown(String::from(body)),
         }
+        return ListPipelinesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListPipelinesError {
     fn from(err: serde_json::error::Error) -> ListPipelinesError {
-        ListPipelinesError::Unknown(err.description().to_string())
+        ListPipelinesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListPipelinesError {
@@ -1627,7 +1664,8 @@ impl Error for ListPipelinesError {
             ListPipelinesError::Validation(ref cause) => cause,
             ListPipelinesError::Credentials(ref err) => err.description(),
             ListPipelinesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListPipelinesError::Unknown(ref cause) => cause,
+            ListPipelinesError::ParseError(ref cause) => cause,
+            ListPipelinesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1646,47 +1684,47 @@ pub enum PollForTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PollForTaskError {
-    pub fn from_body(body: &str) -> PollForTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PollForTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        PollForTaskError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        PollForTaskError::InvalidRequest(String::from(error_message))
-                    }
-                    "TaskNotFoundException" => {
-                        PollForTaskError::TaskNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PollForTaskError::Validation(error_message.to_string())
-                    }
-                    _ => PollForTaskError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return PollForTaskError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return PollForTaskError::InvalidRequest(String::from(error_message))
+                }
+                "TaskNotFoundException" => {
+                    return PollForTaskError::TaskNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PollForTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PollForTaskError::Unknown(String::from(body)),
         }
+        return PollForTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PollForTaskError {
     fn from(err: serde_json::error::Error) -> PollForTaskError {
-        PollForTaskError::Unknown(err.description().to_string())
+        PollForTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PollForTaskError {
@@ -1718,7 +1756,8 @@ impl Error for PollForTaskError {
             PollForTaskError::Validation(ref cause) => cause,
             PollForTaskError::Credentials(ref err) => err.description(),
             PollForTaskError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PollForTaskError::Unknown(ref cause) => cause,
+            PollForTaskError::ParseError(ref cause) => cause,
+            PollForTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1739,50 +1778,52 @@ pub enum PutPipelineDefinitionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutPipelineDefinitionError {
-    pub fn from_body(body: &str) -> PutPipelineDefinitionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutPipelineDefinitionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => PutPipelineDefinitionError::InternalServiceError(
-                        String::from(error_message),
-                    ),
-                    "InvalidRequestException" => {
-                        PutPipelineDefinitionError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        PutPipelineDefinitionError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        PutPipelineDefinitionError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutPipelineDefinitionError::Validation(error_message.to_string())
-                    }
-                    _ => PutPipelineDefinitionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return PutPipelineDefinitionError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return PutPipelineDefinitionError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return PutPipelineDefinitionError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return PutPipelineDefinitionError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutPipelineDefinitionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutPipelineDefinitionError::Unknown(String::from(body)),
         }
+        return PutPipelineDefinitionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutPipelineDefinitionError {
     fn from(err: serde_json::error::Error) -> PutPipelineDefinitionError {
-        PutPipelineDefinitionError::Unknown(err.description().to_string())
+        PutPipelineDefinitionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutPipelineDefinitionError {
@@ -1817,7 +1858,8 @@ impl Error for PutPipelineDefinitionError {
             PutPipelineDefinitionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutPipelineDefinitionError::Unknown(ref cause) => cause,
+            PutPipelineDefinitionError::ParseError(ref cause) => cause,
+            PutPipelineDefinitionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1838,50 +1880,50 @@ pub enum QueryObjectsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl QueryObjectsError {
-    pub fn from_body(body: &str) -> QueryObjectsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> QueryObjectsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        QueryObjectsError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        QueryObjectsError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        QueryObjectsError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        QueryObjectsError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        QueryObjectsError::Validation(error_message.to_string())
-                    }
-                    _ => QueryObjectsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return QueryObjectsError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return QueryObjectsError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return QueryObjectsError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return QueryObjectsError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return QueryObjectsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => QueryObjectsError::Unknown(String::from(body)),
         }
+        return QueryObjectsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for QueryObjectsError {
     fn from(err: serde_json::error::Error) -> QueryObjectsError {
-        QueryObjectsError::Unknown(err.description().to_string())
+        QueryObjectsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for QueryObjectsError {
@@ -1914,7 +1956,8 @@ impl Error for QueryObjectsError {
             QueryObjectsError::Validation(ref cause) => cause,
             QueryObjectsError::Credentials(ref err) => err.description(),
             QueryObjectsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            QueryObjectsError::Unknown(ref cause) => cause,
+            QueryObjectsError::ParseError(ref cause) => cause,
+            QueryObjectsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1935,48 +1978,50 @@ pub enum RemoveTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveTagsError {
-    pub fn from_body(body: &str) -> RemoveTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        RemoveTagsError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        RemoveTagsError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        RemoveTagsError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        RemoveTagsError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => RemoveTagsError::Validation(error_message.to_string()),
-                    _ => RemoveTagsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return RemoveTagsError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return RemoveTagsError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return RemoveTagsError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return RemoveTagsError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return RemoveTagsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveTagsError::Unknown(String::from(body)),
         }
+        return RemoveTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveTagsError {
     fn from(err: serde_json::error::Error) -> RemoveTagsError {
-        RemoveTagsError::Unknown(err.description().to_string())
+        RemoveTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveTagsError {
@@ -2009,7 +2054,8 @@ impl Error for RemoveTagsError {
             RemoveTagsError::Validation(ref cause) => cause,
             RemoveTagsError::Credentials(ref err) => err.description(),
             RemoveTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            RemoveTagsError::Unknown(ref cause) => cause,
+            RemoveTagsError::ParseError(ref cause) => cause,
+            RemoveTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2032,53 +2078,55 @@ pub enum ReportTaskProgressError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ReportTaskProgressError {
-    pub fn from_body(body: &str) -> ReportTaskProgressError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ReportTaskProgressError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        ReportTaskProgressError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        ReportTaskProgressError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        ReportTaskProgressError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        ReportTaskProgressError::PipelineNotFound(String::from(error_message))
-                    }
-                    "TaskNotFoundException" => {
-                        ReportTaskProgressError::TaskNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ReportTaskProgressError::Validation(error_message.to_string())
-                    }
-                    _ => ReportTaskProgressError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return ReportTaskProgressError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return ReportTaskProgressError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return ReportTaskProgressError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return ReportTaskProgressError::PipelineNotFound(String::from(error_message))
+                }
+                "TaskNotFoundException" => {
+                    return ReportTaskProgressError::TaskNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ReportTaskProgressError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ReportTaskProgressError::Unknown(String::from(body)),
         }
+        return ReportTaskProgressError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ReportTaskProgressError {
     fn from(err: serde_json::error::Error) -> ReportTaskProgressError {
-        ReportTaskProgressError::Unknown(err.description().to_string())
+        ReportTaskProgressError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ReportTaskProgressError {
@@ -2114,7 +2162,8 @@ impl Error for ReportTaskProgressError {
             ReportTaskProgressError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ReportTaskProgressError::Unknown(ref cause) => cause,
+            ReportTaskProgressError::ParseError(ref cause) => cause,
+            ReportTaskProgressError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2131,44 +2180,48 @@ pub enum ReportTaskRunnerHeartbeatError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ReportTaskRunnerHeartbeatError {
-    pub fn from_body(body: &str) -> ReportTaskRunnerHeartbeatError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ReportTaskRunnerHeartbeatError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => ReportTaskRunnerHeartbeatError::InternalServiceError(
-                        String::from(error_message),
-                    ),
-                    "InvalidRequestException" => {
-                        ReportTaskRunnerHeartbeatError::InvalidRequest(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ReportTaskRunnerHeartbeatError::Validation(error_message.to_string())
-                    }
-                    _ => ReportTaskRunnerHeartbeatError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return ReportTaskRunnerHeartbeatError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return ReportTaskRunnerHeartbeatError::InvalidRequest(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ReportTaskRunnerHeartbeatError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ReportTaskRunnerHeartbeatError::Unknown(String::from(body)),
         }
+        return ReportTaskRunnerHeartbeatError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ReportTaskRunnerHeartbeatError {
     fn from(err: serde_json::error::Error) -> ReportTaskRunnerHeartbeatError {
-        ReportTaskRunnerHeartbeatError::Unknown(err.description().to_string())
+        ReportTaskRunnerHeartbeatError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ReportTaskRunnerHeartbeatError {
@@ -2201,7 +2254,8 @@ impl Error for ReportTaskRunnerHeartbeatError {
             ReportTaskRunnerHeartbeatError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ReportTaskRunnerHeartbeatError::Unknown(ref cause) => cause,
+            ReportTaskRunnerHeartbeatError::ParseError(ref cause) => cause,
+            ReportTaskRunnerHeartbeatError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2222,48 +2276,50 @@ pub enum SetStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SetStatusError {
-    pub fn from_body(body: &str) -> SetStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SetStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        SetStatusError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        SetStatusError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        SetStatusError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        SetStatusError::PipelineNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => SetStatusError::Validation(error_message.to_string()),
-                    _ => SetStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return SetStatusError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return SetStatusError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return SetStatusError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return SetStatusError::PipelineNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return SetStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SetStatusError::Unknown(String::from(body)),
         }
+        return SetStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SetStatusError {
     fn from(err: serde_json::error::Error) -> SetStatusError {
-        SetStatusError::Unknown(err.description().to_string())
+        SetStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SetStatusError {
@@ -2296,7 +2352,8 @@ impl Error for SetStatusError {
             SetStatusError::Validation(ref cause) => cause,
             SetStatusError::Credentials(ref err) => err.description(),
             SetStatusError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SetStatusError::Unknown(ref cause) => cause,
+            SetStatusError::ParseError(ref cause) => cause,
+            SetStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2319,53 +2376,53 @@ pub enum SetTaskStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SetTaskStatusError {
-    pub fn from_body(body: &str) -> SetTaskStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SetTaskStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        SetTaskStatusError::InternalServiceError(String::from(error_message))
-                    }
-                    "InvalidRequestException" => {
-                        SetTaskStatusError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => {
-                        SetTaskStatusError::PipelineDeleted(String::from(error_message))
-                    }
-                    "PipelineNotFoundException" => {
-                        SetTaskStatusError::PipelineNotFound(String::from(error_message))
-                    }
-                    "TaskNotFoundException" => {
-                        SetTaskStatusError::TaskNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        SetTaskStatusError::Validation(error_message.to_string())
-                    }
-                    _ => SetTaskStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return SetTaskStatusError::InternalServiceError(String::from(error_message))
                 }
+                "InvalidRequestException" => {
+                    return SetTaskStatusError::InvalidRequest(String::from(error_message))
+                }
+                "PipelineDeletedException" => {
+                    return SetTaskStatusError::PipelineDeleted(String::from(error_message))
+                }
+                "PipelineNotFoundException" => {
+                    return SetTaskStatusError::PipelineNotFound(String::from(error_message))
+                }
+                "TaskNotFoundException" => {
+                    return SetTaskStatusError::TaskNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return SetTaskStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SetTaskStatusError::Unknown(String::from(body)),
         }
+        return SetTaskStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SetTaskStatusError {
     fn from(err: serde_json::error::Error) -> SetTaskStatusError {
-        SetTaskStatusError::Unknown(err.description().to_string())
+        SetTaskStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SetTaskStatusError {
@@ -2399,7 +2456,8 @@ impl Error for SetTaskStatusError {
             SetTaskStatusError::Validation(ref cause) => cause,
             SetTaskStatusError::Credentials(ref err) => err.description(),
             SetTaskStatusError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SetTaskStatusError::Unknown(ref cause) => cause,
+            SetTaskStatusError::ParseError(ref cause) => cause,
+            SetTaskStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2420,54 +2478,58 @@ pub enum ValidatePipelineDefinitionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ValidatePipelineDefinitionError {
-    pub fn from_body(body: &str) -> ValidatePipelineDefinitionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ValidatePipelineDefinitionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceError" => {
-                        ValidatePipelineDefinitionError::InternalServiceError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRequestException" => {
-                        ValidatePipelineDefinitionError::InvalidRequest(String::from(error_message))
-                    }
-                    "PipelineDeletedException" => ValidatePipelineDefinitionError::PipelineDeleted(
-                        String::from(error_message),
-                    ),
-                    "PipelineNotFoundException" => {
-                        ValidatePipelineDefinitionError::PipelineNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ValidatePipelineDefinitionError::Validation(error_message.to_string())
-                    }
-                    _ => ValidatePipelineDefinitionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceError" => {
+                    return ValidatePipelineDefinitionError::InternalServiceError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidRequestException" => {
+                    return ValidatePipelineDefinitionError::InvalidRequest(String::from(
+                        error_message,
+                    ))
+                }
+                "PipelineDeletedException" => {
+                    return ValidatePipelineDefinitionError::PipelineDeleted(String::from(
+                        error_message,
+                    ))
+                }
+                "PipelineNotFoundException" => {
+                    return ValidatePipelineDefinitionError::PipelineNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ValidatePipelineDefinitionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ValidatePipelineDefinitionError::Unknown(String::from(body)),
         }
+        return ValidatePipelineDefinitionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ValidatePipelineDefinitionError {
     fn from(err: serde_json::error::Error) -> ValidatePipelineDefinitionError {
-        ValidatePipelineDefinitionError::Unknown(err.description().to_string())
+        ValidatePipelineDefinitionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ValidatePipelineDefinitionError {
@@ -2502,7 +2564,8 @@ impl Error for ValidatePipelineDefinitionError {
             ValidatePipelineDefinitionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ValidatePipelineDefinitionError::Unknown(ref cause) => cause,
+            ValidatePipelineDefinitionError::ParseError(ref cause) => cause,
+            ValidatePipelineDefinitionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2672,14 +2735,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<ActivatePipelineOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ActivatePipelineError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ActivatePipelineError::from_response(response))),
+                )
             }
         })
     }
@@ -2704,14 +2769,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<AddTagsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AddTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -2739,14 +2806,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<CreatePipelineOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreatePipelineError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreatePipelineError::from_response(response))),
+                )
             }
         })
     }
@@ -2774,14 +2843,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<DeactivatePipelineOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeactivatePipelineError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeactivatePipelineError::from_response(response))),
+                )
             }
         })
     }
@@ -2799,11 +2870,12 @@ impl DataPipeline for DataPipelineClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeletePipelineError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeletePipelineError::from_response(response))),
+                )
             }
         })
     }
@@ -2831,14 +2903,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<DescribeObjectsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeObjectsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeObjectsError::from_response(response))),
+                )
             }
         })
     }
@@ -2866,14 +2940,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<DescribePipelinesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribePipelinesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribePipelinesError::from_response(response))),
+                )
             }
         })
     }
@@ -2901,14 +2977,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<EvaluateExpressionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(EvaluateExpressionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(EvaluateExpressionError::from_response(response))),
+                )
             }
         })
     }
@@ -2936,14 +3014,15 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<GetPipelineDefinitionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetPipelineDefinitionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetPipelineDefinitionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2971,14 +3050,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<ListPipelinesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListPipelinesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListPipelinesError::from_response(response))),
+                )
             }
         })
     }
@@ -3006,14 +3087,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<PollForTaskOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PollForTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PollForTaskError::from_response(response))),
+                )
             }
         })
     }
@@ -3041,14 +3124,15 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<PutPipelineDefinitionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutPipelineDefinitionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutPipelineDefinitionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3076,14 +3160,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<QueryObjectsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(QueryObjectsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(QueryObjectsError::from_response(response))),
+                )
             }
         })
     }
@@ -3111,14 +3197,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<RemoveTagsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(RemoveTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -3146,14 +3234,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<ReportTaskProgressOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ReportTaskProgressError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ReportTaskProgressError::from_response(response))),
+                )
             }
         })
     }
@@ -3181,13 +3271,12 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<ReportTaskRunnerHeartbeatOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ReportTaskRunnerHeartbeatError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ReportTaskRunnerHeartbeatError::from_response(response))
                 }))
             }
         })
@@ -3206,11 +3295,12 @@ impl DataPipeline for DataPipelineClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SetStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SetStatusError::from_response(response))),
+                )
             }
         })
     }
@@ -3238,14 +3328,16 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<SetTaskStatusOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SetTaskStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SetTaskStatusError::from_response(response))),
+                )
             }
         })
     }
@@ -3273,13 +3365,12 @@ impl DataPipeline for DataPipelineClient {
 
                     serde_json::from_str::<ValidatePipelineDefinitionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ValidatePipelineDefinitionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ValidatePipelineDefinitionError::from_response(response))
                 }))
             }
         })

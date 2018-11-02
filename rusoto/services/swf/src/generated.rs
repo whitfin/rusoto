@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Unit of work sent to an activity worker.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTask {
     /// <p>The unique ID of the task.</p>
     #[serde(rename = "activityId")]
@@ -54,6 +55,7 @@ pub struct ActivityTask {
 
 /// <p>Provides the details of the <code>ActivityTaskCancelRequested</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskCancelRequestedEventAttributes {
     /// <p>The unique ID of the task.</p>
     #[serde(rename = "activityId")]
@@ -65,6 +67,7 @@ pub struct ActivityTaskCancelRequestedEventAttributes {
 
 /// <p>Provides the details of the <code>ActivityTaskCanceled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskCanceledEventAttributes {
     /// <p>Details of the cancellation.</p>
     #[serde(rename = "details")]
@@ -84,6 +87,7 @@ pub struct ActivityTaskCanceledEventAttributes {
 
 /// <p>Provides the details of the <code>ActivityTaskCompleted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskCompletedEventAttributes {
     /// <p>The results of the activity task.</p>
     #[serde(rename = "result")]
@@ -99,6 +103,7 @@ pub struct ActivityTaskCompletedEventAttributes {
 
 /// <p>Provides the details of the <code>ActivityTaskFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskFailedEventAttributes {
     /// <p>The details of the failure.</p>
     #[serde(rename = "details")]
@@ -118,6 +123,7 @@ pub struct ActivityTaskFailedEventAttributes {
 
 /// <p>Provides the details of the <code>ActivityTaskScheduled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskScheduledEventAttributes {
     /// <p>The unique ID of the activity task.</p>
     #[serde(rename = "activityId")]
@@ -163,6 +169,7 @@ pub struct ActivityTaskScheduledEventAttributes {
 
 /// <p>Provides the details of the <code>ActivityTaskStarted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskStartedEventAttributes {
     /// <p>Identity of the worker that was assigned this task. This aids diagnostics when problems arise. The form of this identity is user defined.</p>
     #[serde(rename = "identity")]
@@ -175,6 +182,7 @@ pub struct ActivityTaskStartedEventAttributes {
 
 /// <p>Status information about an activity task.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskStatus {
     /// <p>Set to <code>true</code> if cancellation of the task is requested.</p>
     #[serde(rename = "cancelRequested")]
@@ -183,6 +191,7 @@ pub struct ActivityTaskStatus {
 
 /// <p>Provides the details of the <code>ActivityTaskTimedOut</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTaskTimedOutEventAttributes {
     /// <p>Contains the content of the <code>details</code> parameter for the last call made by the activity to <code>RecordActivityTaskHeartbeat</code>.</p>
     #[serde(rename = "details")]
@@ -212,6 +221,7 @@ pub struct ActivityType {
 
 /// <p>Configuration settings registered with the activity type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTypeConfiguration {
     /// <p> The default maximum time, in seconds, before which a worker processing a task must report progress by calling <a>RecordActivityTaskHeartbeat</a>.</p> <p>You can specify this value only when <i>registering</i> an activity type. The registered default value can be overridden when you schedule a task through the <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity worker subsequently attempts to record a heartbeat or returns a result, the activity worker receives an <code>UnknownResource</code> fault. In this case, Amazon SWF no longer considers the activity task to be valid; the activity worker should clean up the activity task.</p> <p>The duration is specified in seconds, an integer greater than or equal to <code>0</code>. You can use <code>NONE</code> to specify unlimited duration.</p>
     #[serde(rename = "defaultTaskHeartbeatTimeout")]
@@ -241,6 +251,7 @@ pub struct ActivityTypeConfiguration {
 
 /// <p>Detailed information about an activity type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTypeDetail {
     /// <p>The configuration settings registered with the activity type.</p>
     #[serde(rename = "configuration")]
@@ -252,6 +263,7 @@ pub struct ActivityTypeDetail {
 
 /// <p>Detailed information about an activity type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTypeInfo {
     /// <p>The <a>ActivityType</a> type structure representing the activity type.</p>
     #[serde(rename = "activityType")]
@@ -274,6 +286,7 @@ pub struct ActivityTypeInfo {
 
 /// <p>Contains a paginated list of activity type information structures.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivityTypeInfos {
     /// <p>If a <code>NextPageToken</code> was returned by a previous call, there are more results available. To retrieve the next page of results, make the call again using the returned token in <code>nextPageToken</code>. Keep all other arguments unchanged.</p> <p>The configured <code>maximumPageSize</code> determines how many results can be returned in a single call.</p>
     #[serde(rename = "nextPageToken")]
@@ -294,6 +307,7 @@ pub struct CancelTimerDecisionAttributes {
 
 /// <p>Provides the details of the <code>CancelTimerFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CancelTimerFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -317,6 +331,7 @@ pub struct CancelWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>CancelWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CancelWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -328,6 +343,7 @@ pub struct CancelWorkflowExecutionFailedEventAttributes {
 
 /// <p>Provide details of the <code>ChildWorkflowExecutionCanceled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionCanceledEventAttributes {
     /// <p>Details of the cancellation (if provided).</p>
     #[serde(rename = "details")]
@@ -349,6 +365,7 @@ pub struct ChildWorkflowExecutionCanceledEventAttributes {
 
 /// <p>Provides the details of the <code>ChildWorkflowExecutionCompleted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionCompletedEventAttributes {
     /// <p>The ID of the <code>StartChildWorkflowExecutionInitiated</code> event corresponding to the <code>StartChildWorkflowExecution</code> <a>Decision</a> to start this child workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -370,6 +387,7 @@ pub struct ChildWorkflowExecutionCompletedEventAttributes {
 
 /// <p>Provides the details of the <code>ChildWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionFailedEventAttributes {
     /// <p>The details of the failure (if provided).</p>
     #[serde(rename = "details")]
@@ -395,6 +413,7 @@ pub struct ChildWorkflowExecutionFailedEventAttributes {
 
 /// <p>Provides the details of the <code>ChildWorkflowExecutionStarted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionStartedEventAttributes {
     /// <p>The ID of the <code>StartChildWorkflowExecutionInitiated</code> event corresponding to the <code>StartChildWorkflowExecution</code> <a>Decision</a> to start this child workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -409,6 +428,7 @@ pub struct ChildWorkflowExecutionStartedEventAttributes {
 
 /// <p>Provides the details of the <code>ChildWorkflowExecutionTerminated</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionTerminatedEventAttributes {
     /// <p>The ID of the <code>StartChildWorkflowExecutionInitiated</code> event corresponding to the <code>StartChildWorkflowExecution</code> <a>Decision</a> to start this child workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -426,6 +446,7 @@ pub struct ChildWorkflowExecutionTerminatedEventAttributes {
 
 /// <p>Provides the details of the <code>ChildWorkflowExecutionTimedOut</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ChildWorkflowExecutionTimedOutEventAttributes {
     /// <p>The ID of the <code>StartChildWorkflowExecutionInitiated</code> event corresponding to the <code>StartChildWorkflowExecution</code> <a>Decision</a> to start this child workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -463,6 +484,7 @@ pub struct CompleteWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>CompleteWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CompleteWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -515,6 +537,7 @@ pub struct ContinueAsNewWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>ContinueAsNewWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ContinueAsNewWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -668,6 +691,7 @@ pub struct Decision {
 
 /// <p>A structure that represents a decision task. Decision tasks are sent to deciders in order for them to make decisions.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DecisionTask {
     /// <p>A paginated list of history events of the workflow execution. The decider uses this during the processing of the decision task.</p>
     #[serde(rename = "events")]
@@ -696,6 +720,7 @@ pub struct DecisionTask {
 
 /// <p>Provides the details of the <code>DecisionTaskCompleted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DecisionTaskCompletedEventAttributes {
     /// <p>User defined context for the workflow execution.</p>
     #[serde(rename = "executionContext")]
@@ -711,6 +736,7 @@ pub struct DecisionTaskCompletedEventAttributes {
 
 /// <p>Provides details about the <code>DecisionTaskScheduled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DecisionTaskScheduledEventAttributes {
     /// <p>The maximum duration for this decision task. The task is considered timed out if it doesn't completed within this duration.</p> <p>The duration is specified in seconds, an integer greater than or equal to <code>0</code>. You can use <code>NONE</code> to specify unlimited duration.</p>
     #[serde(rename = "startToCloseTimeout")]
@@ -727,6 +753,7 @@ pub struct DecisionTaskScheduledEventAttributes {
 
 /// <p>Provides the details of the <code>DecisionTaskStarted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DecisionTaskStartedEventAttributes {
     /// <p>Identity of the decider making the request. This enables diagnostic tracing when problems arise. The form of this identity is user defined.</p>
     #[serde(rename = "identity")]
@@ -739,6 +766,7 @@ pub struct DecisionTaskStartedEventAttributes {
 
 /// <p>Provides the details of the <code>DecisionTaskTimedOut</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DecisionTaskTimedOutEventAttributes {
     /// <p>The ID of the <code>DecisionTaskScheduled</code> event that was recorded when this decision task was scheduled. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "scheduledEventId")]
@@ -817,6 +845,7 @@ pub struct DescribeWorkflowTypeInput {
 
 /// <p>Contains the configuration settings of a domain.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainConfiguration {
     /// <p>The retention period for workflow executions in this domain.</p>
     #[serde(rename = "workflowExecutionRetentionPeriodInDays")]
@@ -825,6 +854,7 @@ pub struct DomainConfiguration {
 
 /// <p>Contains details of a domain.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainDetail {
     /// <p>The domain configuration. Currently, this includes only the domain's retention period.</p>
     #[serde(rename = "configuration")]
@@ -836,6 +866,7 @@ pub struct DomainDetail {
 
 /// <p>Contains general information about a domain.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainInfo {
     /// <p>The description of the domain provided through <a>RegisterDomain</a>.</p>
     #[serde(rename = "description")]
@@ -851,6 +882,7 @@ pub struct DomainInfo {
 
 /// <p>Contains a paginated collection of DomainInfo structures.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainInfos {
     /// <p>A list of DomainInfo structures.</p>
     #[serde(rename = "domainInfos")]
@@ -875,6 +907,7 @@ pub struct ExecutionTimeFilter {
 
 /// <p>Provides the details of the <code>ExternalWorkflowExecutionCancelRequested</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
     /// <p>The ID of the <code>RequestCancelExternalWorkflowExecutionInitiated</code> event corresponding to the <code>RequestCancelExternalWorkflowExecution</code> decision to cancel this external workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -886,6 +919,7 @@ pub struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
 
 /// <p>Provides the details of the <code>ExternalWorkflowExecutionSignaled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExternalWorkflowExecutionSignaledEventAttributes {
     /// <p>The ID of the <code>SignalExternalWorkflowExecutionInitiated</code> event corresponding to the <code>SignalExternalWorkflowExecution</code> decision to request this signal. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "initiatedEventId")]
@@ -910,6 +944,7 @@ pub struct FailWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>FailWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FailWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -943,6 +978,7 @@ pub struct GetWorkflowExecutionHistoryInput {
 
 /// <p>Paginated representation of a workflow history for a workflow execution. This is the up to date, complete and authoritative record of the events related to all tasks and events in the life of the workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct History {
     /// <p>The list of history events.</p>
     #[serde(rename = "events")]
@@ -955,6 +991,7 @@ pub struct History {
 
 /// <p><p>Event within a workflow execution. A history event can be one of these types:</p> <ul> <li> <p> <code>ActivityTaskCancelRequested</code> – A <code>RequestCancelActivityTask</code> decision was received by the system.</p> </li> <li> <p> <code>ActivityTaskCanceled</code> – The activity task was successfully canceled.</p> </li> <li> <p> <code>ActivityTaskCompleted</code> – An activity worker successfully completed an activity task by calling <a>RespondActivityTaskCompleted</a>.</p> </li> <li> <p> <code>ActivityTaskFailed</code> – An activity worker failed an activity task by calling <a>RespondActivityTaskFailed</a>.</p> </li> <li> <p> <code>ActivityTaskScheduled</code> – An activity task was scheduled for execution.</p> </li> <li> <p> <code>ActivityTaskStarted</code> – The scheduled activity task was dispatched to a worker.</p> </li> <li> <p> <code>ActivityTaskTimedOut</code> – The activity task timed out.</p> </li> <li> <p> <code>CancelTimerFailed</code> – Failed to process CancelTimer decision. This happens when the decision isn&#39;t configured properly, for example no timer exists with the specified timer Id.</p> </li> <li> <p> <code>CancelWorkflowExecutionFailed</code> – A request to cancel a workflow execution failed.</p> </li> <li> <p> <code>ChildWorkflowExecutionCanceled</code> – A child workflow execution, started by this workflow execution, was canceled and closed.</p> </li> <li> <p> <code>ChildWorkflowExecutionCompleted</code> – A child workflow execution, started by this workflow execution, completed successfully and was closed.</p> </li> <li> <p> <code>ChildWorkflowExecutionFailed</code> – A child workflow execution, started by this workflow execution, failed to complete successfully and was closed.</p> </li> <li> <p> <code>ChildWorkflowExecutionStarted</code> – A child workflow execution was successfully started.</p> </li> <li> <p> <code>ChildWorkflowExecutionTerminated</code> – A child workflow execution, started by this workflow execution, was terminated.</p> </li> <li> <p> <code>ChildWorkflowExecutionTimedOut</code> – A child workflow execution, started by this workflow execution, timed out and was closed.</p> </li> <li> <p> <code>CompleteWorkflowExecutionFailed</code> – The workflow execution failed to complete.</p> </li> <li> <p> <code>ContinueAsNewWorkflowExecutionFailed</code> – The workflow execution failed to complete after being continued as a new workflow execution.</p> </li> <li> <p> <code>DecisionTaskCompleted</code> – The decider successfully completed a decision task by calling <a>RespondDecisionTaskCompleted</a>.</p> </li> <li> <p> <code>DecisionTaskScheduled</code> – A decision task was scheduled for the workflow execution.</p> </li> <li> <p> <code>DecisionTaskStarted</code> – The decision task was dispatched to a decider.</p> </li> <li> <p> <code>DecisionTaskTimedOut</code> – The decision task timed out.</p> </li> <li> <p> <code>ExternalWorkflowExecutionCancelRequested</code> – Request to cancel an external workflow execution was successfully delivered to the target execution.</p> </li> <li> <p> <code>ExternalWorkflowExecutionSignaled</code> – A signal, requested by this workflow execution, was successfully delivered to the target external workflow execution.</p> </li> <li> <p> <code>FailWorkflowExecutionFailed</code> – A request to mark a workflow execution as failed, itself failed.</p> </li> <li> <p> <code>MarkerRecorded</code> – A marker was recorded in the workflow history as the result of a <code>RecordMarker</code> decision.</p> </li> <li> <p> <code>RecordMarkerFailed</code> – A <code>RecordMarker</code> decision was returned as failed.</p> </li> <li> <p> <code>RequestCancelActivityTaskFailed</code> – Failed to process RequestCancelActivityTask decision. This happens when the decision isn&#39;t configured properly.</p> </li> <li> <p> <code>RequestCancelExternalWorkflowExecutionFailed</code> – Request to cancel an external workflow execution failed.</p> </li> <li> <p> <code>RequestCancelExternalWorkflowExecutionInitiated</code> – A request was made to request the cancellation of an external workflow execution.</p> </li> <li> <p> <code>ScheduleActivityTaskFailed</code> – Failed to process ScheduleActivityTask decision. This happens when the decision isn&#39;t configured properly, for example the activity type specified isn&#39;t registered.</p> </li> <li> <p> <code>SignalExternalWorkflowExecutionFailed</code> – The request to signal an external workflow execution failed.</p> </li> <li> <p> <code>SignalExternalWorkflowExecutionInitiated</code> – A request to signal an external workflow was made.</p> </li> <li> <p> <code>StartActivityTaskFailed</code> – A scheduled activity task failed to start.</p> </li> <li> <p> <code>StartChildWorkflowExecutionFailed</code> – Failed to process StartChildWorkflowExecution decision. This happens when the decision isn&#39;t configured properly, for example the workflow type specified isn&#39;t registered.</p> </li> <li> <p> <code>StartChildWorkflowExecutionInitiated</code> – A request was made to start a child workflow execution.</p> </li> <li> <p> <code>StartTimerFailed</code> – Failed to process StartTimer decision. This happens when the decision isn&#39;t configured properly, for example a timer already exists with the specified timer Id.</p> </li> <li> <p> <code>TimerCanceled</code> – A timer, previously started for this workflow execution, was successfully canceled.</p> </li> <li> <p> <code>TimerFired</code> – A timer, previously started for this workflow execution, fired.</p> </li> <li> <p> <code>TimerStarted</code> – A timer was started for the workflow execution due to a <code>StartTimer</code> decision.</p> </li> <li> <p> <code>WorkflowExecutionCancelRequested</code> – A request to cancel this workflow execution was made.</p> </li> <li> <p> <code>WorkflowExecutionCanceled</code> – The workflow execution was successfully canceled and closed.</p> </li> <li> <p> <code>WorkflowExecutionCompleted</code> – The workflow execution was closed due to successful completion.</p> </li> <li> <p> <code>WorkflowExecutionContinuedAsNew</code> – The workflow execution was closed and a new execution of the same type was created with the same workflowId.</p> </li> <li> <p> <code>WorkflowExecutionFailed</code> – The workflow execution closed due to a failure.</p> </li> <li> <p> <code>WorkflowExecutionSignaled</code> – An external signal was received for the workflow execution.</p> </li> <li> <p> <code>WorkflowExecutionStarted</code> – The workflow execution was started.</p> </li> <li> <p> <code>WorkflowExecutionTerminated</code> – The workflow execution was terminated.</p> </li> <li> <p> <code>WorkflowExecutionTimedOut</code> – The workflow execution was closed because a time out was exceeded.</p> </li> </ul></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct HistoryEvent {
     /// <p>If the event is of type <code>ActivityTaskcancelRequested</code> then this member is set and provides detailed information about the event. It isn't set for other event types.</p>
     #[serde(rename = "activityTaskCancelRequestedEventAttributes")]
@@ -1216,6 +1253,7 @@ pub struct HistoryEvent {
 
 /// <p>Provides the details of the <code>LambdaFunctionCompleted</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaFunctionCompletedEventAttributes {
     /// <p>The results of the Lambda task.</p>
     #[serde(rename = "result")]
@@ -1231,6 +1269,7 @@ pub struct LambdaFunctionCompletedEventAttributes {
 
 /// <p>Provides the details of the <code>LambdaFunctionFailed</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaFunctionFailedEventAttributes {
     /// <p>The details of the failure.</p>
     #[serde(rename = "details")]
@@ -1250,6 +1289,7 @@ pub struct LambdaFunctionFailedEventAttributes {
 
 /// <p>Provides the details of the <code>LambdaFunctionScheduled</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaFunctionScheduledEventAttributes {
     /// <p>Data attached to the event that the decider can use in subsequent workflow tasks. This data isn't sent to the Lambda task.</p>
     #[serde(rename = "control")]
@@ -1276,6 +1316,7 @@ pub struct LambdaFunctionScheduledEventAttributes {
 
 /// <p>Provides the details of the <code>LambdaFunctionStarted</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaFunctionStartedEventAttributes {
     /// <p>The ID of the <code>LambdaFunctionScheduled</code> event that was recorded when this activity task was scheduled. To help diagnose issues, use this information to trace back the chain of events leading up to this event.</p>
     #[serde(rename = "scheduledEventId")]
@@ -1284,6 +1325,7 @@ pub struct LambdaFunctionStartedEventAttributes {
 
 /// <p>Provides details of the <code>LambdaFunctionTimedOut</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaFunctionTimedOutEventAttributes {
     /// <p>The ID of the <code>LambdaFunctionScheduled</code> event that was recorded when this activity task was scheduled. To help diagnose issues, use this information to trace back the chain of events leading up to this event.</p>
     #[serde(rename = "scheduledEventId")]
@@ -1447,6 +1489,7 @@ pub struct ListWorkflowTypesInput {
 
 /// <p>Provides the details of the <code>MarkerRecorded</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MarkerRecordedEventAttributes {
     /// <p>The ID of the <code>DecisionTaskCompleted</code> event corresponding to the decision task that resulted in the <code>RecordMarker</code> decision that requested this marker. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "decisionTaskCompletedEventId")]
@@ -1462,6 +1505,7 @@ pub struct MarkerRecordedEventAttributes {
 
 /// <p>Contains the count of tasks in a task list.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PendingTaskCount {
     /// <p>The number of tasks in the task list.</p>
     #[serde(rename = "count")]
@@ -1537,6 +1581,7 @@ pub struct RecordMarkerDecisionAttributes {
 
 /// <p>Provides the details of the <code>RecordMarkerFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RecordMarkerFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -1655,6 +1700,7 @@ pub struct RequestCancelActivityTaskDecisionAttributes {
 
 /// <p>Provides the details of the <code>RequestCancelActivityTaskFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestCancelActivityTaskFailedEventAttributes {
     /// <p>The activityId provided in the <code>RequestCancelActivityTask</code> decision that failed.</p>
     #[serde(rename = "activityId")]
@@ -1685,6 +1731,7 @@ pub struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>RequestCancelExternalWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -1710,6 +1757,7 @@ pub struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
 
 /// <p>Provides the details of the <code>RequestCancelExternalWorkflowExecutionInitiated</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
     /// <p>Data attached to the event that can be used by the decider in subsequent workflow tasks.</p>
     #[serde(rename = "control")]
@@ -1796,6 +1844,7 @@ pub struct RespondDecisionTaskCompletedInput {
 
 /// <p>Specifies the <code>runId</code> of a workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Run {
     /// <p>The <code>runId</code> of a workflow execution. This ID is generated by the service and can be used to uniquely identify the workflow execution within a domain.</p>
     #[serde(rename = "runId")]
@@ -1848,6 +1897,7 @@ pub struct ScheduleActivityTaskDecisionAttributes {
 
 /// <p>Provides the details of the <code>ScheduleActivityTaskFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ScheduleActivityTaskFailedEventAttributes {
     /// <p>The activityId provided in the <code>ScheduleActivityTask</code> decision that failed.</p>
     #[serde(rename = "activityId")]
@@ -1888,6 +1938,7 @@ pub struct ScheduleLambdaFunctionDecisionAttributes {
 
 /// <p>Provides the details of the <code>ScheduleLambdaFunctionFailed</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ScheduleLambdaFunctionFailedEventAttributes {
     /// <p><p>The cause of the failure. To help diagnose issues, use this information to trace back the chain of events leading up to this event.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -1928,6 +1979,7 @@ pub struct SignalExternalWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>SignalExternalWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SignalExternalWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -1953,6 +2005,7 @@ pub struct SignalExternalWorkflowExecutionFailedEventAttributes {
 
 /// <p>Provides the details of the <code>SignalExternalWorkflowExecutionInitiated</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SignalExternalWorkflowExecutionInitiatedEventAttributes {
     /// <p>Data attached to the event that can be used by the decider in subsequent decision tasks.</p>
     #[serde(rename = "control")]
@@ -2047,6 +2100,7 @@ pub struct StartChildWorkflowExecutionDecisionAttributes {
 
 /// <p>Provides the details of the <code>StartChildWorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartChildWorkflowExecutionFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>When <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision fails because it lacks sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -2071,6 +2125,7 @@ pub struct StartChildWorkflowExecutionFailedEventAttributes {
 
 /// <p>Provides the details of the <code>StartChildWorkflowExecutionInitiated</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartChildWorkflowExecutionInitiatedEventAttributes {
     /// <p><p>The policy to use for the child workflow executions if this execution gets terminated by explicitly calling the <a>TerminateWorkflowExecution</a> action or due to an expired timeout.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "childPolicy")]
@@ -2119,6 +2174,7 @@ pub struct StartChildWorkflowExecutionInitiatedEventAttributes {
 
 /// <p>Provides the details of the <code>StartLambdaFunctionFailed</code> event. It isn't set for other event types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartLambdaFunctionFailedEventAttributes {
     /// <p><p>The cause of the failure. To help diagnose issues, use this information to trace back the chain of events leading up to this event.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because the IAM role attached to the execution lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/lambda-task.html">Lambda Tasks</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -2151,6 +2207,7 @@ pub struct StartTimerDecisionAttributes {
 
 /// <p>Provides the details of the <code>StartTimerFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartTimerFailedEventAttributes {
     /// <p><p>The cause of the failure. This information is generated by the system and can be useful for diagnostic purposes.</p> <note> <p>If <code>cause</code> is set to <code>OPERATION<em>NOT</em>PERMITTED</code>, the decision failed because it lacked sufficient permissions. For details and example IAM policies, see <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html">Using IAM to Manage Access to Amazon SWF Workflows</a> in the <i>Amazon SWF Developer Guide</i>.</p> </note></p>
     #[serde(rename = "cause")]
@@ -2252,6 +2309,7 @@ pub struct TerminateWorkflowExecutionInput {
 
 /// <p> Provides the details of the <code>TimerCanceled</code> event. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TimerCanceledEventAttributes {
     /// <p>The ID of the <code>DecisionTaskCompleted</code> event corresponding to the decision task that resulted in the <code>CancelTimer</code> decision to cancel this timer. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "decisionTaskCompletedEventId")]
@@ -2266,6 +2324,7 @@ pub struct TimerCanceledEventAttributes {
 
 /// <p>Provides the details of the <code>TimerFired</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TimerFiredEventAttributes {
     /// <p>The ID of the <code>TimerStarted</code> event that was recorded when this timer was started. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "startedEventId")]
@@ -2277,6 +2336,7 @@ pub struct TimerFiredEventAttributes {
 
 /// <p>Provides the details of the <code>TimerStarted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TimerStartedEventAttributes {
     /// <p>Data attached to the event that can be used by the decider in subsequent workflow tasks.</p>
     #[serde(rename = "control")]
@@ -2306,6 +2366,7 @@ pub struct WorkflowExecution {
 
 /// <p>Provides the details of the <code>WorkflowExecutionCancelRequested</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionCancelRequestedEventAttributes {
     /// <p>If set, indicates that the request to cancel the workflow execution was automatically generated, and specifies the cause. This happens if the parent workflow execution times out or is terminated, and the child policy is set to cancel child executions.</p>
     #[serde(rename = "cause")]
@@ -2323,6 +2384,7 @@ pub struct WorkflowExecutionCancelRequestedEventAttributes {
 
 /// <p>Provides the details of the <code>WorkflowExecutionCanceled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionCanceledEventAttributes {
     /// <p>The ID of the <code>DecisionTaskCompleted</code> event corresponding to the decision task that resulted in the <code>CancelWorkflowExecution</code> decision for this cancellation request. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "decisionTaskCompletedEventId")]
@@ -2335,6 +2397,7 @@ pub struct WorkflowExecutionCanceledEventAttributes {
 
 /// <p>Provides the details of the <code>WorkflowExecutionCompleted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionCompletedEventAttributes {
     /// <p>The ID of the <code>DecisionTaskCompleted</code> event corresponding to the decision task that resulted in the <code>CompleteWorkflowExecution</code> decision to complete this execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "decisionTaskCompletedEventId")]
@@ -2347,6 +2410,7 @@ pub struct WorkflowExecutionCompletedEventAttributes {
 
 /// <p>The configuration settings for a workflow execution including timeout values, tasklist etc. These configuration settings are determined from the defaults specified when registering the workflow type and those specified when starting the workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionConfiguration {
     /// <p><p>The policy to use for the child workflow executions if this workflow execution is terminated, by calling the <a>TerminateWorkflowExecution</a> action explicitly or due to an expired timeout.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "childPolicy")]
@@ -2372,6 +2436,7 @@ pub struct WorkflowExecutionConfiguration {
 
 /// <p>Provides the details of the <code>WorkflowExecutionContinuedAsNew</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionContinuedAsNewEventAttributes {
     /// <p><p>The policy to use for the child workflow executions of the new execution if it is terminated by calling the <a>TerminateWorkflowExecution</a> action explicitly or due to an expired timeout.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "childPolicy")]
@@ -2416,6 +2481,7 @@ pub struct WorkflowExecutionContinuedAsNewEventAttributes {
 
 /// <p>Contains the count of workflow executions returned from <a>CountOpenWorkflowExecutions</a> or <a>CountClosedWorkflowExecutions</a> </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionCount {
     /// <p>The number of workflow executions.</p>
     #[serde(rename = "count")]
@@ -2428,6 +2494,7 @@ pub struct WorkflowExecutionCount {
 
 /// <p>Contains details about a workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionDetail {
     /// <p>The configuration settings for this workflow execution including timeout values, tasklist etc.</p>
     #[serde(rename = "executionConfiguration")]
@@ -2450,6 +2517,7 @@ pub struct WorkflowExecutionDetail {
 
 /// <p>Provides the details of the <code>WorkflowExecutionFailed</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionFailedEventAttributes {
     /// <p>The ID of the <code>DecisionTaskCompleted</code> event corresponding to the decision task that resulted in the <code>FailWorkflowExecution</code> decision to fail this execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event.</p>
     #[serde(rename = "decisionTaskCompletedEventId")]
@@ -2474,6 +2542,7 @@ pub struct WorkflowExecutionFilter {
 
 /// <p>Contains information about a workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionInfo {
     /// <p>Set to true if a cancellation is requested for this workflow execution.</p>
     #[serde(rename = "cancelRequested")]
@@ -2511,6 +2580,7 @@ pub struct WorkflowExecutionInfo {
 
 /// <p>Contains a paginated list of information about workflow executions.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionInfos {
     /// <p>The list of workflow information structures.</p>
     #[serde(rename = "executionInfos")]
@@ -2523,6 +2593,7 @@ pub struct WorkflowExecutionInfos {
 
 /// <p>Contains the counts of open tasks, child workflow executions and timers for a workflow execution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionOpenCounts {
     /// <p>The count of activity tasks whose status is <code>OPEN</code>.</p>
     #[serde(rename = "openActivityTasks")]
@@ -2544,6 +2615,7 @@ pub struct WorkflowExecutionOpenCounts {
 
 /// <p>Provides the details of the <code>WorkflowExecutionSignaled</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionSignaledEventAttributes {
     /// <p>The ID of the <code>SignalExternalWorkflowExecutionInitiated</code> event corresponding to the <code>SignalExternalWorkflow</code> decision to signal this workflow execution.The source event with this ID can be found in the history of the source workflow execution. This information can be useful for diagnosing problems by tracing back the chain of events leading up to this event. This field is set only if the signal was initiated by another workflow execution.</p>
     #[serde(rename = "externalInitiatedEventId")]
@@ -2564,6 +2636,7 @@ pub struct WorkflowExecutionSignaledEventAttributes {
 
 /// <p>Provides details of <code>WorkflowExecutionStarted</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionStartedEventAttributes {
     /// <p><p>The policy to use for the child workflow executions if this workflow execution is terminated, by calling the <a>TerminateWorkflowExecution</a> action explicitly or due to an expired timeout.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "childPolicy")]
@@ -2614,6 +2687,7 @@ pub struct WorkflowExecutionStartedEventAttributes {
 
 /// <p>Provides the details of the <code>WorkflowExecutionTerminated</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionTerminatedEventAttributes {
     /// <p>If set, indicates that the workflow execution was automatically terminated, and specifies the cause. This happens if the parent workflow execution times out or is terminated and the child policy is set to terminate child executions.</p>
     #[serde(rename = "cause")]
@@ -2634,6 +2708,7 @@ pub struct WorkflowExecutionTerminatedEventAttributes {
 
 /// <p>Provides the details of the <code>WorkflowExecutionTimedOut</code> event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowExecutionTimedOutEventAttributes {
     /// <p><p>The policy used for the child workflow executions of this workflow execution.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "childPolicy")]
@@ -2656,6 +2731,7 @@ pub struct WorkflowType {
 
 /// <p>The configuration settings of a workflow type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowTypeConfiguration {
     /// <p><p> The default policy to use for the child workflow executions when a workflow execution of this type is terminated, by calling the <a>TerminateWorkflowExecution</a> action explicitly or due to an expired timeout. This default can be overridden when starting a workflow execution using the <a>StartWorkflowExecution</a> action or the <code>StartChildWorkflowExecution</code> <a>Decision</a>.</p> <p>The supported child policies are:</p> <ul> <li> <p> <code>TERMINATE</code> – The child executions are terminated.</p> </li> <li> <p> <code>REQUEST_CANCEL</code> – A request to cancel is attempted for each child execution by recording a <code>WorkflowExecutionCancelRequested</code> event in its history. It is up to the decider to take appropriate actions when it receives an execution history with this event.</p> </li> <li> <p> <code>ABANDON</code> – No action is taken. The child executions continue to run.</p> </li> </ul></p>
     #[serde(rename = "defaultChildPolicy")]
@@ -2685,6 +2761,7 @@ pub struct WorkflowTypeConfiguration {
 
 /// <p>Contains details about a workflow type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowTypeDetail {
     /// <p>Configuration settings of the workflow type registered through <a>RegisterWorkflowType</a> </p>
     #[serde(rename = "configuration")]
@@ -2708,6 +2785,7 @@ pub struct WorkflowTypeFilter {
 
 /// <p>Contains information about a workflow type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowTypeInfo {
     /// <p>The date when this type was registered.</p>
     #[serde(rename = "creationDate")]
@@ -2730,6 +2808,7 @@ pub struct WorkflowTypeInfo {
 
 /// <p>Contains a paginated list of information structures about workflow types.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct WorkflowTypeInfos {
     /// <p>If a <code>NextPageToken</code> was returned by a previous call, there are more results available. To retrieve the next page of results, make the call again using the returned token in <code>nextPageToken</code>. Keep all other arguments unchanged.</p> <p>The configured <code>maximumPageSize</code> determines how many results can be returned in a single call.</p>
     #[serde(rename = "nextPageToken")]
@@ -2753,48 +2832,48 @@ pub enum CountClosedWorkflowExecutionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CountClosedWorkflowExecutionsError {
-    pub fn from_body(body: &str) -> CountClosedWorkflowExecutionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CountClosedWorkflowExecutionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        CountClosedWorkflowExecutionsError::OperationNotPermittedFault(
-                            String::from(error_message),
-                        )
-                    }
-                    "UnknownResourceFault" => {
-                        CountClosedWorkflowExecutionsError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CountClosedWorkflowExecutionsError::Validation(error_message.to_string())
-                    }
-                    _ => CountClosedWorkflowExecutionsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return CountClosedWorkflowExecutionsError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return CountClosedWorkflowExecutionsError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CountClosedWorkflowExecutionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CountClosedWorkflowExecutionsError::Unknown(String::from(body)),
         }
+        return CountClosedWorkflowExecutionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CountClosedWorkflowExecutionsError {
     fn from(err: serde_json::error::Error) -> CountClosedWorkflowExecutionsError {
-        CountClosedWorkflowExecutionsError::Unknown(err.description().to_string())
+        CountClosedWorkflowExecutionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CountClosedWorkflowExecutionsError {
@@ -2827,7 +2906,8 @@ impl Error for CountClosedWorkflowExecutionsError {
             CountClosedWorkflowExecutionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CountClosedWorkflowExecutionsError::Unknown(ref cause) => cause,
+            CountClosedWorkflowExecutionsError::ParseError(ref cause) => cause,
+            CountClosedWorkflowExecutionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2844,48 +2924,48 @@ pub enum CountOpenWorkflowExecutionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CountOpenWorkflowExecutionsError {
-    pub fn from_body(body: &str) -> CountOpenWorkflowExecutionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CountOpenWorkflowExecutionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        CountOpenWorkflowExecutionsError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        CountOpenWorkflowExecutionsError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CountOpenWorkflowExecutionsError::Validation(error_message.to_string())
-                    }
-                    _ => CountOpenWorkflowExecutionsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return CountOpenWorkflowExecutionsError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return CountOpenWorkflowExecutionsError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CountOpenWorkflowExecutionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CountOpenWorkflowExecutionsError::Unknown(String::from(body)),
         }
+        return CountOpenWorkflowExecutionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CountOpenWorkflowExecutionsError {
     fn from(err: serde_json::error::Error) -> CountOpenWorkflowExecutionsError {
-        CountOpenWorkflowExecutionsError::Unknown(err.description().to_string())
+        CountOpenWorkflowExecutionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CountOpenWorkflowExecutionsError {
@@ -2918,7 +2998,8 @@ impl Error for CountOpenWorkflowExecutionsError {
             CountOpenWorkflowExecutionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CountOpenWorkflowExecutionsError::Unknown(ref cause) => cause,
+            CountOpenWorkflowExecutionsError::ParseError(ref cause) => cause,
+            CountOpenWorkflowExecutionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2935,46 +3016,48 @@ pub enum CountPendingActivityTasksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CountPendingActivityTasksError {
-    pub fn from_body(body: &str) -> CountPendingActivityTasksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CountPendingActivityTasksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        CountPendingActivityTasksError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => CountPendingActivityTasksError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        CountPendingActivityTasksError::Validation(error_message.to_string())
-                    }
-                    _ => CountPendingActivityTasksError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return CountPendingActivityTasksError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return CountPendingActivityTasksError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CountPendingActivityTasksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CountPendingActivityTasksError::Unknown(String::from(body)),
         }
+        return CountPendingActivityTasksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CountPendingActivityTasksError {
     fn from(err: serde_json::error::Error) -> CountPendingActivityTasksError {
-        CountPendingActivityTasksError::Unknown(err.description().to_string())
+        CountPendingActivityTasksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CountPendingActivityTasksError {
@@ -3007,7 +3090,8 @@ impl Error for CountPendingActivityTasksError {
             CountPendingActivityTasksError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CountPendingActivityTasksError::Unknown(ref cause) => cause,
+            CountPendingActivityTasksError::ParseError(ref cause) => cause,
+            CountPendingActivityTasksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3024,46 +3108,48 @@ pub enum CountPendingDecisionTasksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CountPendingDecisionTasksError {
-    pub fn from_body(body: &str) -> CountPendingDecisionTasksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CountPendingDecisionTasksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        CountPendingDecisionTasksError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => CountPendingDecisionTasksError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        CountPendingDecisionTasksError::Validation(error_message.to_string())
-                    }
-                    _ => CountPendingDecisionTasksError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return CountPendingDecisionTasksError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return CountPendingDecisionTasksError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CountPendingDecisionTasksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CountPendingDecisionTasksError::Unknown(String::from(body)),
         }
+        return CountPendingDecisionTasksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CountPendingDecisionTasksError {
     fn from(err: serde_json::error::Error) -> CountPendingDecisionTasksError {
-        CountPendingDecisionTasksError::Unknown(err.description().to_string())
+        CountPendingDecisionTasksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CountPendingDecisionTasksError {
@@ -3096,7 +3182,8 @@ impl Error for CountPendingDecisionTasksError {
             CountPendingDecisionTasksError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CountPendingDecisionTasksError::Unknown(ref cause) => cause,
+            CountPendingDecisionTasksError::ParseError(ref cause) => cause,
+            CountPendingDecisionTasksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3115,49 +3202,53 @@ pub enum DeprecateActivityTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeprecateActivityTypeError {
-    pub fn from_body(body: &str) -> DeprecateActivityTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeprecateActivityTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DeprecateActivityTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TypeDeprecatedFault" => {
-                        DeprecateActivityTypeError::TypeDeprecatedFault(String::from(error_message))
-                    }
-                    "UnknownResourceFault" => DeprecateActivityTypeError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DeprecateActivityTypeError::Validation(error_message.to_string())
-                    }
-                    _ => DeprecateActivityTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DeprecateActivityTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "TypeDeprecatedFault" => {
+                    return DeprecateActivityTypeError::TypeDeprecatedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return DeprecateActivityTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeprecateActivityTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeprecateActivityTypeError::Unknown(String::from(body)),
         }
+        return DeprecateActivityTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeprecateActivityTypeError {
     fn from(err: serde_json::error::Error) -> DeprecateActivityTypeError {
-        DeprecateActivityTypeError::Unknown(err.description().to_string())
+        DeprecateActivityTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeprecateActivityTypeError {
@@ -3191,7 +3282,8 @@ impl Error for DeprecateActivityTypeError {
             DeprecateActivityTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeprecateActivityTypeError::Unknown(ref cause) => cause,
+            DeprecateActivityTypeError::ParseError(ref cause) => cause,
+            DeprecateActivityTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3210,49 +3302,49 @@ pub enum DeprecateDomainError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeprecateDomainError {
-    pub fn from_body(body: &str) -> DeprecateDomainError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeprecateDomainError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DomainDeprecatedFault" => {
-                        DeprecateDomainError::DomainDeprecatedFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        DeprecateDomainError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        DeprecateDomainError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeprecateDomainError::Validation(error_message.to_string())
-                    }
-                    _ => DeprecateDomainError::Unknown(String::from(body)),
+            match *error_type {
+                "DomainDeprecatedFault" => {
+                    return DeprecateDomainError::DomainDeprecatedFault(String::from(error_message))
                 }
+                "OperationNotPermittedFault" => {
+                    return DeprecateDomainError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return DeprecateDomainError::UnknownResourceFault(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeprecateDomainError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeprecateDomainError::Unknown(String::from(body)),
         }
+        return DeprecateDomainError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeprecateDomainError {
     fn from(err: serde_json::error::Error) -> DeprecateDomainError {
-        DeprecateDomainError::Unknown(err.description().to_string())
+        DeprecateDomainError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeprecateDomainError {
@@ -3284,7 +3376,8 @@ impl Error for DeprecateDomainError {
             DeprecateDomainError::Validation(ref cause) => cause,
             DeprecateDomainError::Credentials(ref err) => err.description(),
             DeprecateDomainError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeprecateDomainError::Unknown(ref cause) => cause,
+            DeprecateDomainError::ParseError(ref cause) => cause,
+            DeprecateDomainError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3303,49 +3396,53 @@ pub enum DeprecateWorkflowTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeprecateWorkflowTypeError {
-    pub fn from_body(body: &str) -> DeprecateWorkflowTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeprecateWorkflowTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DeprecateWorkflowTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TypeDeprecatedFault" => {
-                        DeprecateWorkflowTypeError::TypeDeprecatedFault(String::from(error_message))
-                    }
-                    "UnknownResourceFault" => DeprecateWorkflowTypeError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DeprecateWorkflowTypeError::Validation(error_message.to_string())
-                    }
-                    _ => DeprecateWorkflowTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DeprecateWorkflowTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "TypeDeprecatedFault" => {
+                    return DeprecateWorkflowTypeError::TypeDeprecatedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return DeprecateWorkflowTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeprecateWorkflowTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeprecateWorkflowTypeError::Unknown(String::from(body)),
         }
+        return DeprecateWorkflowTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeprecateWorkflowTypeError {
     fn from(err: serde_json::error::Error) -> DeprecateWorkflowTypeError {
-        DeprecateWorkflowTypeError::Unknown(err.description().to_string())
+        DeprecateWorkflowTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeprecateWorkflowTypeError {
@@ -3379,7 +3476,8 @@ impl Error for DeprecateWorkflowTypeError {
             DeprecateWorkflowTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeprecateWorkflowTypeError::Unknown(ref cause) => cause,
+            DeprecateWorkflowTypeError::ParseError(ref cause) => cause,
+            DeprecateWorkflowTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3396,46 +3494,48 @@ pub enum DescribeActivityTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeActivityTypeError {
-    pub fn from_body(body: &str) -> DescribeActivityTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeActivityTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DescribeActivityTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        DescribeActivityTypeError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeActivityTypeError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeActivityTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DescribeActivityTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return DescribeActivityTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeActivityTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeActivityTypeError::Unknown(String::from(body)),
         }
+        return DescribeActivityTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeActivityTypeError {
     fn from(err: serde_json::error::Error) -> DescribeActivityTypeError {
-        DescribeActivityTypeError::Unknown(err.description().to_string())
+        DescribeActivityTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeActivityTypeError {
@@ -3468,7 +3568,8 @@ impl Error for DescribeActivityTypeError {
             DescribeActivityTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeActivityTypeError::Unknown(ref cause) => cause,
+            DescribeActivityTypeError::ParseError(ref cause) => cause,
+            DescribeActivityTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3485,44 +3586,46 @@ pub enum DescribeDomainError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeDomainError {
-    pub fn from_body(body: &str) -> DescribeDomainError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeDomainError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DescribeDomainError::OperationNotPermittedFault(String::from(error_message))
-                    }
-                    "UnknownResourceFault" => {
-                        DescribeDomainError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeDomainError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeDomainError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DescribeDomainError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return DescribeDomainError::UnknownResourceFault(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeDomainError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeDomainError::Unknown(String::from(body)),
         }
+        return DescribeDomainError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeDomainError {
     fn from(err: serde_json::error::Error) -> DescribeDomainError {
-        DescribeDomainError::Unknown(err.description().to_string())
+        DescribeDomainError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeDomainError {
@@ -3553,7 +3656,8 @@ impl Error for DescribeDomainError {
             DescribeDomainError::Validation(ref cause) => cause,
             DescribeDomainError::Credentials(ref err) => err.description(),
             DescribeDomainError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeDomainError::Unknown(ref cause) => cause,
+            DescribeDomainError::ParseError(ref cause) => cause,
+            DescribeDomainError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3570,46 +3674,48 @@ pub enum DescribeWorkflowExecutionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeWorkflowExecutionError {
-    pub fn from_body(body: &str) -> DescribeWorkflowExecutionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeWorkflowExecutionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DescribeWorkflowExecutionError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => DescribeWorkflowExecutionError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DescribeWorkflowExecutionError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeWorkflowExecutionError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DescribeWorkflowExecutionError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return DescribeWorkflowExecutionError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeWorkflowExecutionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeWorkflowExecutionError::Unknown(String::from(body)),
         }
+        return DescribeWorkflowExecutionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeWorkflowExecutionError {
     fn from(err: serde_json::error::Error) -> DescribeWorkflowExecutionError {
-        DescribeWorkflowExecutionError::Unknown(err.description().to_string())
+        DescribeWorkflowExecutionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeWorkflowExecutionError {
@@ -3642,7 +3748,8 @@ impl Error for DescribeWorkflowExecutionError {
             DescribeWorkflowExecutionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeWorkflowExecutionError::Unknown(ref cause) => cause,
+            DescribeWorkflowExecutionError::ParseError(ref cause) => cause,
+            DescribeWorkflowExecutionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3659,46 +3766,48 @@ pub enum DescribeWorkflowTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeWorkflowTypeError {
-    pub fn from_body(body: &str) -> DescribeWorkflowTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeWorkflowTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        DescribeWorkflowTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        DescribeWorkflowTypeError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeWorkflowTypeError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeWorkflowTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return DescribeWorkflowTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return DescribeWorkflowTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeWorkflowTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeWorkflowTypeError::Unknown(String::from(body)),
         }
+        return DescribeWorkflowTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeWorkflowTypeError {
     fn from(err: serde_json::error::Error) -> DescribeWorkflowTypeError {
-        DescribeWorkflowTypeError::Unknown(err.description().to_string())
+        DescribeWorkflowTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeWorkflowTypeError {
@@ -3731,7 +3840,8 @@ impl Error for DescribeWorkflowTypeError {
             DescribeWorkflowTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeWorkflowTypeError::Unknown(ref cause) => cause,
+            DescribeWorkflowTypeError::ParseError(ref cause) => cause,
+            DescribeWorkflowTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3748,48 +3858,48 @@ pub enum GetWorkflowExecutionHistoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetWorkflowExecutionHistoryError {
-    pub fn from_body(body: &str) -> GetWorkflowExecutionHistoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetWorkflowExecutionHistoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        GetWorkflowExecutionHistoryError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        GetWorkflowExecutionHistoryError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetWorkflowExecutionHistoryError::Validation(error_message.to_string())
-                    }
-                    _ => GetWorkflowExecutionHistoryError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return GetWorkflowExecutionHistoryError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return GetWorkflowExecutionHistoryError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetWorkflowExecutionHistoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetWorkflowExecutionHistoryError::Unknown(String::from(body)),
         }
+        return GetWorkflowExecutionHistoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetWorkflowExecutionHistoryError {
     fn from(err: serde_json::error::Error) -> GetWorkflowExecutionHistoryError {
-        GetWorkflowExecutionHistoryError::Unknown(err.description().to_string())
+        GetWorkflowExecutionHistoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetWorkflowExecutionHistoryError {
@@ -3822,7 +3932,8 @@ impl Error for GetWorkflowExecutionHistoryError {
             GetWorkflowExecutionHistoryError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetWorkflowExecutionHistoryError::Unknown(ref cause) => cause,
+            GetWorkflowExecutionHistoryError::ParseError(ref cause) => cause,
+            GetWorkflowExecutionHistoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3839,46 +3950,46 @@ pub enum ListActivityTypesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListActivityTypesError {
-    pub fn from_body(body: &str) -> ListActivityTypesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListActivityTypesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        ListActivityTypesError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        ListActivityTypesError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListActivityTypesError::Validation(error_message.to_string())
-                    }
-                    _ => ListActivityTypesError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return ListActivityTypesError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return ListActivityTypesError::UnknownResourceFault(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListActivityTypesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListActivityTypesError::Unknown(String::from(body)),
         }
+        return ListActivityTypesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListActivityTypesError {
     fn from(err: serde_json::error::Error) -> ListActivityTypesError {
-        ListActivityTypesError::Unknown(err.description().to_string())
+        ListActivityTypesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListActivityTypesError {
@@ -3911,7 +4022,8 @@ impl Error for ListActivityTypesError {
             ListActivityTypesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListActivityTypesError::Unknown(ref cause) => cause,
+            ListActivityTypesError::ParseError(ref cause) => cause,
+            ListActivityTypesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3928,48 +4040,48 @@ pub enum ListClosedWorkflowExecutionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListClosedWorkflowExecutionsError {
-    pub fn from_body(body: &str) -> ListClosedWorkflowExecutionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListClosedWorkflowExecutionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        ListClosedWorkflowExecutionsError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        ListClosedWorkflowExecutionsError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListClosedWorkflowExecutionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListClosedWorkflowExecutionsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return ListClosedWorkflowExecutionsError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return ListClosedWorkflowExecutionsError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListClosedWorkflowExecutionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListClosedWorkflowExecutionsError::Unknown(String::from(body)),
         }
+        return ListClosedWorkflowExecutionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListClosedWorkflowExecutionsError {
     fn from(err: serde_json::error::Error) -> ListClosedWorkflowExecutionsError {
-        ListClosedWorkflowExecutionsError::Unknown(err.description().to_string())
+        ListClosedWorkflowExecutionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListClosedWorkflowExecutionsError {
@@ -4002,7 +4114,8 @@ impl Error for ListClosedWorkflowExecutionsError {
             ListClosedWorkflowExecutionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListClosedWorkflowExecutionsError::Unknown(ref cause) => cause,
+            ListClosedWorkflowExecutionsError::ParseError(ref cause) => cause,
+            ListClosedWorkflowExecutionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4017,41 +4130,41 @@ pub enum ListDomainsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDomainsError {
-    pub fn from_body(body: &str) -> ListDomainsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDomainsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        ListDomainsError::OperationNotPermittedFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListDomainsError::Validation(error_message.to_string())
-                    }
-                    _ => ListDomainsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return ListDomainsError::OperationNotPermittedFault(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return ListDomainsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDomainsError::Unknown(String::from(body)),
         }
+        return ListDomainsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDomainsError {
     fn from(err: serde_json::error::Error) -> ListDomainsError {
-        ListDomainsError::Unknown(err.description().to_string())
+        ListDomainsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDomainsError {
@@ -4081,7 +4194,8 @@ impl Error for ListDomainsError {
             ListDomainsError::Validation(ref cause) => cause,
             ListDomainsError::Credentials(ref err) => err.description(),
             ListDomainsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListDomainsError::Unknown(ref cause) => cause,
+            ListDomainsError::ParseError(ref cause) => cause,
+            ListDomainsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4098,48 +4212,48 @@ pub enum ListOpenWorkflowExecutionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListOpenWorkflowExecutionsError {
-    pub fn from_body(body: &str) -> ListOpenWorkflowExecutionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListOpenWorkflowExecutionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        ListOpenWorkflowExecutionsError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        ListOpenWorkflowExecutionsError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListOpenWorkflowExecutionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListOpenWorkflowExecutionsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return ListOpenWorkflowExecutionsError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return ListOpenWorkflowExecutionsError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListOpenWorkflowExecutionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListOpenWorkflowExecutionsError::Unknown(String::from(body)),
         }
+        return ListOpenWorkflowExecutionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListOpenWorkflowExecutionsError {
     fn from(err: serde_json::error::Error) -> ListOpenWorkflowExecutionsError {
-        ListOpenWorkflowExecutionsError::Unknown(err.description().to_string())
+        ListOpenWorkflowExecutionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListOpenWorkflowExecutionsError {
@@ -4172,7 +4286,8 @@ impl Error for ListOpenWorkflowExecutionsError {
             ListOpenWorkflowExecutionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListOpenWorkflowExecutionsError::Unknown(ref cause) => cause,
+            ListOpenWorkflowExecutionsError::ParseError(ref cause) => cause,
+            ListOpenWorkflowExecutionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4189,46 +4304,46 @@ pub enum ListWorkflowTypesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListWorkflowTypesError {
-    pub fn from_body(body: &str) -> ListWorkflowTypesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListWorkflowTypesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        ListWorkflowTypesError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        ListWorkflowTypesError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListWorkflowTypesError::Validation(error_message.to_string())
-                    }
-                    _ => ListWorkflowTypesError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return ListWorkflowTypesError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return ListWorkflowTypesError::UnknownResourceFault(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListWorkflowTypesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListWorkflowTypesError::Unknown(String::from(body)),
         }
+        return ListWorkflowTypesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListWorkflowTypesError {
     fn from(err: serde_json::error::Error) -> ListWorkflowTypesError {
-        ListWorkflowTypesError::Unknown(err.description().to_string())
+        ListWorkflowTypesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListWorkflowTypesError {
@@ -4261,7 +4376,8 @@ impl Error for ListWorkflowTypesError {
             ListWorkflowTypesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListWorkflowTypesError::Unknown(ref cause) => cause,
+            ListWorkflowTypesError::ParseError(ref cause) => cause,
+            ListWorkflowTypesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4280,49 +4396,51 @@ pub enum PollForActivityTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PollForActivityTaskError {
-    pub fn from_body(body: &str) -> PollForActivityTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PollForActivityTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "LimitExceededFault" => {
-                        PollForActivityTaskError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        PollForActivityTaskError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        PollForActivityTaskError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PollForActivityTaskError::Validation(error_message.to_string())
-                    }
-                    _ => PollForActivityTaskError::Unknown(String::from(body)),
+            match *error_type {
+                "LimitExceededFault" => {
+                    return PollForActivityTaskError::LimitExceededFault(String::from(error_message))
                 }
+                "OperationNotPermittedFault" => {
+                    return PollForActivityTaskError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return PollForActivityTaskError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return PollForActivityTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PollForActivityTaskError::Unknown(String::from(body)),
         }
+        return PollForActivityTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PollForActivityTaskError {
     fn from(err: serde_json::error::Error) -> PollForActivityTaskError {
-        PollForActivityTaskError::Unknown(err.description().to_string())
+        PollForActivityTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PollForActivityTaskError {
@@ -4356,7 +4474,8 @@ impl Error for PollForActivityTaskError {
             PollForActivityTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PollForActivityTaskError::Unknown(ref cause) => cause,
+            PollForActivityTaskError::ParseError(ref cause) => cause,
+            PollForActivityTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4375,49 +4494,51 @@ pub enum PollForDecisionTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PollForDecisionTaskError {
-    pub fn from_body(body: &str) -> PollForDecisionTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PollForDecisionTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "LimitExceededFault" => {
-                        PollForDecisionTaskError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        PollForDecisionTaskError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        PollForDecisionTaskError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PollForDecisionTaskError::Validation(error_message.to_string())
-                    }
-                    _ => PollForDecisionTaskError::Unknown(String::from(body)),
+            match *error_type {
+                "LimitExceededFault" => {
+                    return PollForDecisionTaskError::LimitExceededFault(String::from(error_message))
                 }
+                "OperationNotPermittedFault" => {
+                    return PollForDecisionTaskError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return PollForDecisionTaskError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return PollForDecisionTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PollForDecisionTaskError::Unknown(String::from(body)),
         }
+        return PollForDecisionTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PollForDecisionTaskError {
     fn from(err: serde_json::error::Error) -> PollForDecisionTaskError {
-        PollForDecisionTaskError::Unknown(err.description().to_string())
+        PollForDecisionTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PollForDecisionTaskError {
@@ -4451,7 +4572,8 @@ impl Error for PollForDecisionTaskError {
             PollForDecisionTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PollForDecisionTaskError::Unknown(ref cause) => cause,
+            PollForDecisionTaskError::ParseError(ref cause) => cause,
+            PollForDecisionTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4468,48 +4590,48 @@ pub enum RecordActivityTaskHeartbeatError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RecordActivityTaskHeartbeatError {
-    pub fn from_body(body: &str) -> RecordActivityTaskHeartbeatError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RecordActivityTaskHeartbeatError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RecordActivityTaskHeartbeatError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        RecordActivityTaskHeartbeatError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RecordActivityTaskHeartbeatError::Validation(error_message.to_string())
-                    }
-                    _ => RecordActivityTaskHeartbeatError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RecordActivityTaskHeartbeatError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return RecordActivityTaskHeartbeatError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RecordActivityTaskHeartbeatError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RecordActivityTaskHeartbeatError::Unknown(String::from(body)),
         }
+        return RecordActivityTaskHeartbeatError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RecordActivityTaskHeartbeatError {
     fn from(err: serde_json::error::Error) -> RecordActivityTaskHeartbeatError {
-        RecordActivityTaskHeartbeatError::Unknown(err.description().to_string())
+        RecordActivityTaskHeartbeatError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RecordActivityTaskHeartbeatError {
@@ -4542,7 +4664,8 @@ impl Error for RecordActivityTaskHeartbeatError {
             RecordActivityTaskHeartbeatError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RecordActivityTaskHeartbeatError::Unknown(ref cause) => cause,
+            RecordActivityTaskHeartbeatError::ParseError(ref cause) => cause,
+            RecordActivityTaskHeartbeatError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4563,52 +4686,58 @@ pub enum RegisterActivityTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterActivityTypeError {
-    pub fn from_body(body: &str) -> RegisterActivityTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterActivityTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "LimitExceededFault" => {
-                        RegisterActivityTypeError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        RegisterActivityTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TypeAlreadyExistsFault" => RegisterActivityTypeError::TypeAlreadyExistsFault(
-                        String::from(error_message),
-                    ),
-                    "UnknownResourceFault" => {
-                        RegisterActivityTypeError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RegisterActivityTypeError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterActivityTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "LimitExceededFault" => {
+                    return RegisterActivityTypeError::LimitExceededFault(String::from(
+                        error_message,
+                    ))
                 }
+                "OperationNotPermittedFault" => {
+                    return RegisterActivityTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "TypeAlreadyExistsFault" => {
+                    return RegisterActivityTypeError::TypeAlreadyExistsFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return RegisterActivityTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RegisterActivityTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterActivityTypeError::Unknown(String::from(body)),
         }
+        return RegisterActivityTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterActivityTypeError {
     fn from(err: serde_json::error::Error) -> RegisterActivityTypeError {
-        RegisterActivityTypeError::Unknown(err.description().to_string())
+        RegisterActivityTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterActivityTypeError {
@@ -4643,7 +4772,8 @@ impl Error for RegisterActivityTypeError {
             RegisterActivityTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterActivityTypeError::Unknown(ref cause) => cause,
+            RegisterActivityTypeError::ParseError(ref cause) => cause,
+            RegisterActivityTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4662,47 +4792,51 @@ pub enum RegisterDomainError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterDomainError {
-    pub fn from_body(body: &str) -> RegisterDomainError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterDomainError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DomainAlreadyExistsFault" => {
-                        RegisterDomainError::DomainAlreadyExistsFault(String::from(error_message))
-                    }
-                    "LimitExceededFault" => {
-                        RegisterDomainError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        RegisterDomainError::OperationNotPermittedFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RegisterDomainError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterDomainError::Unknown(String::from(body)),
+            match *error_type {
+                "DomainAlreadyExistsFault" => {
+                    return RegisterDomainError::DomainAlreadyExistsFault(String::from(
+                        error_message,
+                    ))
                 }
+                "LimitExceededFault" => {
+                    return RegisterDomainError::LimitExceededFault(String::from(error_message))
+                }
+                "OperationNotPermittedFault" => {
+                    return RegisterDomainError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RegisterDomainError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterDomainError::Unknown(String::from(body)),
         }
+        return RegisterDomainError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterDomainError {
     fn from(err: serde_json::error::Error) -> RegisterDomainError {
-        RegisterDomainError::Unknown(err.description().to_string())
+        RegisterDomainError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterDomainError {
@@ -4734,7 +4868,8 @@ impl Error for RegisterDomainError {
             RegisterDomainError::Validation(ref cause) => cause,
             RegisterDomainError::Credentials(ref err) => err.description(),
             RegisterDomainError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            RegisterDomainError::Unknown(ref cause) => cause,
+            RegisterDomainError::ParseError(ref cause) => cause,
+            RegisterDomainError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4755,52 +4890,58 @@ pub enum RegisterWorkflowTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterWorkflowTypeError {
-    pub fn from_body(body: &str) -> RegisterWorkflowTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterWorkflowTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "LimitExceededFault" => {
-                        RegisterWorkflowTypeError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        RegisterWorkflowTypeError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TypeAlreadyExistsFault" => RegisterWorkflowTypeError::TypeAlreadyExistsFault(
-                        String::from(error_message),
-                    ),
-                    "UnknownResourceFault" => {
-                        RegisterWorkflowTypeError::UnknownResourceFault(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RegisterWorkflowTypeError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterWorkflowTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "LimitExceededFault" => {
+                    return RegisterWorkflowTypeError::LimitExceededFault(String::from(
+                        error_message,
+                    ))
                 }
+                "OperationNotPermittedFault" => {
+                    return RegisterWorkflowTypeError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "TypeAlreadyExistsFault" => {
+                    return RegisterWorkflowTypeError::TypeAlreadyExistsFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return RegisterWorkflowTypeError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RegisterWorkflowTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RegisterWorkflowTypeError::Unknown(String::from(body)),
         }
+        return RegisterWorkflowTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterWorkflowTypeError {
     fn from(err: serde_json::error::Error) -> RegisterWorkflowTypeError {
-        RegisterWorkflowTypeError::Unknown(err.description().to_string())
+        RegisterWorkflowTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterWorkflowTypeError {
@@ -4835,7 +4976,8 @@ impl Error for RegisterWorkflowTypeError {
             RegisterWorkflowTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterWorkflowTypeError::Unknown(ref cause) => cause,
+            RegisterWorkflowTypeError::ParseError(ref cause) => cause,
+            RegisterWorkflowTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4852,48 +4994,50 @@ pub enum RequestCancelWorkflowExecutionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RequestCancelWorkflowExecutionError {
-    pub fn from_body(body: &str) -> RequestCancelWorkflowExecutionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RequestCancelWorkflowExecutionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RequestCancelWorkflowExecutionError::OperationNotPermittedFault(
-                            String::from(error_message),
-                        )
-                    }
-                    "UnknownResourceFault" => {
-                        RequestCancelWorkflowExecutionError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RequestCancelWorkflowExecutionError::Validation(error_message.to_string())
-                    }
-                    _ => RequestCancelWorkflowExecutionError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RequestCancelWorkflowExecutionError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return RequestCancelWorkflowExecutionError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RequestCancelWorkflowExecutionError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => RequestCancelWorkflowExecutionError::Unknown(String::from(body)),
         }
+        return RequestCancelWorkflowExecutionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RequestCancelWorkflowExecutionError {
     fn from(err: serde_json::error::Error) -> RequestCancelWorkflowExecutionError {
-        RequestCancelWorkflowExecutionError::Unknown(err.description().to_string())
+        RequestCancelWorkflowExecutionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RequestCancelWorkflowExecutionError {
@@ -4926,7 +5070,8 @@ impl Error for RequestCancelWorkflowExecutionError {
             RequestCancelWorkflowExecutionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RequestCancelWorkflowExecutionError::Unknown(ref cause) => cause,
+            RequestCancelWorkflowExecutionError::ParseError(ref cause) => cause,
+            RequestCancelWorkflowExecutionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4943,48 +5088,48 @@ pub enum RespondActivityTaskCanceledError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RespondActivityTaskCanceledError {
-    pub fn from_body(body: &str) -> RespondActivityTaskCanceledError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RespondActivityTaskCanceledError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RespondActivityTaskCanceledError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        RespondActivityTaskCanceledError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RespondActivityTaskCanceledError::Validation(error_message.to_string())
-                    }
-                    _ => RespondActivityTaskCanceledError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RespondActivityTaskCanceledError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return RespondActivityTaskCanceledError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RespondActivityTaskCanceledError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RespondActivityTaskCanceledError::Unknown(String::from(body)),
         }
+        return RespondActivityTaskCanceledError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RespondActivityTaskCanceledError {
     fn from(err: serde_json::error::Error) -> RespondActivityTaskCanceledError {
-        RespondActivityTaskCanceledError::Unknown(err.description().to_string())
+        RespondActivityTaskCanceledError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RespondActivityTaskCanceledError {
@@ -5017,7 +5162,8 @@ impl Error for RespondActivityTaskCanceledError {
             RespondActivityTaskCanceledError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RespondActivityTaskCanceledError::Unknown(ref cause) => cause,
+            RespondActivityTaskCanceledError::ParseError(ref cause) => cause,
+            RespondActivityTaskCanceledError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5034,48 +5180,48 @@ pub enum RespondActivityTaskCompletedError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RespondActivityTaskCompletedError {
-    pub fn from_body(body: &str) -> RespondActivityTaskCompletedError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RespondActivityTaskCompletedError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RespondActivityTaskCompletedError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        RespondActivityTaskCompletedError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RespondActivityTaskCompletedError::Validation(error_message.to_string())
-                    }
-                    _ => RespondActivityTaskCompletedError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RespondActivityTaskCompletedError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return RespondActivityTaskCompletedError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RespondActivityTaskCompletedError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RespondActivityTaskCompletedError::Unknown(String::from(body)),
         }
+        return RespondActivityTaskCompletedError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RespondActivityTaskCompletedError {
     fn from(err: serde_json::error::Error) -> RespondActivityTaskCompletedError {
-        RespondActivityTaskCompletedError::Unknown(err.description().to_string())
+        RespondActivityTaskCompletedError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RespondActivityTaskCompletedError {
@@ -5108,7 +5254,8 @@ impl Error for RespondActivityTaskCompletedError {
             RespondActivityTaskCompletedError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RespondActivityTaskCompletedError::Unknown(ref cause) => cause,
+            RespondActivityTaskCompletedError::ParseError(ref cause) => cause,
+            RespondActivityTaskCompletedError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5125,46 +5272,48 @@ pub enum RespondActivityTaskFailedError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RespondActivityTaskFailedError {
-    pub fn from_body(body: &str) -> RespondActivityTaskFailedError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RespondActivityTaskFailedError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RespondActivityTaskFailedError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => RespondActivityTaskFailedError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        RespondActivityTaskFailedError::Validation(error_message.to_string())
-                    }
-                    _ => RespondActivityTaskFailedError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RespondActivityTaskFailedError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return RespondActivityTaskFailedError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RespondActivityTaskFailedError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RespondActivityTaskFailedError::Unknown(String::from(body)),
         }
+        return RespondActivityTaskFailedError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RespondActivityTaskFailedError {
     fn from(err: serde_json::error::Error) -> RespondActivityTaskFailedError {
-        RespondActivityTaskFailedError::Unknown(err.description().to_string())
+        RespondActivityTaskFailedError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RespondActivityTaskFailedError {
@@ -5197,7 +5346,8 @@ impl Error for RespondActivityTaskFailedError {
             RespondActivityTaskFailedError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RespondActivityTaskFailedError::Unknown(ref cause) => cause,
+            RespondActivityTaskFailedError::ParseError(ref cause) => cause,
+            RespondActivityTaskFailedError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5214,48 +5364,48 @@ pub enum RespondDecisionTaskCompletedError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RespondDecisionTaskCompletedError {
-    pub fn from_body(body: &str) -> RespondDecisionTaskCompletedError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RespondDecisionTaskCompletedError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        RespondDecisionTaskCompletedError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        RespondDecisionTaskCompletedError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RespondDecisionTaskCompletedError::Validation(error_message.to_string())
-                    }
-                    _ => RespondDecisionTaskCompletedError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return RespondDecisionTaskCompletedError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return RespondDecisionTaskCompletedError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RespondDecisionTaskCompletedError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RespondDecisionTaskCompletedError::Unknown(String::from(body)),
         }
+        return RespondDecisionTaskCompletedError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RespondDecisionTaskCompletedError {
     fn from(err: serde_json::error::Error) -> RespondDecisionTaskCompletedError {
-        RespondDecisionTaskCompletedError::Unknown(err.description().to_string())
+        RespondDecisionTaskCompletedError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RespondDecisionTaskCompletedError {
@@ -5288,7 +5438,8 @@ impl Error for RespondDecisionTaskCompletedError {
             RespondDecisionTaskCompletedError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RespondDecisionTaskCompletedError::Unknown(ref cause) => cause,
+            RespondDecisionTaskCompletedError::ParseError(ref cause) => cause,
+            RespondDecisionTaskCompletedError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5305,46 +5456,48 @@ pub enum SignalWorkflowExecutionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SignalWorkflowExecutionError {
-    pub fn from_body(body: &str) -> SignalWorkflowExecutionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SignalWorkflowExecutionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        SignalWorkflowExecutionError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => SignalWorkflowExecutionError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        SignalWorkflowExecutionError::Validation(error_message.to_string())
-                    }
-                    _ => SignalWorkflowExecutionError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return SignalWorkflowExecutionError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "UnknownResourceFault" => {
+                    return SignalWorkflowExecutionError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return SignalWorkflowExecutionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SignalWorkflowExecutionError::Unknown(String::from(body)),
         }
+        return SignalWorkflowExecutionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SignalWorkflowExecutionError {
     fn from(err: serde_json::error::Error) -> SignalWorkflowExecutionError {
-        SignalWorkflowExecutionError::Unknown(err.description().to_string())
+        SignalWorkflowExecutionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SignalWorkflowExecutionError {
@@ -5377,7 +5530,8 @@ impl Error for SignalWorkflowExecutionError {
             SignalWorkflowExecutionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            SignalWorkflowExecutionError::Unknown(ref cause) => cause,
+            SignalWorkflowExecutionError::ParseError(ref cause) => cause,
+            SignalWorkflowExecutionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5402,60 +5556,68 @@ pub enum StartWorkflowExecutionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartWorkflowExecutionError {
-    pub fn from_body(body: &str) -> StartWorkflowExecutionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartWorkflowExecutionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "DefaultUndefinedFault" => StartWorkflowExecutionError::DefaultUndefinedFault(
-                        String::from(error_message),
-                    ),
-                    "LimitExceededFault" => {
-                        StartWorkflowExecutionError::LimitExceededFault(String::from(error_message))
-                    }
-                    "OperationNotPermittedFault" => {
-                        StartWorkflowExecutionError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TypeDeprecatedFault" => StartWorkflowExecutionError::TypeDeprecatedFault(
-                        String::from(error_message),
-                    ),
-                    "UnknownResourceFault" => StartWorkflowExecutionError::UnknownResourceFault(
-                        String::from(error_message),
-                    ),
-                    "WorkflowExecutionAlreadyStartedFault" => {
-                        StartWorkflowExecutionError::WorkflowExecutionAlreadyStartedFault(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        StartWorkflowExecutionError::Validation(error_message.to_string())
-                    }
-                    _ => StartWorkflowExecutionError::Unknown(String::from(body)),
+            match *error_type {
+                "DefaultUndefinedFault" => {
+                    return StartWorkflowExecutionError::DefaultUndefinedFault(String::from(
+                        error_message,
+                    ))
                 }
+                "LimitExceededFault" => {
+                    return StartWorkflowExecutionError::LimitExceededFault(String::from(
+                        error_message,
+                    ))
+                }
+                "OperationNotPermittedFault" => {
+                    return StartWorkflowExecutionError::OperationNotPermittedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "TypeDeprecatedFault" => {
+                    return StartWorkflowExecutionError::TypeDeprecatedFault(String::from(
+                        error_message,
+                    ))
+                }
+                "UnknownResourceFault" => {
+                    return StartWorkflowExecutionError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "WorkflowExecutionAlreadyStartedFault" => {
+                    return StartWorkflowExecutionError::WorkflowExecutionAlreadyStartedFault(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return StartWorkflowExecutionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartWorkflowExecutionError::Unknown(String::from(body)),
         }
+        return StartWorkflowExecutionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartWorkflowExecutionError {
     fn from(err: serde_json::error::Error) -> StartWorkflowExecutionError {
-        StartWorkflowExecutionError::Unknown(err.description().to_string())
+        StartWorkflowExecutionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartWorkflowExecutionError {
@@ -5492,7 +5654,8 @@ impl Error for StartWorkflowExecutionError {
             StartWorkflowExecutionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            StartWorkflowExecutionError::Unknown(ref cause) => cause,
+            StartWorkflowExecutionError::ParseError(ref cause) => cause,
+            StartWorkflowExecutionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5509,48 +5672,48 @@ pub enum TerminateWorkflowExecutionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TerminateWorkflowExecutionError {
-    pub fn from_body(body: &str) -> TerminateWorkflowExecutionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> TerminateWorkflowExecutionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedFault" => {
-                        TerminateWorkflowExecutionError::OperationNotPermittedFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnknownResourceFault" => {
-                        TerminateWorkflowExecutionError::UnknownResourceFault(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        TerminateWorkflowExecutionError::Validation(error_message.to_string())
-                    }
-                    _ => TerminateWorkflowExecutionError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedFault" => {
+                    return TerminateWorkflowExecutionError::OperationNotPermittedFault(
+                        String::from(error_message),
+                    )
                 }
+                "UnknownResourceFault" => {
+                    return TerminateWorkflowExecutionError::UnknownResourceFault(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return TerminateWorkflowExecutionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TerminateWorkflowExecutionError::Unknown(String::from(body)),
         }
+        return TerminateWorkflowExecutionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TerminateWorkflowExecutionError {
     fn from(err: serde_json::error::Error) -> TerminateWorkflowExecutionError {
-        TerminateWorkflowExecutionError::Unknown(err.description().to_string())
+        TerminateWorkflowExecutionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TerminateWorkflowExecutionError {
@@ -5583,7 +5746,8 @@ impl Error for TerminateWorkflowExecutionError {
             TerminateWorkflowExecutionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            TerminateWorkflowExecutionError::Unknown(ref cause) => cause,
+            TerminateWorkflowExecutionError::ParseError(ref cause) => cause,
+            TerminateWorkflowExecutionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5831,13 +5995,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowExecutionCount>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CountClosedWorkflowExecutionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CountClosedWorkflowExecutionsError::from_response(response))
                 }))
             }
         })
@@ -5869,13 +6032,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowExecutionCount>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CountOpenWorkflowExecutionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CountOpenWorkflowExecutionsError::from_response(response))
                 }))
             }
         })
@@ -5907,13 +6069,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<PendingTaskCount>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CountPendingActivityTasksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CountPendingActivityTasksError::from_response(response))
                 }))
             }
         })
@@ -5945,13 +6106,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<PendingTaskCount>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CountPendingDecisionTasksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CountPendingDecisionTasksError::from_response(response))
                 }))
             }
         })
@@ -5976,11 +6136,11 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeprecateActivityTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeprecateActivityTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6001,11 +6161,12 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeprecateDomainError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeprecateDomainError::from_response(response))),
+                )
             }
         })
     }
@@ -6029,11 +6190,11 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeprecateWorkflowTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeprecateWorkflowTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6061,14 +6222,15 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<ActivityTypeDetail>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeActivityTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeActivityTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6096,14 +6258,16 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<DomainDetail>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeDomainError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeDomainError::from_response(response))),
+                )
             }
         })
     }
@@ -6134,13 +6298,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowExecutionDetail>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeWorkflowExecutionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeWorkflowExecutionError::from_response(response))
                 }))
             }
         })
@@ -6169,14 +6332,15 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowTypeDetail>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeWorkflowTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeWorkflowTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6210,9 +6374,7 @@ impl Swf for SwfClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetWorkflowExecutionHistoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetWorkflowExecutionHistoryError::from_response(response))
                 }))
             }
         })
@@ -6241,14 +6403,16 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<ActivityTypeInfos>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListActivityTypesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListActivityTypesError::from_response(response))),
+                )
             }
         })
     }
@@ -6279,13 +6443,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowExecutionInfos>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListClosedWorkflowExecutionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListClosedWorkflowExecutionsError::from_response(response))
                 }))
             }
         })
@@ -6311,14 +6474,16 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<DomainInfos>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDomainsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListDomainsError::from_response(response))),
+                )
             }
         })
     }
@@ -6349,13 +6514,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowExecutionInfos>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListOpenWorkflowExecutionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListOpenWorkflowExecutionsError::from_response(response))
                 }))
             }
         })
@@ -6384,14 +6548,16 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<WorkflowTypeInfos>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListWorkflowTypesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListWorkflowTypesError::from_response(response))),
+                )
             }
         })
     }
@@ -6419,14 +6585,15 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<ActivityTask>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PollForActivityTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PollForActivityTaskError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6454,14 +6621,15 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<DecisionTask>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PollForDecisionTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PollForDecisionTaskError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6492,13 +6660,12 @@ impl Swf for SwfClient {
 
                     serde_json::from_str::<ActivityTaskStatus>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RecordActivityTaskHeartbeatError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RecordActivityTaskHeartbeatError::from_response(response))
                 }))
             }
         })
@@ -6520,11 +6687,11 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterActivityTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(RegisterActivityTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6542,11 +6709,12 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterDomainError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(RegisterDomainError::from_response(response))),
+                )
             }
         })
     }
@@ -6567,11 +6735,11 @@ impl Swf for SwfClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterWorkflowTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(RegisterWorkflowTypeError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6596,9 +6764,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RequestCancelWorkflowExecutionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RequestCancelWorkflowExecutionError::from_response(response))
                 }))
             }
         })
@@ -6624,9 +6790,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RespondActivityTaskCanceledError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RespondActivityTaskCanceledError::from_response(response))
                 }))
             }
         })
@@ -6652,9 +6816,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RespondActivityTaskCompletedError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RespondActivityTaskCompletedError::from_response(response))
                 }))
             }
         })
@@ -6680,9 +6842,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RespondActivityTaskFailedError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RespondActivityTaskFailedError::from_response(response))
                 }))
             }
         })
@@ -6708,9 +6868,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RespondDecisionTaskCompletedError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RespondDecisionTaskCompletedError::from_response(response))
                 }))
             }
         })
@@ -6736,9 +6894,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SignalWorkflowExecutionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(SignalWorkflowExecutionError::from_response(response))
                 }))
             }
         })
@@ -6772,11 +6928,11 @@ impl Swf for SwfClient {
                         .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartWorkflowExecutionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(StartWorkflowExecutionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6801,9 +6957,7 @@ impl Swf for SwfClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TerminateWorkflowExecutionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(TerminateWorkflowExecutionError::from_response(response))
                 }))
             }
         })

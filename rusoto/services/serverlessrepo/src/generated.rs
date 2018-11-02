@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,7 +27,7 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Details about the application.</p>
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -90,6 +90,7 @@ pub struct ApplicationPolicyStatement {
 
 /// <p>Summary of details about the application.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApplicationSummary {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -249,6 +250,7 @@ pub struct CreateApplicationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateApplicationResponse {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -331,6 +333,7 @@ pub struct CreateApplicationVersionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateApplicationVersionResponse {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -398,6 +401,7 @@ pub struct CreateCloudFormationChangeSetRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateCloudFormationChangeSetResponse {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -434,6 +438,7 @@ pub struct GetApplicationPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetApplicationPolicyResponse {
     /// <p>An array of policy statements applied to the application.</p>
     #[serde(rename = "Statements")]
@@ -453,6 +458,7 @@ pub struct GetApplicationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetApplicationResponse {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -517,6 +523,7 @@ pub struct ListApplicationVersionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListApplicationVersionsResponse {
     /// <p>The token to request the next page of results.</p>
     #[serde(rename = "NextToken")]
@@ -541,6 +548,7 @@ pub struct ListApplicationsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListApplicationsResponse {
     /// <p>An array of application summaries.</p>
     #[serde(rename = "Applications")]
@@ -554,6 +562,7 @@ pub struct ListApplicationsResponse {
 
 /// <p>Parameters supported by the application.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ParameterDefinition {
     /// <p>A regular expression that represents the patterns to allow for String types.</p>
     #[serde(rename = "AllowedPattern")]
@@ -647,6 +656,7 @@ pub struct PutApplicationPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutApplicationPolicyResponse {
     /// <p>An array of policy statements applied to the application.</p>
     #[serde(rename = "Statements")]
@@ -705,6 +715,7 @@ pub struct UpdateApplicationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateApplicationResponse {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -755,6 +766,7 @@ pub struct UpdateApplicationResponse {
 
 /// <p>Application version details.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Version {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -781,6 +793,7 @@ pub struct Version {
 
 /// <p>An application version summary.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VersionSummary {
     /// <p>The application Amazon Resource Name (ARN).</p>
     #[serde(rename = "ApplicationId")]
@@ -818,53 +831,67 @@ pub enum CreateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateApplicationError {
-    pub fn from_body(body: &str) -> CreateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateApplicationError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateApplicationError::Conflict(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        CreateApplicationError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        CreateApplicationError::InternalServerError(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateApplicationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => CreateApplicationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateApplicationError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateApplicationError::Conflict(String::from(error_message))
+                }
+                "ForbiddenException" => {
+                    return CreateApplicationError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return CreateApplicationError::InternalServerError(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateApplicationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateApplicationError::Unknown(String::from(body)),
         }
+        return CreateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateApplicationError {
     fn from(err: serde_json::error::Error) -> CreateApplicationError {
-        CreateApplicationError::Unknown(err.description().to_string())
+        CreateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateApplicationError {
@@ -900,7 +927,8 @@ impl Error for CreateApplicationError {
             CreateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateApplicationError::Unknown(ref cause) => cause,
+            CreateApplicationError::ParseError(ref cause) => cause,
+            CreateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -923,55 +951,71 @@ pub enum CreateApplicationVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateApplicationVersionError {
-    pub fn from_body(body: &str) -> CreateApplicationVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateApplicationVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateApplicationVersionError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        CreateApplicationVersionError::Conflict(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        CreateApplicationVersionError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        CreateApplicationVersionError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateApplicationVersionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateApplicationVersionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateApplicationVersionError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateApplicationVersionError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return CreateApplicationVersionError::Conflict(String::from(error_message))
+                }
+                "ForbiddenException" => {
+                    return CreateApplicationVersionError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return CreateApplicationVersionError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "TooManyRequestsException" => {
+                    return CreateApplicationVersionError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateApplicationVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateApplicationVersionError::Unknown(String::from(body)),
         }
+        return CreateApplicationVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateApplicationVersionError {
     fn from(err: serde_json::error::Error) -> CreateApplicationVersionError {
-        CreateApplicationVersionError::Unknown(err.description().to_string())
+        CreateApplicationVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateApplicationVersionError {
@@ -1007,7 +1051,8 @@ impl Error for CreateApplicationVersionError {
             CreateApplicationVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateApplicationVersionError::Unknown(ref cause) => cause,
+            CreateApplicationVersionError::ParseError(ref cause) => cause,
+            CreateApplicationVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1028,54 +1073,72 @@ pub enum CreateCloudFormationChangeSetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateCloudFormationChangeSetError {
-    pub fn from_body(body: &str) -> CreateCloudFormationChangeSetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateCloudFormationChangeSetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        CreateCloudFormationChangeSetError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        CreateCloudFormationChangeSetError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        CreateCloudFormationChangeSetError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateCloudFormationChangeSetError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateCloudFormationChangeSetError::Validation(error_message.to_string())
-                    }
-                    _ => CreateCloudFormationChangeSetError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return CreateCloudFormationChangeSetError::BadRequest(String::from(
+                        error_message,
+                    ))
                 }
+                "ForbiddenException" => {
+                    return CreateCloudFormationChangeSetError::Forbidden(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerErrorException" => {
+                    return CreateCloudFormationChangeSetError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "TooManyRequestsException" => {
+                    return CreateCloudFormationChangeSetError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateCloudFormationChangeSetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateCloudFormationChangeSetError::Unknown(String::from(body)),
         }
+        return CreateCloudFormationChangeSetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateCloudFormationChangeSetError {
     fn from(err: serde_json::error::Error) -> CreateCloudFormationChangeSetError {
-        CreateCloudFormationChangeSetError::Unknown(err.description().to_string())
+        CreateCloudFormationChangeSetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateCloudFormationChangeSetError {
@@ -1110,7 +1173,8 @@ impl Error for CreateCloudFormationChangeSetError {
             CreateCloudFormationChangeSetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateCloudFormationChangeSetError::Unknown(ref cause) => cause,
+            CreateCloudFormationChangeSetError::ParseError(ref cause) => cause,
+            CreateCloudFormationChangeSetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1135,56 +1199,70 @@ pub enum DeleteApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationError {
-    pub fn from_body(body: &str) -> DeleteApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        DeleteApplicationError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        DeleteApplicationError::Conflict(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        DeleteApplicationError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        DeleteApplicationError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DeleteApplicationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteApplicationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteApplicationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return DeleteApplicationError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return DeleteApplicationError::Conflict(String::from(error_message))
+                }
+                "ForbiddenException" => {
+                    return DeleteApplicationError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return DeleteApplicationError::InternalServerError(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DeleteApplicationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteApplicationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationError::Unknown(String::from(body)),
         }
+        return DeleteApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationError {
-        DeleteApplicationError::Unknown(err.description().to_string())
+        DeleteApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationError {
@@ -1221,7 +1299,8 @@ impl Error for DeleteApplicationError {
             DeleteApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationError::Unknown(ref cause) => cause,
+            DeleteApplicationError::ParseError(ref cause) => cause,
+            DeleteApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1244,53 +1323,67 @@ pub enum GetApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApplicationError {
-    pub fn from_body(body: &str) -> GetApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetApplicationError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        GetApplicationError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        GetApplicationError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetApplicationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetApplicationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => GetApplicationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetApplicationError::BadRequest(String::from(error_message))
                 }
+                "ForbiddenException" => {
+                    return GetApplicationError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return GetApplicationError::InternalServerError(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return GetApplicationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetApplicationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApplicationError::Unknown(String::from(body)),
         }
+        return GetApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApplicationError {
     fn from(err: serde_json::error::Error) -> GetApplicationError {
-        GetApplicationError::Unknown(err.description().to_string())
+        GetApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApplicationError {
@@ -1324,7 +1417,8 @@ impl Error for GetApplicationError {
             GetApplicationError::Validation(ref cause) => cause,
             GetApplicationError::Credentials(ref err) => err.description(),
             GetApplicationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetApplicationError::Unknown(ref cause) => cause,
+            GetApplicationError::ParseError(ref cause) => cause,
+            GetApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1347,53 +1441,69 @@ pub enum GetApplicationPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetApplicationPolicyError {
-    pub fn from_body(body: &str) -> GetApplicationPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetApplicationPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        GetApplicationPolicyError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        GetApplicationPolicyError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        GetApplicationPolicyError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetApplicationPolicyError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetApplicationPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetApplicationPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => GetApplicationPolicyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return GetApplicationPolicyError::BadRequest(String::from(error_message))
                 }
+                "ForbiddenException" => {
+                    return GetApplicationPolicyError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return GetApplicationPolicyError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "NotFoundException" => {
+                    return GetApplicationPolicyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetApplicationPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetApplicationPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetApplicationPolicyError::Unknown(String::from(body)),
         }
+        return GetApplicationPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetApplicationPolicyError {
     fn from(err: serde_json::error::Error) -> GetApplicationPolicyError {
-        GetApplicationPolicyError::Unknown(err.description().to_string())
+        GetApplicationPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetApplicationPolicyError {
@@ -1429,7 +1539,8 @@ impl Error for GetApplicationPolicyError {
             GetApplicationPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetApplicationPolicyError::Unknown(ref cause) => cause,
+            GetApplicationPolicyError::ParseError(ref cause) => cause,
+            GetApplicationPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1452,55 +1563,71 @@ pub enum ListApplicationVersionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListApplicationVersionsError {
-    pub fn from_body(body: &str) -> ListApplicationVersionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListApplicationVersionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        ListApplicationVersionsError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        ListApplicationVersionsError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        ListApplicationVersionsError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "NotFoundException" => {
-                        ListApplicationVersionsError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListApplicationVersionsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListApplicationVersionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListApplicationVersionsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return ListApplicationVersionsError::BadRequest(String::from(error_message))
                 }
+                "ForbiddenException" => {
+                    return ListApplicationVersionsError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return ListApplicationVersionsError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "NotFoundException" => {
+                    return ListApplicationVersionsError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListApplicationVersionsError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListApplicationVersionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListApplicationVersionsError::Unknown(String::from(body)),
         }
+        return ListApplicationVersionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListApplicationVersionsError {
     fn from(err: serde_json::error::Error) -> ListApplicationVersionsError {
-        ListApplicationVersionsError::Unknown(err.description().to_string())
+        ListApplicationVersionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListApplicationVersionsError {
@@ -1536,7 +1663,8 @@ impl Error for ListApplicationVersionsError {
             ListApplicationVersionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListApplicationVersionsError::Unknown(ref cause) => cause,
+            ListApplicationVersionsError::ParseError(ref cause) => cause,
+            ListApplicationVersionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1557,50 +1685,64 @@ pub enum ListApplicationsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListApplicationsError {
-    pub fn from_body(body: &str) -> ListApplicationsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListApplicationsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        ListApplicationsError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        ListApplicationsError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        ListApplicationsError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        ListApplicationsError::NotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListApplicationsError::Validation(error_message.to_string())
-                    }
-                    _ => ListApplicationsError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return ListApplicationsError::BadRequest(String::from(error_message))
                 }
+                "ForbiddenException" => {
+                    return ListApplicationsError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return ListApplicationsError::InternalServerError(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return ListApplicationsError::NotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListApplicationsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListApplicationsError::Unknown(String::from(body)),
         }
+        return ListApplicationsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListApplicationsError {
     fn from(err: serde_json::error::Error) -> ListApplicationsError {
-        ListApplicationsError::Unknown(err.description().to_string())
+        ListApplicationsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListApplicationsError {
@@ -1633,7 +1775,8 @@ impl Error for ListApplicationsError {
             ListApplicationsError::Validation(ref cause) => cause,
             ListApplicationsError::Credentials(ref err) => err.description(),
             ListApplicationsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListApplicationsError::Unknown(ref cause) => cause,
+            ListApplicationsError::ParseError(ref cause) => cause,
+            ListApplicationsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1656,53 +1799,69 @@ pub enum PutApplicationPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutApplicationPolicyError {
-    pub fn from_body(body: &str) -> PutApplicationPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutApplicationPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        PutApplicationPolicyError::BadRequest(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        PutApplicationPolicyError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        PutApplicationPolicyError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        PutApplicationPolicyError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutApplicationPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutApplicationPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => PutApplicationPolicyError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return PutApplicationPolicyError::BadRequest(String::from(error_message))
                 }
+                "ForbiddenException" => {
+                    return PutApplicationPolicyError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return PutApplicationPolicyError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "NotFoundException" => {
+                    return PutApplicationPolicyError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutApplicationPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutApplicationPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutApplicationPolicyError::Unknown(String::from(body)),
         }
+        return PutApplicationPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutApplicationPolicyError {
     fn from(err: serde_json::error::Error) -> PutApplicationPolicyError {
-        PutApplicationPolicyError::Unknown(err.description().to_string())
+        PutApplicationPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutApplicationPolicyError {
@@ -1738,7 +1897,8 @@ impl Error for PutApplicationPolicyError {
             PutApplicationPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutApplicationPolicyError::Unknown(ref cause) => cause,
+            PutApplicationPolicyError::ParseError(ref cause) => cause,
+            PutApplicationPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1763,56 +1923,70 @@ pub enum UpdateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateApplicationError {
-    pub fn from_body(body: &str) -> UpdateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "BadRequestException" => {
-                        UpdateApplicationError::BadRequest(String::from(error_message))
-                    }
-                    "ConflictException" => {
-                        UpdateApplicationError::Conflict(String::from(error_message))
-                    }
-                    "ForbiddenException" => {
-                        UpdateApplicationError::Forbidden(String::from(error_message))
-                    }
-                    "InternalServerErrorException" => {
-                        UpdateApplicationError::InternalServerError(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        UpdateApplicationError::NotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateApplicationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateApplicationError::Unknown(String::from(body)),
+            match error_type {
+                "BadRequestException" => {
+                    return UpdateApplicationError::BadRequest(String::from(error_message))
                 }
+                "ConflictException" => {
+                    return UpdateApplicationError::Conflict(String::from(error_message))
+                }
+                "ForbiddenException" => {
+                    return UpdateApplicationError::Forbidden(String::from(error_message))
+                }
+                "InternalServerErrorException" => {
+                    return UpdateApplicationError::InternalServerError(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return UpdateApplicationError::NotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateApplicationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateApplicationError::Unknown(String::from(body)),
         }
+        return UpdateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateApplicationError {
     fn from(err: serde_json::error::Error) -> UpdateApplicationError {
-        UpdateApplicationError::Unknown(err.description().to_string())
+        UpdateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateApplicationError {
@@ -1849,7 +2023,8 @@ impl Error for UpdateApplicationError {
             UpdateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateApplicationError::Unknown(ref cause) => cause,
+            UpdateApplicationError::ParseError(ref cause) => cause,
+            UpdateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1983,11 +2158,12 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -2027,9 +2203,7 @@ impl ServerlessRepo for ServerlessRepoClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateApplicationVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateApplicationVersionError::from_response(response))
                 }))
             }
         })
@@ -2071,9 +2245,7 @@ impl ServerlessRepo for ServerlessRepoClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateCloudFormationChangeSetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateCloudFormationChangeSetError::from_response(response))
                 }))
             }
         })
@@ -2101,11 +2273,12 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -2145,11 +2318,12 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -2184,11 +2358,11 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetApplicationPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetApplicationPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2233,9 +2407,7 @@ impl ServerlessRepo for ServerlessRepoClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListApplicationVersionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListApplicationVersionsError::from_response(response))
                 }))
             }
         })
@@ -2276,11 +2448,12 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListApplicationsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListApplicationsError::from_response(response))),
+                )
             }
         })
     }
@@ -2320,11 +2493,11 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutApplicationPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutApplicationPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2362,11 +2535,12 @@ impl ServerlessRepo for ServerlessRepoClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateApplicationError::from_response(response))),
+                )
             }
         })
     }

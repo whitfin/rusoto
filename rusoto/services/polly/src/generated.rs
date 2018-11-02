@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,7 +27,7 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct DeleteLexiconInput {
@@ -37,6 +37,7 @@ pub struct DeleteLexiconInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteLexiconOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -52,6 +53,7 @@ pub struct DescribeVoicesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeVoicesOutput {
     /// <p>The pagination token to use in the next request to continue the listing of voices. <code>NextToken</code> is returned only if the response is truncated.</p>
     #[serde(rename = "NextToken")]
@@ -71,6 +73,7 @@ pub struct GetLexiconInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetLexiconOutput {
     /// <p>Lexicon object that provides name and the string content of the lexicon. </p>
     #[serde(rename = "Lexicon")]
@@ -90,6 +93,7 @@ pub struct GetSpeechSynthesisTaskInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetSpeechSynthesisTaskOutput {
     /// <p>SynthesisTask object that provides information from the requested task, including output format, creation time, task status, and so on.</p>
     #[serde(rename = "SynthesisTask")]
@@ -99,6 +103,7 @@ pub struct GetSpeechSynthesisTaskOutput {
 
 /// <p>Provides lexicon name and lexicon content in string format. For more information, see <a href="https://www.w3.org/TR/pronunciation-lexicon/">Pronunciation Lexicon Specification (PLS) Version 1.0</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Lexicon {
     /// <p>Lexicon content in string format. The content of a lexicon must be in PLS format.</p>
     #[serde(rename = "Content")]
@@ -112,6 +117,7 @@ pub struct Lexicon {
 
 /// <p>Contains metadata describing the lexicon such as the number of lexemes, language code, and so on. For more information, see <a href="http://docs.aws.amazon.com/polly/latest/dg/managing-lexicons.html">Managing Lexicons</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LexiconAttributes {
     /// <p>Phonetic alphabet used in the lexicon. Valid values are <code>ipa</code> and <code>x-sampa</code>.</p>
     #[serde(rename = "Alphabet")]
@@ -141,6 +147,7 @@ pub struct LexiconAttributes {
 
 /// <p>Describes the content of the lexicon.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LexiconDescription {
     /// <p>Provides lexicon metadata.</p>
     #[serde(rename = "Attributes")]
@@ -161,6 +168,7 @@ pub struct ListLexiconsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListLexiconsOutput {
     /// <p>A list of lexicon names and attributes.</p>
     #[serde(rename = "Lexicons")]
@@ -189,6 +197,7 @@ pub struct ListSpeechSynthesisTasksInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListSpeechSynthesisTasksOutput {
     /// <p>An opaque pagination token returned from the previous List operation in this request. If present, this indicates where to continue the listing.</p>
     #[serde(rename = "NextToken")]
@@ -211,6 +220,7 @@ pub struct PutLexiconInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutLexiconOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -254,6 +264,7 @@ pub struct StartSpeechSynthesisTaskInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartSpeechSynthesisTaskOutput {
     /// <p>SynthesisTask object that provides information and attributes about a newly submitted speech synthesis task.</p>
     #[serde(rename = "SynthesisTask")]
@@ -263,6 +274,7 @@ pub struct StartSpeechSynthesisTaskOutput {
 
 /// <p>SynthesisTask object that provides information about a speech synthesis task.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SynthesisTask {
     /// <p>Timestamp for the time the synthesis task was started.</p>
     #[serde(rename = "CreationTime")]
@@ -359,6 +371,7 @@ pub struct SynthesizeSpeechOutput {
 
 /// <p>Description of the voice.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Voice {
     /// <p>Gender of the voice.</p>
     #[serde(rename = "Gender")]
@@ -395,44 +408,58 @@ pub enum DeleteLexiconError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteLexiconError {
-    pub fn from_body(body: &str) -> DeleteLexiconError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteLexiconError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "LexiconNotFoundException" => {
-                        DeleteLexiconError::LexiconNotFound(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        DeleteLexiconError::ServiceFailure(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteLexiconError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteLexiconError::Unknown(String::from(body)),
+            match error_type {
+                "LexiconNotFoundException" => {
+                    return DeleteLexiconError::LexiconNotFound(String::from(error_message))
                 }
+                "ServiceFailureException" => {
+                    return DeleteLexiconError::ServiceFailure(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteLexiconError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteLexiconError::Unknown(String::from(body)),
         }
+        return DeleteLexiconError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteLexiconError {
     fn from(err: serde_json::error::Error) -> DeleteLexiconError {
-        DeleteLexiconError::Unknown(err.description().to_string())
+        DeleteLexiconError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteLexiconError {
@@ -463,7 +490,8 @@ impl Error for DeleteLexiconError {
             DeleteLexiconError::Validation(ref cause) => cause,
             DeleteLexiconError::Credentials(ref err) => err.description(),
             DeleteLexiconError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteLexiconError::Unknown(ref cause) => cause,
+            DeleteLexiconError::ParseError(ref cause) => cause,
+            DeleteLexiconError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -480,44 +508,58 @@ pub enum DescribeVoicesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeVoicesError {
-    pub fn from_body(body: &str) -> DescribeVoicesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeVoicesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        DescribeVoicesError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        DescribeVoicesError::ServiceFailure(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeVoicesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeVoicesError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidNextTokenException" => {
+                    return DescribeVoicesError::InvalidNextToken(String::from(error_message))
                 }
+                "ServiceFailureException" => {
+                    return DescribeVoicesError::ServiceFailure(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeVoicesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeVoicesError::Unknown(String::from(body)),
         }
+        return DescribeVoicesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeVoicesError {
     fn from(err: serde_json::error::Error) -> DescribeVoicesError {
-        DescribeVoicesError::Unknown(err.description().to_string())
+        DescribeVoicesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeVoicesError {
@@ -548,7 +590,8 @@ impl Error for DescribeVoicesError {
             DescribeVoicesError::Validation(ref cause) => cause,
             DescribeVoicesError::Credentials(ref err) => err.description(),
             DescribeVoicesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeVoicesError::Unknown(ref cause) => cause,
+            DescribeVoicesError::ParseError(ref cause) => cause,
+            DescribeVoicesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -565,42 +608,58 @@ pub enum GetLexiconError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetLexiconError {
-    pub fn from_body(body: &str) -> GetLexiconError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetLexiconError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "LexiconNotFoundException" => {
-                        GetLexiconError::LexiconNotFound(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        GetLexiconError::ServiceFailure(String::from(error_message))
-                    }
-                    "ValidationException" => GetLexiconError::Validation(error_message.to_string()),
-                    _ => GetLexiconError::Unknown(String::from(body)),
+            match error_type {
+                "LexiconNotFoundException" => {
+                    return GetLexiconError::LexiconNotFound(String::from(error_message))
                 }
+                "ServiceFailureException" => {
+                    return GetLexiconError::ServiceFailure(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetLexiconError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetLexiconError::Unknown(String::from(body)),
         }
+        return GetLexiconError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetLexiconError {
     fn from(err: serde_json::error::Error) -> GetLexiconError {
-        GetLexiconError::Unknown(err.description().to_string())
+        GetLexiconError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetLexiconError {
@@ -631,7 +690,8 @@ impl Error for GetLexiconError {
             GetLexiconError::Validation(ref cause) => cause,
             GetLexiconError::Credentials(ref err) => err.description(),
             GetLexiconError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetLexiconError::Unknown(ref cause) => cause,
+            GetLexiconError::ParseError(ref cause) => cause,
+            GetLexiconError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -650,49 +710,63 @@ pub enum GetSpeechSynthesisTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetSpeechSynthesisTaskError {
-    pub fn from_body(body: &str) -> GetSpeechSynthesisTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetSpeechSynthesisTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidTaskIdException" => {
-                        GetSpeechSynthesisTaskError::InvalidTaskId(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        GetSpeechSynthesisTaskError::ServiceFailure(String::from(error_message))
-                    }
-                    "SynthesisTaskNotFoundException" => {
-                        GetSpeechSynthesisTaskError::SynthesisTaskNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetSpeechSynthesisTaskError::Validation(error_message.to_string())
-                    }
-                    _ => GetSpeechSynthesisTaskError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidTaskIdException" => {
+                    return GetSpeechSynthesisTaskError::InvalidTaskId(String::from(error_message))
                 }
+                "ServiceFailureException" => {
+                    return GetSpeechSynthesisTaskError::ServiceFailure(String::from(error_message))
+                }
+                "SynthesisTaskNotFoundException" => {
+                    return GetSpeechSynthesisTaskError::SynthesisTaskNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetSpeechSynthesisTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetSpeechSynthesisTaskError::Unknown(String::from(body)),
         }
+        return GetSpeechSynthesisTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetSpeechSynthesisTaskError {
     fn from(err: serde_json::error::Error) -> GetSpeechSynthesisTaskError {
-        GetSpeechSynthesisTaskError::Unknown(err.description().to_string())
+        GetSpeechSynthesisTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetSpeechSynthesisTaskError {
@@ -726,7 +800,8 @@ impl Error for GetSpeechSynthesisTaskError {
             GetSpeechSynthesisTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetSpeechSynthesisTaskError::Unknown(ref cause) => cause,
+            GetSpeechSynthesisTaskError::ParseError(ref cause) => cause,
+            GetSpeechSynthesisTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -743,44 +818,58 @@ pub enum ListLexiconsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListLexiconsError {
-    pub fn from_body(body: &str) -> ListLexiconsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListLexiconsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListLexiconsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        ListLexiconsError::ServiceFailure(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListLexiconsError::Validation(error_message.to_string())
-                    }
-                    _ => ListLexiconsError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidNextTokenException" => {
+                    return ListLexiconsError::InvalidNextToken(String::from(error_message))
                 }
+                "ServiceFailureException" => {
+                    return ListLexiconsError::ServiceFailure(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListLexiconsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListLexiconsError::Unknown(String::from(body)),
         }
+        return ListLexiconsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListLexiconsError {
     fn from(err: serde_json::error::Error) -> ListLexiconsError {
-        ListLexiconsError::Unknown(err.description().to_string())
+        ListLexiconsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListLexiconsError {
@@ -811,7 +900,8 @@ impl Error for ListLexiconsError {
             ListLexiconsError::Validation(ref cause) => cause,
             ListLexiconsError::Credentials(ref err) => err.description(),
             ListLexiconsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListLexiconsError::Unknown(ref cause) => cause,
+            ListLexiconsError::ParseError(ref cause) => cause,
+            ListLexiconsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -828,44 +918,62 @@ pub enum ListSpeechSynthesisTasksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListSpeechSynthesisTasksError {
-    pub fn from_body(body: &str) -> ListSpeechSynthesisTasksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListSpeechSynthesisTasksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidNextTokenException" => {
-                        ListSpeechSynthesisTasksError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        ListSpeechSynthesisTasksError::ServiceFailure(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListSpeechSynthesisTasksError::Validation(error_message.to_string())
-                    }
-                    _ => ListSpeechSynthesisTasksError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidNextTokenException" => {
+                    return ListSpeechSynthesisTasksError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceFailureException" => {
+                    return ListSpeechSynthesisTasksError::ServiceFailure(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListSpeechSynthesisTasksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListSpeechSynthesisTasksError::Unknown(String::from(body)),
         }
+        return ListSpeechSynthesisTasksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListSpeechSynthesisTasksError {
     fn from(err: serde_json::error::Error) -> ListSpeechSynthesisTasksError {
-        ListSpeechSynthesisTasksError::Unknown(err.description().to_string())
+        ListSpeechSynthesisTasksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListSpeechSynthesisTasksError {
@@ -898,7 +1006,8 @@ impl Error for ListSpeechSynthesisTasksError {
             ListSpeechSynthesisTasksError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListSpeechSynthesisTasksError::Unknown(ref cause) => cause,
+            ListSpeechSynthesisTasksError::ParseError(ref cause) => cause,
+            ListSpeechSynthesisTasksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -925,57 +1034,73 @@ pub enum PutLexiconError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutLexiconError {
-    pub fn from_body(body: &str) -> PutLexiconError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutLexiconError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidLexiconException" => {
-                        PutLexiconError::InvalidLexicon(String::from(error_message))
-                    }
-                    "LexiconSizeExceededException" => {
-                        PutLexiconError::LexiconSizeExceeded(String::from(error_message))
-                    }
-                    "MaxLexemeLengthExceededException" => {
-                        PutLexiconError::MaxLexemeLengthExceeded(String::from(error_message))
-                    }
-                    "MaxLexiconsNumberExceededException" => {
-                        PutLexiconError::MaxLexiconsNumberExceeded(String::from(error_message))
-                    }
-                    "ServiceFailureException" => {
-                        PutLexiconError::ServiceFailure(String::from(error_message))
-                    }
-                    "UnsupportedPlsAlphabetException" => {
-                        PutLexiconError::UnsupportedPlsAlphabet(String::from(error_message))
-                    }
-                    "UnsupportedPlsLanguageException" => {
-                        PutLexiconError::UnsupportedPlsLanguage(String::from(error_message))
-                    }
-                    "ValidationException" => PutLexiconError::Validation(error_message.to_string()),
-                    _ => PutLexiconError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidLexiconException" => {
+                    return PutLexiconError::InvalidLexicon(String::from(error_message))
                 }
+                "LexiconSizeExceededException" => {
+                    return PutLexiconError::LexiconSizeExceeded(String::from(error_message))
+                }
+                "MaxLexemeLengthExceededException" => {
+                    return PutLexiconError::MaxLexemeLengthExceeded(String::from(error_message))
+                }
+                "MaxLexiconsNumberExceededException" => {
+                    return PutLexiconError::MaxLexiconsNumberExceeded(String::from(error_message))
+                }
+                "ServiceFailureException" => {
+                    return PutLexiconError::ServiceFailure(String::from(error_message))
+                }
+                "UnsupportedPlsAlphabetException" => {
+                    return PutLexiconError::UnsupportedPlsAlphabet(String::from(error_message))
+                }
+                "UnsupportedPlsLanguageException" => {
+                    return PutLexiconError::UnsupportedPlsLanguage(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutLexiconError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutLexiconError::Unknown(String::from(body)),
         }
+        return PutLexiconError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutLexiconError {
     fn from(err: serde_json::error::Error) -> PutLexiconError {
-        PutLexiconError::Unknown(err.description().to_string())
+        PutLexiconError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutLexiconError {
@@ -1011,7 +1136,8 @@ impl Error for PutLexiconError {
             PutLexiconError::Validation(ref cause) => cause,
             PutLexiconError::Credentials(ref err) => err.description(),
             PutLexiconError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutLexiconError::Unknown(ref cause) => cause,
+            PutLexiconError::ParseError(ref cause) => cause,
+            PutLexiconError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1044,78 +1170,98 @@ pub enum StartSpeechSynthesisTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartSpeechSynthesisTaskError {
-    pub fn from_body(body: &str) -> StartSpeechSynthesisTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> StartSpeechSynthesisTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidS3BucketException" => {
-                        StartSpeechSynthesisTaskError::InvalidS3Bucket(String::from(error_message))
-                    }
-                    "InvalidS3KeyException" => {
-                        StartSpeechSynthesisTaskError::InvalidS3Key(String::from(error_message))
-                    }
-                    "InvalidSampleRateException" => {
-                        StartSpeechSynthesisTaskError::InvalidSampleRate(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidSnsTopicArnException" => {
-                        StartSpeechSynthesisTaskError::InvalidSnsTopicArn(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidSsmlException" => {
-                        StartSpeechSynthesisTaskError::InvalidSsml(String::from(error_message))
-                    }
-                    "LexiconNotFoundException" => {
-                        StartSpeechSynthesisTaskError::LexiconNotFound(String::from(error_message))
-                    }
-                    "MarksNotSupportedForFormatException" => {
-                        StartSpeechSynthesisTaskError::MarksNotSupportedForFormat(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceFailureException" => {
-                        StartSpeechSynthesisTaskError::ServiceFailure(String::from(error_message))
-                    }
-                    "SsmlMarksNotSupportedForTextTypeException" => {
-                        StartSpeechSynthesisTaskError::SsmlMarksNotSupportedForTextType(
-                            String::from(error_message),
-                        )
-                    }
-                    "TextLengthExceededException" => {
-                        StartSpeechSynthesisTaskError::TextLengthExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        StartSpeechSynthesisTaskError::Validation(error_message.to_string())
-                    }
-                    _ => StartSpeechSynthesisTaskError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidS3BucketException" => {
+                    return StartSpeechSynthesisTaskError::InvalidS3Bucket(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidS3KeyException" => {
+                    return StartSpeechSynthesisTaskError::InvalidS3Key(String::from(error_message))
+                }
+                "InvalidSampleRateException" => {
+                    return StartSpeechSynthesisTaskError::InvalidSampleRate(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidSnsTopicArnException" => {
+                    return StartSpeechSynthesisTaskError::InvalidSnsTopicArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidSsmlException" => {
+                    return StartSpeechSynthesisTaskError::InvalidSsml(String::from(error_message))
+                }
+                "LexiconNotFoundException" => {
+                    return StartSpeechSynthesisTaskError::LexiconNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "MarksNotSupportedForFormatException" => {
+                    return StartSpeechSynthesisTaskError::MarksNotSupportedForFormat(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceFailureException" => {
+                    return StartSpeechSynthesisTaskError::ServiceFailure(String::from(
+                        error_message,
+                    ))
+                }
+                "SsmlMarksNotSupportedForTextTypeException" => {
+                    return StartSpeechSynthesisTaskError::SsmlMarksNotSupportedForTextType(
+                        String::from(error_message),
+                    )
+                }
+                "TextLengthExceededException" => {
+                    return StartSpeechSynthesisTaskError::TextLengthExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return StartSpeechSynthesisTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartSpeechSynthesisTaskError::Unknown(String::from(body)),
         }
+        return StartSpeechSynthesisTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartSpeechSynthesisTaskError {
     fn from(err: serde_json::error::Error) -> StartSpeechSynthesisTaskError {
-        StartSpeechSynthesisTaskError::Unknown(err.description().to_string())
+        StartSpeechSynthesisTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartSpeechSynthesisTaskError {
@@ -1156,7 +1302,8 @@ impl Error for StartSpeechSynthesisTaskError {
             StartSpeechSynthesisTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            StartSpeechSynthesisTaskError::Unknown(ref cause) => cause,
+            StartSpeechSynthesisTaskError::ParseError(ref cause) => cause,
+            StartSpeechSynthesisTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1183,63 +1330,77 @@ pub enum SynthesizeSpeechError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SynthesizeSpeechError {
-    pub fn from_body(body: &str) -> SynthesizeSpeechError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> SynthesizeSpeechError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidSampleRateException" => {
-                        SynthesizeSpeechError::InvalidSampleRate(String::from(error_message))
-                    }
-                    "InvalidSsmlException" => {
-                        SynthesizeSpeechError::InvalidSsml(String::from(error_message))
-                    }
-                    "LexiconNotFoundException" => {
-                        SynthesizeSpeechError::LexiconNotFound(String::from(error_message))
-                    }
-                    "MarksNotSupportedForFormatException" => {
-                        SynthesizeSpeechError::MarksNotSupportedForFormat(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceFailureException" => {
-                        SynthesizeSpeechError::ServiceFailure(String::from(error_message))
-                    }
-                    "SsmlMarksNotSupportedForTextTypeException" => {
-                        SynthesizeSpeechError::SsmlMarksNotSupportedForTextType(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TextLengthExceededException" => {
-                        SynthesizeSpeechError::TextLengthExceeded(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        SynthesizeSpeechError::Validation(error_message.to_string())
-                    }
-                    _ => SynthesizeSpeechError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidSampleRateException" => {
+                    return SynthesizeSpeechError::InvalidSampleRate(String::from(error_message))
                 }
+                "InvalidSsmlException" => {
+                    return SynthesizeSpeechError::InvalidSsml(String::from(error_message))
+                }
+                "LexiconNotFoundException" => {
+                    return SynthesizeSpeechError::LexiconNotFound(String::from(error_message))
+                }
+                "MarksNotSupportedForFormatException" => {
+                    return SynthesizeSpeechError::MarksNotSupportedForFormat(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceFailureException" => {
+                    return SynthesizeSpeechError::ServiceFailure(String::from(error_message))
+                }
+                "SsmlMarksNotSupportedForTextTypeException" => {
+                    return SynthesizeSpeechError::SsmlMarksNotSupportedForTextType(String::from(
+                        error_message,
+                    ))
+                }
+                "TextLengthExceededException" => {
+                    return SynthesizeSpeechError::TextLengthExceeded(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return SynthesizeSpeechError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SynthesizeSpeechError::Unknown(String::from(body)),
         }
+        return SynthesizeSpeechError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SynthesizeSpeechError {
     fn from(err: serde_json::error::Error) -> SynthesizeSpeechError {
-        SynthesizeSpeechError::Unknown(err.description().to_string())
+        SynthesizeSpeechError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SynthesizeSpeechError {
@@ -1275,7 +1436,8 @@ impl Error for SynthesizeSpeechError {
             SynthesizeSpeechError::Validation(ref cause) => cause,
             SynthesizeSpeechError::Credentials(ref err) => err.description(),
             SynthesizeSpeechError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SynthesizeSpeechError::Unknown(ref cause) => cause,
+            SynthesizeSpeechError::ParseError(ref cause) => cause,
+            SynthesizeSpeechError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1397,11 +1559,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteLexiconError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteLexiconError::from_response(response))),
+                )
             }
         })
     }
@@ -1441,11 +1604,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeVoicesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeVoicesError::from_response(response))),
+                )
             }
         })
     }
@@ -1476,11 +1640,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetLexiconError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetLexiconError::from_response(response))),
+                )
             }
         })
     }
@@ -1512,11 +1677,11 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetSpeechSynthesisTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetSpeechSynthesisTaskError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -1553,11 +1718,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListLexiconsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListLexiconsError::from_response(response))),
+                )
             }
         })
     }
@@ -1602,9 +1768,7 @@ impl Polly for PollyClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListSpeechSynthesisTasksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListSpeechSynthesisTasksError::from_response(response))
                 }))
             }
         })
@@ -1639,11 +1803,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutLexiconError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutLexiconError::from_response(response))),
+                )
             }
         })
     }
@@ -1679,9 +1844,7 @@ impl Polly for PollyClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartSpeechSynthesisTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(StartSpeechSynthesisTaskError::from_response(response))
                 }))
             }
         })
@@ -1720,11 +1883,12 @@ impl Polly for PollyClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SynthesizeSpeechError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SynthesizeSpeechError::from_response(response))),
+                )
             }
         })
     }

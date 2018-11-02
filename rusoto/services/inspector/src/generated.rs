@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AddAttributesToFindingsRequest {
@@ -39,6 +39,7 @@ pub struct AddAttributesToFindingsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddAttributesToFindingsResponse {
     /// <p>Attribute details that cannot be described. An error code is provided for each failed item.</p>
     #[serde(rename = "failedItems")]
@@ -67,6 +68,7 @@ pub struct AgentFilter {
 
 /// <p>Used as a response element in the <a>PreviewAgents</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AgentPreview {
     /// <p>The health status of the Amazon Inspector Agent.</p>
     #[serde(rename = "agentHealth")]
@@ -103,6 +105,7 @@ pub struct AgentPreview {
 
 /// <p>A snapshot of an Amazon Inspector assessment run that contains the findings of the assessment run .</p> <p>Used as the response element in the <a>DescribeAssessmentRuns</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentRun {
     /// <p>The ARN of the assessment run.</p>
     #[serde(rename = "arn")]
@@ -155,6 +158,7 @@ pub struct AssessmentRun {
 
 /// <p>Contains information about an Amazon Inspector agent. This data type is used as a response element in the <a>ListAssessmentRunAgents</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentRunAgent {
     /// <p>The current health state of the agent.</p>
     #[serde(rename = "agentHealth")]
@@ -216,6 +220,7 @@ pub struct AssessmentRunFilter {
 
 /// <p>Used as one of the elements of the <a>AssessmentRun</a> data type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentRunNotification {
     /// <p>The date of the notification.</p>
     #[serde(rename = "date")]
@@ -242,6 +247,7 @@ pub struct AssessmentRunNotification {
 
 /// <p>Used as one of the elements of the <a>AssessmentRun</a> data type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentRunStateChange {
     /// <p>The assessment run state.</p>
     #[serde(rename = "state")]
@@ -253,6 +259,7 @@ pub struct AssessmentRunStateChange {
 
 /// <p>Contains information about an Amazon Inspector application. This data type is used as the response element in the <a>DescribeAssessmentTargets</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentTarget {
     /// <p>The ARN that specifies the Amazon Inspector assessment target.</p>
     #[serde(rename = "arn")]
@@ -283,6 +290,7 @@ pub struct AssessmentTargetFilter {
 
 /// <p>Contains information about an Amazon Inspector assessment template. This data type is used as the response element in the <a>DescribeAssessmentTemplates</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssessmentTemplate {
     /// <p>The ARN of the assessment template.</p>
     #[serde(rename = "arn")]
@@ -333,6 +341,7 @@ pub struct AssessmentTemplateFilter {
 
 /// <p>A collection of attributes of the host from which the finding is generated.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssetAttributes {
     /// <p>The ID of the agent that is installed on the EC2 instance where the finding is generated.</p>
     #[serde(rename = "agentId")]
@@ -383,6 +392,7 @@ pub struct CreateAssessmentTargetRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateAssessmentTargetResponse {
     /// <p>The ARN that specifies the assessment target that is created.</p>
     #[serde(rename = "assessmentTargetArn")]
@@ -410,6 +420,7 @@ pub struct CreateAssessmentTemplateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateAssessmentTemplateResponse {
     /// <p>The ARN that specifies the assessment template that is created.</p>
     #[serde(rename = "assessmentTemplateArn")]
@@ -424,6 +435,7 @@ pub struct CreateExclusionsPreviewRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateExclusionsPreviewResponse {
     /// <p>Specifies the unique identifier of the requested exclusions preview. You can use the unique identifier to retrieve the exclusions preview when running the GetExclusionsPreview API.</p>
     #[serde(rename = "previewToken")]
@@ -438,6 +450,7 @@ pub struct CreateResourceGroupRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateResourceGroupResponse {
     /// <p>The ARN that specifies the resource group that is created.</p>
     #[serde(rename = "resourceGroupArn")]
@@ -473,6 +486,7 @@ pub struct DescribeAssessmentRunsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAssessmentRunsResponse {
     /// <p>Information about the assessment run.</p>
     #[serde(rename = "assessmentRuns")]
@@ -490,6 +504,7 @@ pub struct DescribeAssessmentTargetsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAssessmentTargetsResponse {
     /// <p>Information about the assessment targets.</p>
     #[serde(rename = "assessmentTargets")]
@@ -506,6 +521,7 @@ pub struct DescribeAssessmentTemplatesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAssessmentTemplatesResponse {
     /// <p>Information about the assessment templates.</p>
     #[serde(rename = "assessmentTemplates")]
@@ -516,6 +532,7 @@ pub struct DescribeAssessmentTemplatesResponse {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCrossAccountAccessRoleResponse {
     /// <p>The date when the cross-account access role was registered.</p>
     #[serde(rename = "registeredAt")]
@@ -540,6 +557,7 @@ pub struct DescribeExclusionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeExclusionsResponse {
     /// <p>Information about the exclusions.</p>
     #[serde(rename = "exclusions")]
@@ -561,6 +579,7 @@ pub struct DescribeFindingsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeFindingsResponse {
     /// <p>Finding details that cannot be described. An error code is provided for each failed item.</p>
     #[serde(rename = "failedItems")]
@@ -578,6 +597,7 @@ pub struct DescribeResourceGroupsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeResourceGroupsResponse {
     /// <p>Resource group details that cannot be described. An error code is provided for each failed item.</p>
     #[serde(rename = "failedItems")]
@@ -599,6 +619,7 @@ pub struct DescribeRulesPackagesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeRulesPackagesResponse {
     /// <p>Rules package details that cannot be described. An error code is provided for each failed item.</p>
     #[serde(rename = "failedItems")]
@@ -623,6 +644,7 @@ pub struct DurationRange {
 
 /// <p>This data type is used in the <a>Subscription</a> data type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EventSubscription {
     /// <p>The event for which Amazon Simple Notification Service (SNS) notifications are sent.</p>
     #[serde(rename = "event")]
@@ -634,6 +656,7 @@ pub struct EventSubscription {
 
 /// <p>Contains information about what was excluded from an assessment run.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Exclusion {
     /// <p>The ARN that specifies the exclusion.</p>
     #[serde(rename = "arn")]
@@ -658,6 +681,7 @@ pub struct Exclusion {
 
 /// <p>Contains information about what is excluded from an assessment run given the current state of the assessment template.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExclusionPreview {
     /// <p>The system-defined attributes for the exclusion preview.</p>
     #[serde(rename = "attributes")]
@@ -679,6 +703,7 @@ pub struct ExclusionPreview {
 
 /// <p>Includes details about the failed items.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FailedItemDetails {
     /// <p>The status code of a failed item.</p>
     #[serde(rename = "failureCode")]
@@ -690,6 +715,7 @@ pub struct FailedItemDetails {
 
 /// <p>Contains information about an Amazon Inspector finding. This data type is used as the response element in the <a>DescribeFindings</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Finding {
     /// <p>The ARN that specifies the finding.</p>
     #[serde(rename = "arn")]
@@ -811,6 +837,7 @@ pub struct GetAssessmentReportRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetAssessmentReportResponse {
     /// <p>Specifies the status of the request to generate an assessment report. </p>
     #[serde(rename = "status")]
@@ -844,6 +871,7 @@ pub struct GetExclusionsPreviewRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetExclusionsPreviewResponse {
     /// <p>Information about the exclusions included in the preview.</p>
     #[serde(rename = "exclusionPreviews")]
@@ -866,6 +894,7 @@ pub struct GetTelemetryMetadataRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetTelemetryMetadataResponse {
     /// <p>Telemetry details.</p>
     #[serde(rename = "telemetryMetadata")]
@@ -874,6 +903,7 @@ pub struct GetTelemetryMetadataResponse {
 
 /// <p>This data type is used in the <a>Finding</a> data type.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InspectorServiceAttributes {
     /// <p>The ARN of the assessment run during which the finding is generated.</p>
     #[serde(rename = "assessmentRunArn")]
@@ -908,6 +938,7 @@ pub struct ListAssessmentRunAgentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAssessmentRunAgentsResponse {
     /// <p>A list of ARNs that specifies the agents returned by the action.</p>
     #[serde(rename = "assessmentRunAgents")]
@@ -939,6 +970,7 @@ pub struct ListAssessmentRunsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAssessmentRunsResponse {
     /// <p>A list of ARNs that specifies the assessment runs that are returned by the action.</p>
     #[serde(rename = "assessmentRunArns")]
@@ -966,6 +998,7 @@ pub struct ListAssessmentTargetsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAssessmentTargetsResponse {
     /// <p>A list of ARNs that specifies the assessment targets that are returned by the action.</p>
     #[serde(rename = "assessmentTargetArns")]
@@ -997,6 +1030,7 @@ pub struct ListAssessmentTemplatesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAssessmentTemplatesResponse {
     /// <p>A list of ARNs that specifies the assessment templates returned by the action.</p>
     #[serde(rename = "assessmentTemplateArns")]
@@ -1024,6 +1058,7 @@ pub struct ListEventSubscriptionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListEventSubscriptionsResponse {
     /// <p> When a response is generated, if there is more data to be listed, this parameter is present in the response and contains the value to use for the <b>nextToken</b> parameter in a subsequent pagination request. If there is no more data to be listed, this parameter is set to null.</p>
     #[serde(rename = "nextToken")]
@@ -1050,6 +1085,7 @@ pub struct ListExclusionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListExclusionsResponse {
     /// <p>A list of exclusions' ARNs returned by the action.</p>
     #[serde(rename = "exclusionArns")]
@@ -1081,6 +1117,7 @@ pub struct ListFindingsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListFindingsResponse {
     /// <p>A list of ARNs that specifies the findings returned by the action.</p>
     #[serde(rename = "findingArns")]
@@ -1104,6 +1141,7 @@ pub struct ListRulesPackagesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListRulesPackagesResponse {
     /// <p> When a response is generated, if there is more data to be listed, this parameter is present in the response and contains the value to use for the <b>nextToken</b> parameter in a subsequent pagination request. If there is no more data to be listed, this parameter is set to null.</p>
     #[serde(rename = "nextToken")]
@@ -1122,6 +1160,7 @@ pub struct ListTagsForResourceRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTagsForResourceResponse {
     /// <p>A collection of key and value pairs.</p>
     #[serde(rename = "tags")]
@@ -1144,6 +1183,7 @@ pub struct PreviewAgentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PreviewAgentsResponse {
     /// <p>The resulting list of agents.</p>
     #[serde(rename = "agentPreviews")]
@@ -1172,6 +1212,7 @@ pub struct RemoveAttributesFromFindingsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RemoveAttributesFromFindingsResponse {
     /// <p>Attributes details that cannot be described. An error code is provided for each failed item.</p>
     #[serde(rename = "failedItems")]
@@ -1180,6 +1221,7 @@ pub struct RemoveAttributesFromFindingsResponse {
 
 /// <p>Contains information about a resource group. The resource group defines a set of tags that, when queried, identify the AWS resources that make up the assessment target. This data type is used as the response element in the <a>DescribeResourceGroups</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourceGroup {
     /// <p>The ARN of the resource group.</p>
     #[serde(rename = "arn")]
@@ -1206,6 +1248,7 @@ pub struct ResourceGroupTag {
 
 /// <p>Contains information about an Amazon Inspector rules package. This data type is used as the response element in the <a>DescribeRulesPackages</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RulesPackage {
     /// <p>The ARN of the rules package.</p>
     #[serde(rename = "arn")]
@@ -1227,6 +1270,7 @@ pub struct RulesPackage {
 
 /// <p>This data type contains key-value pairs that identify various Amazon resources.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Scope {
     /// <p>The type of the scope.</p>
     #[serde(rename = "key")]
@@ -1261,6 +1305,7 @@ pub struct StartAssessmentRunRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartAssessmentRunResponse {
     /// <p>The ARN of the assessment run that has been started.</p>
     #[serde(rename = "assessmentRunArn")]
@@ -1293,6 +1338,7 @@ pub struct SubscribeToEventRequest {
 
 /// <p>This data type is used as a response element in the <a>ListEventSubscriptions</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Subscription {
     /// <p>The list of existing event subscriptions.</p>
     #[serde(rename = "eventSubscriptions")]
@@ -1319,6 +1365,7 @@ pub struct Tag {
 
 /// <p>The metadata about the Amazon Inspector application data metrics collected by the agent. This data type is used as the response element in the <a>GetTelemetryMetadata</a> action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TelemetryMetadata {
     /// <p>The count of messages that the agent sends to the Amazon Inspector service.</p>
     #[serde(rename = "count")]
@@ -1391,55 +1438,55 @@ pub enum AddAttributesToFindingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddAttributesToFindingsError {
-    pub fn from_body(body: &str) -> AddAttributesToFindingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddAttributesToFindingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        AddAttributesToFindingsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        AddAttributesToFindingsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        AddAttributesToFindingsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        AddAttributesToFindingsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        AddAttributesToFindingsError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AddAttributesToFindingsError::Validation(error_message.to_string())
-                    }
-                    _ => AddAttributesToFindingsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return AddAttributesToFindingsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return AddAttributesToFindingsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return AddAttributesToFindingsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return AddAttributesToFindingsError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return AddAttributesToFindingsError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return AddAttributesToFindingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddAttributesToFindingsError::Unknown(String::from(body)),
         }
+        return AddAttributesToFindingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddAttributesToFindingsError {
     fn from(err: serde_json::error::Error) -> AddAttributesToFindingsError {
-        AddAttributesToFindingsError::Unknown(err.description().to_string())
+        AddAttributesToFindingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddAttributesToFindingsError {
@@ -1475,7 +1522,8 @@ impl Error for AddAttributesToFindingsError {
             AddAttributesToFindingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddAttributesToFindingsError::Unknown(ref cause) => cause,
+            AddAttributesToFindingsError::ParseError(ref cause) => cause,
+            AddAttributesToFindingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1502,63 +1550,63 @@ pub enum CreateAssessmentTargetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateAssessmentTargetError {
-    pub fn from_body(body: &str) -> CreateAssessmentTargetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateAssessmentTargetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateAssessmentTargetError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        CreateAssessmentTargetError::Internal(String::from(error_message))
-                    }
-                    "InvalidCrossAccountRoleException" => {
-                        CreateAssessmentTargetError::InvalidCrossAccountRole(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        CreateAssessmentTargetError::InvalidInput(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateAssessmentTargetError::LimitExceeded(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        CreateAssessmentTargetError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        CreateAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateAssessmentTargetError::Validation(error_message.to_string())
-                    }
-                    _ => CreateAssessmentTargetError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateAssessmentTargetError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return CreateAssessmentTargetError::Internal(String::from(error_message))
+                }
+                "InvalidCrossAccountRoleException" => {
+                    return CreateAssessmentTargetError::InvalidCrossAccountRole(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return CreateAssessmentTargetError::InvalidInput(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateAssessmentTargetError::LimitExceeded(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return CreateAssessmentTargetError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return CreateAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateAssessmentTargetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateAssessmentTargetError::Unknown(String::from(body)),
         }
+        return CreateAssessmentTargetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateAssessmentTargetError {
     fn from(err: serde_json::error::Error) -> CreateAssessmentTargetError {
-        CreateAssessmentTargetError::Unknown(err.description().to_string())
+        CreateAssessmentTargetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateAssessmentTargetError {
@@ -1596,7 +1644,8 @@ impl Error for CreateAssessmentTargetError {
             CreateAssessmentTargetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateAssessmentTargetError::Unknown(ref cause) => cause,
+            CreateAssessmentTargetError::ParseError(ref cause) => cause,
+            CreateAssessmentTargetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1621,58 +1670,58 @@ pub enum CreateAssessmentTemplateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateAssessmentTemplateError {
-    pub fn from_body(body: &str) -> CreateAssessmentTemplateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateAssessmentTemplateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateAssessmentTemplateError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        CreateAssessmentTemplateError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateAssessmentTemplateError::InvalidInput(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateAssessmentTemplateError::LimitExceeded(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        CreateAssessmentTemplateError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        CreateAssessmentTemplateError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateAssessmentTemplateError::Validation(error_message.to_string())
-                    }
-                    _ => CreateAssessmentTemplateError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateAssessmentTemplateError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return CreateAssessmentTemplateError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateAssessmentTemplateError::InvalidInput(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateAssessmentTemplateError::LimitExceeded(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return CreateAssessmentTemplateError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return CreateAssessmentTemplateError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return CreateAssessmentTemplateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateAssessmentTemplateError::Unknown(String::from(body)),
         }
+        return CreateAssessmentTemplateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateAssessmentTemplateError {
     fn from(err: serde_json::error::Error) -> CreateAssessmentTemplateError {
-        CreateAssessmentTemplateError::Unknown(err.description().to_string())
+        CreateAssessmentTemplateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateAssessmentTemplateError {
@@ -1709,7 +1758,8 @@ impl Error for CreateAssessmentTemplateError {
             CreateAssessmentTemplateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateAssessmentTemplateError::Unknown(ref cause) => cause,
+            CreateAssessmentTemplateError::ParseError(ref cause) => cause,
+            CreateAssessmentTemplateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1734,60 +1784,60 @@ pub enum CreateExclusionsPreviewError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateExclusionsPreviewError {
-    pub fn from_body(body: &str) -> CreateExclusionsPreviewError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateExclusionsPreviewError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateExclusionsPreviewError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        CreateExclusionsPreviewError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateExclusionsPreviewError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        CreateExclusionsPreviewError::NoSuchEntity(String::from(error_message))
-                    }
-                    "PreviewGenerationInProgressException" => {
-                        CreateExclusionsPreviewError::PreviewGenerationInProgress(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        CreateExclusionsPreviewError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateExclusionsPreviewError::Validation(error_message.to_string())
-                    }
-                    _ => CreateExclusionsPreviewError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateExclusionsPreviewError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return CreateExclusionsPreviewError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateExclusionsPreviewError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return CreateExclusionsPreviewError::NoSuchEntity(String::from(error_message))
+                }
+                "PreviewGenerationInProgressException" => {
+                    return CreateExclusionsPreviewError::PreviewGenerationInProgress(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return CreateExclusionsPreviewError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return CreateExclusionsPreviewError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateExclusionsPreviewError::Unknown(String::from(body)),
         }
+        return CreateExclusionsPreviewError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateExclusionsPreviewError {
     fn from(err: serde_json::error::Error) -> CreateExclusionsPreviewError {
-        CreateExclusionsPreviewError::Unknown(err.description().to_string())
+        CreateExclusionsPreviewError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateExclusionsPreviewError {
@@ -1824,7 +1874,8 @@ impl Error for CreateExclusionsPreviewError {
             CreateExclusionsPreviewError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateExclusionsPreviewError::Unknown(ref cause) => cause,
+            CreateExclusionsPreviewError::ParseError(ref cause) => cause,
+            CreateExclusionsPreviewError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1847,55 +1898,55 @@ pub enum CreateResourceGroupError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateResourceGroupError {
-    pub fn from_body(body: &str) -> CreateResourceGroupError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateResourceGroupError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateResourceGroupError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        CreateResourceGroupError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateResourceGroupError::InvalidInput(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateResourceGroupError::LimitExceeded(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        CreateResourceGroupError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateResourceGroupError::Validation(error_message.to_string())
-                    }
-                    _ => CreateResourceGroupError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateResourceGroupError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return CreateResourceGroupError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateResourceGroupError::InvalidInput(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateResourceGroupError::LimitExceeded(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return CreateResourceGroupError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateResourceGroupError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateResourceGroupError::Unknown(String::from(body)),
         }
+        return CreateResourceGroupError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateResourceGroupError {
     fn from(err: serde_json::error::Error) -> CreateResourceGroupError {
-        CreateResourceGroupError::Unknown(err.description().to_string())
+        CreateResourceGroupError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateResourceGroupError {
@@ -1931,7 +1982,8 @@ impl Error for CreateResourceGroupError {
             CreateResourceGroupError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateResourceGroupError::Unknown(ref cause) => cause,
+            CreateResourceGroupError::ParseError(ref cause) => cause,
+            CreateResourceGroupError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1956,60 +2008,60 @@ pub enum DeleteAssessmentRunError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteAssessmentRunError {
-    pub fn from_body(body: &str) -> DeleteAssessmentRunError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteAssessmentRunError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DeleteAssessmentRunError::AccessDenied(String::from(error_message))
-                    }
-                    "AssessmentRunInProgressException" => {
-                        DeleteAssessmentRunError::AssessmentRunInProgress(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalException" => {
-                        DeleteAssessmentRunError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DeleteAssessmentRunError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        DeleteAssessmentRunError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        DeleteAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteAssessmentRunError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteAssessmentRunError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DeleteAssessmentRunError::AccessDenied(String::from(error_message))
                 }
+                "AssessmentRunInProgressException" => {
+                    return DeleteAssessmentRunError::AssessmentRunInProgress(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalException" => {
+                    return DeleteAssessmentRunError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DeleteAssessmentRunError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return DeleteAssessmentRunError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return DeleteAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteAssessmentRunError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteAssessmentRunError::Unknown(String::from(body)),
         }
+        return DeleteAssessmentRunError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteAssessmentRunError {
     fn from(err: serde_json::error::Error) -> DeleteAssessmentRunError {
-        DeleteAssessmentRunError::Unknown(err.description().to_string())
+        DeleteAssessmentRunError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteAssessmentRunError {
@@ -2046,7 +2098,8 @@ impl Error for DeleteAssessmentRunError {
             DeleteAssessmentRunError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteAssessmentRunError::Unknown(ref cause) => cause,
+            DeleteAssessmentRunError::ParseError(ref cause) => cause,
+            DeleteAssessmentRunError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2071,60 +2124,60 @@ pub enum DeleteAssessmentTargetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteAssessmentTargetError {
-    pub fn from_body(body: &str) -> DeleteAssessmentTargetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteAssessmentTargetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DeleteAssessmentTargetError::AccessDenied(String::from(error_message))
-                    }
-                    "AssessmentRunInProgressException" => {
-                        DeleteAssessmentTargetError::AssessmentRunInProgress(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalException" => {
-                        DeleteAssessmentTargetError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DeleteAssessmentTargetError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        DeleteAssessmentTargetError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        DeleteAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteAssessmentTargetError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteAssessmentTargetError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DeleteAssessmentTargetError::AccessDenied(String::from(error_message))
                 }
+                "AssessmentRunInProgressException" => {
+                    return DeleteAssessmentTargetError::AssessmentRunInProgress(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalException" => {
+                    return DeleteAssessmentTargetError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DeleteAssessmentTargetError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return DeleteAssessmentTargetError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return DeleteAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteAssessmentTargetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteAssessmentTargetError::Unknown(String::from(body)),
         }
+        return DeleteAssessmentTargetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteAssessmentTargetError {
     fn from(err: serde_json::error::Error) -> DeleteAssessmentTargetError {
-        DeleteAssessmentTargetError::Unknown(err.description().to_string())
+        DeleteAssessmentTargetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteAssessmentTargetError {
@@ -2161,7 +2214,8 @@ impl Error for DeleteAssessmentTargetError {
             DeleteAssessmentTargetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteAssessmentTargetError::Unknown(ref cause) => cause,
+            DeleteAssessmentTargetError::ParseError(ref cause) => cause,
+            DeleteAssessmentTargetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2186,60 +2240,60 @@ pub enum DeleteAssessmentTemplateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteAssessmentTemplateError {
-    pub fn from_body(body: &str) -> DeleteAssessmentTemplateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteAssessmentTemplateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DeleteAssessmentTemplateError::AccessDenied(String::from(error_message))
-                    }
-                    "AssessmentRunInProgressException" => {
-                        DeleteAssessmentTemplateError::AssessmentRunInProgress(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalException" => {
-                        DeleteAssessmentTemplateError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DeleteAssessmentTemplateError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        DeleteAssessmentTemplateError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        DeleteAssessmentTemplateError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteAssessmentTemplateError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteAssessmentTemplateError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DeleteAssessmentTemplateError::AccessDenied(String::from(error_message))
                 }
+                "AssessmentRunInProgressException" => {
+                    return DeleteAssessmentTemplateError::AssessmentRunInProgress(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalException" => {
+                    return DeleteAssessmentTemplateError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DeleteAssessmentTemplateError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return DeleteAssessmentTemplateError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return DeleteAssessmentTemplateError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DeleteAssessmentTemplateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteAssessmentTemplateError::Unknown(String::from(body)),
         }
+        return DeleteAssessmentTemplateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteAssessmentTemplateError {
     fn from(err: serde_json::error::Error) -> DeleteAssessmentTemplateError {
-        DeleteAssessmentTemplateError::Unknown(err.description().to_string())
+        DeleteAssessmentTemplateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteAssessmentTemplateError {
@@ -2276,7 +2330,8 @@ impl Error for DeleteAssessmentTemplateError {
             DeleteAssessmentTemplateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteAssessmentTemplateError::Unknown(ref cause) => cause,
+            DeleteAssessmentTemplateError::ParseError(ref cause) => cause,
+            DeleteAssessmentTemplateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2293,44 +2348,44 @@ pub enum DescribeAssessmentRunsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAssessmentRunsError {
-    pub fn from_body(body: &str) -> DescribeAssessmentRunsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAssessmentRunsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeAssessmentRunsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeAssessmentRunsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAssessmentRunsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAssessmentRunsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeAssessmentRunsError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeAssessmentRunsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeAssessmentRunsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAssessmentRunsError::Unknown(String::from(body)),
         }
+        return DescribeAssessmentRunsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAssessmentRunsError {
     fn from(err: serde_json::error::Error) -> DescribeAssessmentRunsError {
-        DescribeAssessmentRunsError::Unknown(err.description().to_string())
+        DescribeAssessmentRunsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAssessmentRunsError {
@@ -2363,7 +2418,8 @@ impl Error for DescribeAssessmentRunsError {
             DescribeAssessmentRunsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeAssessmentRunsError::Unknown(ref cause) => cause,
+            DescribeAssessmentRunsError::ParseError(ref cause) => cause,
+            DescribeAssessmentRunsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2380,44 +2436,44 @@ pub enum DescribeAssessmentTargetsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAssessmentTargetsError {
-    pub fn from_body(body: &str) -> DescribeAssessmentTargetsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAssessmentTargetsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeAssessmentTargetsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeAssessmentTargetsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAssessmentTargetsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAssessmentTargetsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeAssessmentTargetsError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeAssessmentTargetsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeAssessmentTargetsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAssessmentTargetsError::Unknown(String::from(body)),
         }
+        return DescribeAssessmentTargetsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAssessmentTargetsError {
     fn from(err: serde_json::error::Error) -> DescribeAssessmentTargetsError {
-        DescribeAssessmentTargetsError::Unknown(err.description().to_string())
+        DescribeAssessmentTargetsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAssessmentTargetsError {
@@ -2450,7 +2506,8 @@ impl Error for DescribeAssessmentTargetsError {
             DescribeAssessmentTargetsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeAssessmentTargetsError::Unknown(ref cause) => cause,
+            DescribeAssessmentTargetsError::ParseError(ref cause) => cause,
+            DescribeAssessmentTargetsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2467,44 +2524,46 @@ pub enum DescribeAssessmentTemplatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAssessmentTemplatesError {
-    pub fn from_body(body: &str) -> DescribeAssessmentTemplatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAssessmentTemplatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeAssessmentTemplatesError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeAssessmentTemplatesError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAssessmentTemplatesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAssessmentTemplatesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeAssessmentTemplatesError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeAssessmentTemplatesError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeAssessmentTemplatesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAssessmentTemplatesError::Unknown(String::from(body)),
         }
+        return DescribeAssessmentTemplatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAssessmentTemplatesError {
     fn from(err: serde_json::error::Error) -> DescribeAssessmentTemplatesError {
-        DescribeAssessmentTemplatesError::Unknown(err.description().to_string())
+        DescribeAssessmentTemplatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAssessmentTemplatesError {
@@ -2537,7 +2596,8 @@ impl Error for DescribeAssessmentTemplatesError {
             DescribeAssessmentTemplatesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeAssessmentTemplatesError::Unknown(ref cause) => cause,
+            DescribeAssessmentTemplatesError::ParseError(ref cause) => cause,
+            DescribeAssessmentTemplatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2552,41 +2612,45 @@ pub enum DescribeCrossAccountAccessRoleError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCrossAccountAccessRoleError {
-    pub fn from_body(body: &str) -> DescribeCrossAccountAccessRoleError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCrossAccountAccessRoleError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeCrossAccountAccessRoleError::Internal(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeCrossAccountAccessRoleError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCrossAccountAccessRoleError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeCrossAccountAccessRoleError::Internal(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return DescribeCrossAccountAccessRoleError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeCrossAccountAccessRoleError::Unknown(String::from(body)),
         }
+        return DescribeCrossAccountAccessRoleError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCrossAccountAccessRoleError {
     fn from(err: serde_json::error::Error) -> DescribeCrossAccountAccessRoleError {
-        DescribeCrossAccountAccessRoleError::Unknown(err.description().to_string())
+        DescribeCrossAccountAccessRoleError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCrossAccountAccessRoleError {
@@ -2618,7 +2682,8 @@ impl Error for DescribeCrossAccountAccessRoleError {
             DescribeCrossAccountAccessRoleError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeCrossAccountAccessRoleError::Unknown(ref cause) => cause,
+            DescribeCrossAccountAccessRoleError::ParseError(ref cause) => cause,
+            DescribeCrossAccountAccessRoleError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2635,44 +2700,44 @@ pub enum DescribeExclusionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeExclusionsError {
-    pub fn from_body(body: &str) -> DescribeExclusionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeExclusionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeExclusionsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeExclusionsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeExclusionsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeExclusionsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeExclusionsError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeExclusionsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeExclusionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeExclusionsError::Unknown(String::from(body)),
         }
+        return DescribeExclusionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeExclusionsError {
     fn from(err: serde_json::error::Error) -> DescribeExclusionsError {
-        DescribeExclusionsError::Unknown(err.description().to_string())
+        DescribeExclusionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeExclusionsError {
@@ -2705,7 +2770,8 @@ impl Error for DescribeExclusionsError {
             DescribeExclusionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeExclusionsError::Unknown(ref cause) => cause,
+            DescribeExclusionsError::ParseError(ref cause) => cause,
+            DescribeExclusionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2722,44 +2788,44 @@ pub enum DescribeFindingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeFindingsError {
-    pub fn from_body(body: &str) -> DescribeFindingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeFindingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeFindingsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeFindingsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeFindingsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeFindingsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeFindingsError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeFindingsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeFindingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeFindingsError::Unknown(String::from(body)),
         }
+        return DescribeFindingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeFindingsError {
     fn from(err: serde_json::error::Error) -> DescribeFindingsError {
-        DescribeFindingsError::Unknown(err.description().to_string())
+        DescribeFindingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeFindingsError {
@@ -2790,7 +2856,8 @@ impl Error for DescribeFindingsError {
             DescribeFindingsError::Validation(ref cause) => cause,
             DescribeFindingsError::Credentials(ref err) => err.description(),
             DescribeFindingsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeFindingsError::Unknown(ref cause) => cause,
+            DescribeFindingsError::ParseError(ref cause) => cause,
+            DescribeFindingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2807,44 +2874,44 @@ pub enum DescribeResourceGroupsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeResourceGroupsError {
-    pub fn from_body(body: &str) -> DescribeResourceGroupsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeResourceGroupsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeResourceGroupsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeResourceGroupsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeResourceGroupsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeResourceGroupsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeResourceGroupsError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeResourceGroupsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeResourceGroupsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeResourceGroupsError::Unknown(String::from(body)),
         }
+        return DescribeResourceGroupsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeResourceGroupsError {
     fn from(err: serde_json::error::Error) -> DescribeResourceGroupsError {
-        DescribeResourceGroupsError::Unknown(err.description().to_string())
+        DescribeResourceGroupsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeResourceGroupsError {
@@ -2877,7 +2944,8 @@ impl Error for DescribeResourceGroupsError {
             DescribeResourceGroupsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeResourceGroupsError::Unknown(ref cause) => cause,
+            DescribeResourceGroupsError::ParseError(ref cause) => cause,
+            DescribeResourceGroupsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2894,44 +2962,44 @@ pub enum DescribeRulesPackagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeRulesPackagesError {
-    pub fn from_body(body: &str) -> DescribeRulesPackagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeRulesPackagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalException" => {
-                        DescribeRulesPackagesError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeRulesPackagesError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeRulesPackagesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeRulesPackagesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalException" => {
+                    return DescribeRulesPackagesError::Internal(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return DescribeRulesPackagesError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeRulesPackagesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeRulesPackagesError::Unknown(String::from(body)),
         }
+        return DescribeRulesPackagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeRulesPackagesError {
     fn from(err: serde_json::error::Error) -> DescribeRulesPackagesError {
-        DescribeRulesPackagesError::Unknown(err.description().to_string())
+        DescribeRulesPackagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeRulesPackagesError {
@@ -2964,7 +3032,8 @@ impl Error for DescribeRulesPackagesError {
             DescribeRulesPackagesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeRulesPackagesError::Unknown(ref cause) => cause,
+            DescribeRulesPackagesError::ParseError(ref cause) => cause,
+            DescribeRulesPackagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2991,63 +3060,63 @@ pub enum GetAssessmentReportError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAssessmentReportError {
-    pub fn from_body(body: &str) -> GetAssessmentReportError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetAssessmentReportError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        GetAssessmentReportError::AccessDenied(String::from(error_message))
-                    }
-                    "AssessmentRunInProgressException" => {
-                        GetAssessmentReportError::AssessmentRunInProgress(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalException" => {
-                        GetAssessmentReportError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        GetAssessmentReportError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        GetAssessmentReportError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        GetAssessmentReportError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnsupportedFeatureException" => {
-                        GetAssessmentReportError::UnsupportedFeature(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAssessmentReportError::Validation(error_message.to_string())
-                    }
-                    _ => GetAssessmentReportError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return GetAssessmentReportError::AccessDenied(String::from(error_message))
                 }
+                "AssessmentRunInProgressException" => {
+                    return GetAssessmentReportError::AssessmentRunInProgress(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalException" => {
+                    return GetAssessmentReportError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return GetAssessmentReportError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return GetAssessmentReportError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return GetAssessmentReportError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnsupportedFeatureException" => {
+                    return GetAssessmentReportError::UnsupportedFeature(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAssessmentReportError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAssessmentReportError::Unknown(String::from(body)),
         }
+        return GetAssessmentReportError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAssessmentReportError {
     fn from(err: serde_json::error::Error) -> GetAssessmentReportError {
-        GetAssessmentReportError::Unknown(err.description().to_string())
+        GetAssessmentReportError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAssessmentReportError {
@@ -3085,7 +3154,8 @@ impl Error for GetAssessmentReportError {
             GetAssessmentReportError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetAssessmentReportError::Unknown(ref cause) => cause,
+            GetAssessmentReportError::ParseError(ref cause) => cause,
+            GetAssessmentReportError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3106,50 +3176,50 @@ pub enum GetExclusionsPreviewError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetExclusionsPreviewError {
-    pub fn from_body(body: &str) -> GetExclusionsPreviewError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetExclusionsPreviewError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        GetExclusionsPreviewError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        GetExclusionsPreviewError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        GetExclusionsPreviewError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        GetExclusionsPreviewError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetExclusionsPreviewError::Validation(error_message.to_string())
-                    }
-                    _ => GetExclusionsPreviewError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return GetExclusionsPreviewError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return GetExclusionsPreviewError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return GetExclusionsPreviewError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return GetExclusionsPreviewError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetExclusionsPreviewError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetExclusionsPreviewError::Unknown(String::from(body)),
         }
+        return GetExclusionsPreviewError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetExclusionsPreviewError {
     fn from(err: serde_json::error::Error) -> GetExclusionsPreviewError {
-        GetExclusionsPreviewError::Unknown(err.description().to_string())
+        GetExclusionsPreviewError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetExclusionsPreviewError {
@@ -3184,7 +3254,8 @@ impl Error for GetExclusionsPreviewError {
             GetExclusionsPreviewError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetExclusionsPreviewError::Unknown(ref cause) => cause,
+            GetExclusionsPreviewError::ParseError(ref cause) => cause,
+            GetExclusionsPreviewError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3205,50 +3276,50 @@ pub enum GetTelemetryMetadataError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetTelemetryMetadataError {
-    pub fn from_body(body: &str) -> GetTelemetryMetadataError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetTelemetryMetadataError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        GetTelemetryMetadataError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        GetTelemetryMetadataError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        GetTelemetryMetadataError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        GetTelemetryMetadataError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetTelemetryMetadataError::Validation(error_message.to_string())
-                    }
-                    _ => GetTelemetryMetadataError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return GetTelemetryMetadataError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return GetTelemetryMetadataError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return GetTelemetryMetadataError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return GetTelemetryMetadataError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetTelemetryMetadataError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetTelemetryMetadataError::Unknown(String::from(body)),
         }
+        return GetTelemetryMetadataError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetTelemetryMetadataError {
     fn from(err: serde_json::error::Error) -> GetTelemetryMetadataError {
-        GetTelemetryMetadataError::Unknown(err.description().to_string())
+        GetTelemetryMetadataError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetTelemetryMetadataError {
@@ -3283,7 +3354,8 @@ impl Error for GetTelemetryMetadataError {
             GetTelemetryMetadataError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetTelemetryMetadataError::Unknown(ref cause) => cause,
+            GetTelemetryMetadataError::ParseError(ref cause) => cause,
+            GetTelemetryMetadataError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3304,50 +3376,50 @@ pub enum ListAssessmentRunAgentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAssessmentRunAgentsError {
-    pub fn from_body(body: &str) -> ListAssessmentRunAgentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAssessmentRunAgentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListAssessmentRunAgentsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListAssessmentRunAgentsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAssessmentRunAgentsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListAssessmentRunAgentsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAssessmentRunAgentsError::Validation(error_message.to_string())
-                    }
-                    _ => ListAssessmentRunAgentsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListAssessmentRunAgentsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListAssessmentRunAgentsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAssessmentRunAgentsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListAssessmentRunAgentsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAssessmentRunAgentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAssessmentRunAgentsError::Unknown(String::from(body)),
         }
+        return ListAssessmentRunAgentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAssessmentRunAgentsError {
     fn from(err: serde_json::error::Error) -> ListAssessmentRunAgentsError {
-        ListAssessmentRunAgentsError::Unknown(err.description().to_string())
+        ListAssessmentRunAgentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAssessmentRunAgentsError {
@@ -3382,7 +3454,8 @@ impl Error for ListAssessmentRunAgentsError {
             ListAssessmentRunAgentsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAssessmentRunAgentsError::Unknown(ref cause) => cause,
+            ListAssessmentRunAgentsError::ParseError(ref cause) => cause,
+            ListAssessmentRunAgentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3403,50 +3476,50 @@ pub enum ListAssessmentRunsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAssessmentRunsError {
-    pub fn from_body(body: &str) -> ListAssessmentRunsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAssessmentRunsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListAssessmentRunsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListAssessmentRunsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAssessmentRunsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListAssessmentRunsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAssessmentRunsError::Validation(error_message.to_string())
-                    }
-                    _ => ListAssessmentRunsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListAssessmentRunsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListAssessmentRunsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAssessmentRunsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListAssessmentRunsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAssessmentRunsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAssessmentRunsError::Unknown(String::from(body)),
         }
+        return ListAssessmentRunsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAssessmentRunsError {
     fn from(err: serde_json::error::Error) -> ListAssessmentRunsError {
-        ListAssessmentRunsError::Unknown(err.description().to_string())
+        ListAssessmentRunsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAssessmentRunsError {
@@ -3481,7 +3554,8 @@ impl Error for ListAssessmentRunsError {
             ListAssessmentRunsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAssessmentRunsError::Unknown(ref cause) => cause,
+            ListAssessmentRunsError::ParseError(ref cause) => cause,
+            ListAssessmentRunsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3500,47 +3574,47 @@ pub enum ListAssessmentTargetsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAssessmentTargetsError {
-    pub fn from_body(body: &str) -> ListAssessmentTargetsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAssessmentTargetsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListAssessmentTargetsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListAssessmentTargetsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAssessmentTargetsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAssessmentTargetsError::Validation(error_message.to_string())
-                    }
-                    _ => ListAssessmentTargetsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListAssessmentTargetsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListAssessmentTargetsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAssessmentTargetsError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAssessmentTargetsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAssessmentTargetsError::Unknown(String::from(body)),
         }
+        return ListAssessmentTargetsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAssessmentTargetsError {
     fn from(err: serde_json::error::Error) -> ListAssessmentTargetsError {
-        ListAssessmentTargetsError::Unknown(err.description().to_string())
+        ListAssessmentTargetsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAssessmentTargetsError {
@@ -3574,7 +3648,8 @@ impl Error for ListAssessmentTargetsError {
             ListAssessmentTargetsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAssessmentTargetsError::Unknown(ref cause) => cause,
+            ListAssessmentTargetsError::ParseError(ref cause) => cause,
+            ListAssessmentTargetsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3595,50 +3670,50 @@ pub enum ListAssessmentTemplatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAssessmentTemplatesError {
-    pub fn from_body(body: &str) -> ListAssessmentTemplatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAssessmentTemplatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListAssessmentTemplatesError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListAssessmentTemplatesError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAssessmentTemplatesError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListAssessmentTemplatesError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAssessmentTemplatesError::Validation(error_message.to_string())
-                    }
-                    _ => ListAssessmentTemplatesError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListAssessmentTemplatesError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListAssessmentTemplatesError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAssessmentTemplatesError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListAssessmentTemplatesError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAssessmentTemplatesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAssessmentTemplatesError::Unknown(String::from(body)),
         }
+        return ListAssessmentTemplatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAssessmentTemplatesError {
     fn from(err: serde_json::error::Error) -> ListAssessmentTemplatesError {
-        ListAssessmentTemplatesError::Unknown(err.description().to_string())
+        ListAssessmentTemplatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAssessmentTemplatesError {
@@ -3673,7 +3748,8 @@ impl Error for ListAssessmentTemplatesError {
             ListAssessmentTemplatesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAssessmentTemplatesError::Unknown(ref cause) => cause,
+            ListAssessmentTemplatesError::ParseError(ref cause) => cause,
+            ListAssessmentTemplatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3694,50 +3770,50 @@ pub enum ListEventSubscriptionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListEventSubscriptionsError {
-    pub fn from_body(body: &str) -> ListEventSubscriptionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListEventSubscriptionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListEventSubscriptionsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListEventSubscriptionsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListEventSubscriptionsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListEventSubscriptionsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListEventSubscriptionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListEventSubscriptionsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListEventSubscriptionsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListEventSubscriptionsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListEventSubscriptionsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListEventSubscriptionsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListEventSubscriptionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListEventSubscriptionsError::Unknown(String::from(body)),
         }
+        return ListEventSubscriptionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListEventSubscriptionsError {
     fn from(err: serde_json::error::Error) -> ListEventSubscriptionsError {
-        ListEventSubscriptionsError::Unknown(err.description().to_string())
+        ListEventSubscriptionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListEventSubscriptionsError {
@@ -3772,7 +3848,8 @@ impl Error for ListEventSubscriptionsError {
             ListEventSubscriptionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListEventSubscriptionsError::Unknown(ref cause) => cause,
+            ListEventSubscriptionsError::ParseError(ref cause) => cause,
+            ListEventSubscriptionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3793,50 +3870,50 @@ pub enum ListExclusionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListExclusionsError {
-    pub fn from_body(body: &str) -> ListExclusionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListExclusionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListExclusionsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListExclusionsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListExclusionsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListExclusionsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListExclusionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListExclusionsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListExclusionsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListExclusionsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListExclusionsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListExclusionsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListExclusionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListExclusionsError::Unknown(String::from(body)),
         }
+        return ListExclusionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListExclusionsError {
     fn from(err: serde_json::error::Error) -> ListExclusionsError {
-        ListExclusionsError::Unknown(err.description().to_string())
+        ListExclusionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListExclusionsError {
@@ -3869,7 +3946,8 @@ impl Error for ListExclusionsError {
             ListExclusionsError::Validation(ref cause) => cause,
             ListExclusionsError::Credentials(ref err) => err.description(),
             ListExclusionsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListExclusionsError::Unknown(ref cause) => cause,
+            ListExclusionsError::ParseError(ref cause) => cause,
+            ListExclusionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3890,48 +3968,50 @@ pub enum ListFindingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListFindingsError {
-    pub fn from_body(body: &str) -> ListFindingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListFindingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListFindingsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => ListFindingsError::Internal(String::from(error_message)),
-                    "InvalidInputException" => {
-                        ListFindingsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListFindingsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListFindingsError::Validation(error_message.to_string())
-                    }
-                    _ => ListFindingsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListFindingsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListFindingsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListFindingsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListFindingsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListFindingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListFindingsError::Unknown(String::from(body)),
         }
+        return ListFindingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListFindingsError {
     fn from(err: serde_json::error::Error) -> ListFindingsError {
-        ListFindingsError::Unknown(err.description().to_string())
+        ListFindingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListFindingsError {
@@ -3964,7 +4044,8 @@ impl Error for ListFindingsError {
             ListFindingsError::Validation(ref cause) => cause,
             ListFindingsError::Credentials(ref err) => err.description(),
             ListFindingsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListFindingsError::Unknown(ref cause) => cause,
+            ListFindingsError::ParseError(ref cause) => cause,
+            ListFindingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3983,47 +4064,47 @@ pub enum ListRulesPackagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListRulesPackagesError {
-    pub fn from_body(body: &str) -> ListRulesPackagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListRulesPackagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListRulesPackagesError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListRulesPackagesError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListRulesPackagesError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListRulesPackagesError::Validation(error_message.to_string())
-                    }
-                    _ => ListRulesPackagesError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListRulesPackagesError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListRulesPackagesError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListRulesPackagesError::InvalidInput(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListRulesPackagesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListRulesPackagesError::Unknown(String::from(body)),
         }
+        return ListRulesPackagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListRulesPackagesError {
     fn from(err: serde_json::error::Error) -> ListRulesPackagesError {
-        ListRulesPackagesError::Unknown(err.description().to_string())
+        ListRulesPackagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListRulesPackagesError {
@@ -4057,7 +4138,8 @@ impl Error for ListRulesPackagesError {
             ListRulesPackagesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListRulesPackagesError::Unknown(ref cause) => cause,
+            ListRulesPackagesError::ParseError(ref cause) => cause,
+            ListRulesPackagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4078,50 +4160,50 @@ pub enum ListTagsForResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTagsForResourceError {
-    pub fn from_body(body: &str) -> ListTagsForResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListTagsForResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListTagsForResourceError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        ListTagsForResourceError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListTagsForResourceError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        ListTagsForResourceError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListTagsForResourceError::Validation(error_message.to_string())
-                    }
-                    _ => ListTagsForResourceError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListTagsForResourceError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return ListTagsForResourceError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListTagsForResourceError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return ListTagsForResourceError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListTagsForResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTagsForResourceError::Unknown(String::from(body)),
         }
+        return ListTagsForResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTagsForResourceError {
     fn from(err: serde_json::error::Error) -> ListTagsForResourceError {
-        ListTagsForResourceError::Unknown(err.description().to_string())
+        ListTagsForResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTagsForResourceError {
@@ -4156,7 +4238,8 @@ impl Error for ListTagsForResourceError {
             ListTagsForResourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListTagsForResourceError::Unknown(ref cause) => cause,
+            ListTagsForResourceError::ParseError(ref cause) => cause,
+            ListTagsForResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4179,53 +4262,53 @@ pub enum PreviewAgentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PreviewAgentsError {
-    pub fn from_body(body: &str) -> PreviewAgentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PreviewAgentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        PreviewAgentsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        PreviewAgentsError::Internal(String::from(error_message))
-                    }
-                    "InvalidCrossAccountRoleException" => {
-                        PreviewAgentsError::InvalidCrossAccountRole(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        PreviewAgentsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        PreviewAgentsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PreviewAgentsError::Validation(error_message.to_string())
-                    }
-                    _ => PreviewAgentsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return PreviewAgentsError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return PreviewAgentsError::Internal(String::from(error_message))
+                }
+                "InvalidCrossAccountRoleException" => {
+                    return PreviewAgentsError::InvalidCrossAccountRole(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return PreviewAgentsError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return PreviewAgentsError::NoSuchEntity(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PreviewAgentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PreviewAgentsError::Unknown(String::from(body)),
         }
+        return PreviewAgentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PreviewAgentsError {
     fn from(err: serde_json::error::Error) -> PreviewAgentsError {
-        PreviewAgentsError::Unknown(err.description().to_string())
+        PreviewAgentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PreviewAgentsError {
@@ -4259,7 +4342,8 @@ impl Error for PreviewAgentsError {
             PreviewAgentsError::Validation(ref cause) => cause,
             PreviewAgentsError::Credentials(ref err) => err.description(),
             PreviewAgentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PreviewAgentsError::Unknown(ref cause) => cause,
+            PreviewAgentsError::ParseError(ref cause) => cause,
+            PreviewAgentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4282,57 +4366,65 @@ pub enum RegisterCrossAccountAccessRoleError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RegisterCrossAccountAccessRoleError {
-    pub fn from_body(body: &str) -> RegisterCrossAccountAccessRoleError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RegisterCrossAccountAccessRoleError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => RegisterCrossAccountAccessRoleError::AccessDenied(
-                        String::from(error_message),
-                    ),
-                    "InternalException" => {
-                        RegisterCrossAccountAccessRoleError::Internal(String::from(error_message))
-                    }
-                    "InvalidCrossAccountRoleException" => {
-                        RegisterCrossAccountAccessRoleError::InvalidCrossAccountRole(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => RegisterCrossAccountAccessRoleError::InvalidInput(
-                        String::from(error_message),
-                    ),
-                    "ServiceTemporarilyUnavailableException" => {
-                        RegisterCrossAccountAccessRoleError::ServiceTemporarilyUnavailable(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        RegisterCrossAccountAccessRoleError::Validation(error_message.to_string())
-                    }
-                    _ => RegisterCrossAccountAccessRoleError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return RegisterCrossAccountAccessRoleError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalException" => {
+                    return RegisterCrossAccountAccessRoleError::Internal(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCrossAccountRoleException" => {
+                    return RegisterCrossAccountAccessRoleError::InvalidCrossAccountRole(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInputException" => {
+                    return RegisterCrossAccountAccessRoleError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return RegisterCrossAccountAccessRoleError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return RegisterCrossAccountAccessRoleError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => RegisterCrossAccountAccessRoleError::Unknown(String::from(body)),
         }
+        return RegisterCrossAccountAccessRoleError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RegisterCrossAccountAccessRoleError {
     fn from(err: serde_json::error::Error) -> RegisterCrossAccountAccessRoleError {
-        RegisterCrossAccountAccessRoleError::Unknown(err.description().to_string())
+        RegisterCrossAccountAccessRoleError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RegisterCrossAccountAccessRoleError {
@@ -4368,7 +4460,8 @@ impl Error for RegisterCrossAccountAccessRoleError {
             RegisterCrossAccountAccessRoleError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RegisterCrossAccountAccessRoleError::Unknown(ref cause) => cause,
+            RegisterCrossAccountAccessRoleError::ParseError(ref cause) => cause,
+            RegisterCrossAccountAccessRoleError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4391,55 +4484,61 @@ pub enum RemoveAttributesFromFindingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveAttributesFromFindingsError {
-    pub fn from_body(body: &str) -> RemoveAttributesFromFindingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveAttributesFromFindingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        RemoveAttributesFromFindingsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        RemoveAttributesFromFindingsError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        RemoveAttributesFromFindingsError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        RemoveAttributesFromFindingsError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        RemoveAttributesFromFindingsError::ServiceTemporarilyUnavailable(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        RemoveAttributesFromFindingsError::Validation(error_message.to_string())
-                    }
-                    _ => RemoveAttributesFromFindingsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return RemoveAttributesFromFindingsError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalException" => {
+                    return RemoveAttributesFromFindingsError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return RemoveAttributesFromFindingsError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "NoSuchEntityException" => {
+                    return RemoveAttributesFromFindingsError::NoSuchEntity(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return RemoveAttributesFromFindingsError::ServiceTemporarilyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return RemoveAttributesFromFindingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveAttributesFromFindingsError::Unknown(String::from(body)),
         }
+        return RemoveAttributesFromFindingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveAttributesFromFindingsError {
     fn from(err: serde_json::error::Error) -> RemoveAttributesFromFindingsError {
-        RemoveAttributesFromFindingsError::Unknown(err.description().to_string())
+        RemoveAttributesFromFindingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveAttributesFromFindingsError {
@@ -4475,7 +4574,8 @@ impl Error for RemoveAttributesFromFindingsError {
             RemoveAttributesFromFindingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveAttributesFromFindingsError::Unknown(ref cause) => cause,
+            RemoveAttributesFromFindingsError::ParseError(ref cause) => cause,
+            RemoveAttributesFromFindingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4498,55 +4598,55 @@ pub enum SetTagsForResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SetTagsForResourceError {
-    pub fn from_body(body: &str) -> SetTagsForResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SetTagsForResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        SetTagsForResourceError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        SetTagsForResourceError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        SetTagsForResourceError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        SetTagsForResourceError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        SetTagsForResourceError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        SetTagsForResourceError::Validation(error_message.to_string())
-                    }
-                    _ => SetTagsForResourceError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return SetTagsForResourceError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return SetTagsForResourceError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return SetTagsForResourceError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return SetTagsForResourceError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return SetTagsForResourceError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return SetTagsForResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SetTagsForResourceError::Unknown(String::from(body)),
         }
+        return SetTagsForResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SetTagsForResourceError {
     fn from(err: serde_json::error::Error) -> SetTagsForResourceError {
-        SetTagsForResourceError::Unknown(err.description().to_string())
+        SetTagsForResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SetTagsForResourceError {
@@ -4582,7 +4682,8 @@ impl Error for SetTagsForResourceError {
             SetTagsForResourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            SetTagsForResourceError::Unknown(ref cause) => cause,
+            SetTagsForResourceError::ParseError(ref cause) => cause,
+            SetTagsForResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4611,68 +4712,68 @@ pub enum StartAssessmentRunError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartAssessmentRunError {
-    pub fn from_body(body: &str) -> StartAssessmentRunError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartAssessmentRunError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        StartAssessmentRunError::AccessDenied(String::from(error_message))
-                    }
-                    "AgentsAlreadyRunningAssessmentException" => {
-                        StartAssessmentRunError::AgentsAlreadyRunningAssessment(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalException" => {
-                        StartAssessmentRunError::Internal(String::from(error_message))
-                    }
-                    "InvalidCrossAccountRoleException" => {
-                        StartAssessmentRunError::InvalidCrossAccountRole(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        StartAssessmentRunError::InvalidInput(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        StartAssessmentRunError::LimitExceeded(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        StartAssessmentRunError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        StartAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        StartAssessmentRunError::Validation(error_message.to_string())
-                    }
-                    _ => StartAssessmentRunError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return StartAssessmentRunError::AccessDenied(String::from(error_message))
                 }
+                "AgentsAlreadyRunningAssessmentException" => {
+                    return StartAssessmentRunError::AgentsAlreadyRunningAssessment(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalException" => {
+                    return StartAssessmentRunError::Internal(String::from(error_message))
+                }
+                "InvalidCrossAccountRoleException" => {
+                    return StartAssessmentRunError::InvalidCrossAccountRole(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return StartAssessmentRunError::InvalidInput(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return StartAssessmentRunError::LimitExceeded(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return StartAssessmentRunError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return StartAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return StartAssessmentRunError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartAssessmentRunError::Unknown(String::from(body)),
         }
+        return StartAssessmentRunError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartAssessmentRunError {
     fn from(err: serde_json::error::Error) -> StartAssessmentRunError {
-        StartAssessmentRunError::Unknown(err.description().to_string())
+        StartAssessmentRunError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartAssessmentRunError {
@@ -4711,7 +4812,8 @@ impl Error for StartAssessmentRunError {
             StartAssessmentRunError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            StartAssessmentRunError::Unknown(ref cause) => cause,
+            StartAssessmentRunError::ParseError(ref cause) => cause,
+            StartAssessmentRunError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4734,55 +4836,55 @@ pub enum StopAssessmentRunError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StopAssessmentRunError {
-    pub fn from_body(body: &str) -> StopAssessmentRunError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StopAssessmentRunError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        StopAssessmentRunError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        StopAssessmentRunError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        StopAssessmentRunError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        StopAssessmentRunError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        StopAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        StopAssessmentRunError::Validation(error_message.to_string())
-                    }
-                    _ => StopAssessmentRunError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return StopAssessmentRunError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return StopAssessmentRunError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return StopAssessmentRunError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return StopAssessmentRunError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return StopAssessmentRunError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return StopAssessmentRunError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StopAssessmentRunError::Unknown(String::from(body)),
         }
+        return StopAssessmentRunError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StopAssessmentRunError {
     fn from(err: serde_json::error::Error) -> StopAssessmentRunError {
-        StopAssessmentRunError::Unknown(err.description().to_string())
+        StopAssessmentRunError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StopAssessmentRunError {
@@ -4818,7 +4920,8 @@ impl Error for StopAssessmentRunError {
             StopAssessmentRunError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            StopAssessmentRunError::Unknown(ref cause) => cause,
+            StopAssessmentRunError::ParseError(ref cause) => cause,
+            StopAssessmentRunError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4843,58 +4946,58 @@ pub enum SubscribeToEventError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SubscribeToEventError {
-    pub fn from_body(body: &str) -> SubscribeToEventError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SubscribeToEventError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        SubscribeToEventError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        SubscribeToEventError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        SubscribeToEventError::InvalidInput(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        SubscribeToEventError::LimitExceeded(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        SubscribeToEventError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        SubscribeToEventError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        SubscribeToEventError::Validation(error_message.to_string())
-                    }
-                    _ => SubscribeToEventError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return SubscribeToEventError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return SubscribeToEventError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return SubscribeToEventError::InvalidInput(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return SubscribeToEventError::LimitExceeded(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return SubscribeToEventError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return SubscribeToEventError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return SubscribeToEventError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SubscribeToEventError::Unknown(String::from(body)),
         }
+        return SubscribeToEventError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SubscribeToEventError {
     fn from(err: serde_json::error::Error) -> SubscribeToEventError {
-        SubscribeToEventError::Unknown(err.description().to_string())
+        SubscribeToEventError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SubscribeToEventError {
@@ -4929,7 +5032,8 @@ impl Error for SubscribeToEventError {
             SubscribeToEventError::Validation(ref cause) => cause,
             SubscribeToEventError::Credentials(ref err) => err.description(),
             SubscribeToEventError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SubscribeToEventError::Unknown(ref cause) => cause,
+            SubscribeToEventError::ParseError(ref cause) => cause,
+            SubscribeToEventError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4952,55 +5056,55 @@ pub enum UnsubscribeFromEventError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UnsubscribeFromEventError {
-    pub fn from_body(body: &str) -> UnsubscribeFromEventError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UnsubscribeFromEventError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        UnsubscribeFromEventError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        UnsubscribeFromEventError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        UnsubscribeFromEventError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        UnsubscribeFromEventError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        UnsubscribeFromEventError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UnsubscribeFromEventError::Validation(error_message.to_string())
-                    }
-                    _ => UnsubscribeFromEventError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return UnsubscribeFromEventError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return UnsubscribeFromEventError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return UnsubscribeFromEventError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return UnsubscribeFromEventError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return UnsubscribeFromEventError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UnsubscribeFromEventError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UnsubscribeFromEventError::Unknown(String::from(body)),
         }
+        return UnsubscribeFromEventError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UnsubscribeFromEventError {
     fn from(err: serde_json::error::Error) -> UnsubscribeFromEventError {
-        UnsubscribeFromEventError::Unknown(err.description().to_string())
+        UnsubscribeFromEventError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UnsubscribeFromEventError {
@@ -5036,7 +5140,8 @@ impl Error for UnsubscribeFromEventError {
             UnsubscribeFromEventError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UnsubscribeFromEventError::Unknown(ref cause) => cause,
+            UnsubscribeFromEventError::ParseError(ref cause) => cause,
+            UnsubscribeFromEventError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5059,55 +5164,55 @@ pub enum UpdateAssessmentTargetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateAssessmentTargetError {
-    pub fn from_body(body: &str) -> UpdateAssessmentTargetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateAssessmentTargetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        UpdateAssessmentTargetError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalException" => {
-                        UpdateAssessmentTargetError::Internal(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        UpdateAssessmentTargetError::InvalidInput(String::from(error_message))
-                    }
-                    "NoSuchEntityException" => {
-                        UpdateAssessmentTargetError::NoSuchEntity(String::from(error_message))
-                    }
-                    "ServiceTemporarilyUnavailableException" => {
-                        UpdateAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateAssessmentTargetError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateAssessmentTargetError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return UpdateAssessmentTargetError::AccessDenied(String::from(error_message))
                 }
+                "InternalException" => {
+                    return UpdateAssessmentTargetError::Internal(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return UpdateAssessmentTargetError::InvalidInput(String::from(error_message))
+                }
+                "NoSuchEntityException" => {
+                    return UpdateAssessmentTargetError::NoSuchEntity(String::from(error_message))
+                }
+                "ServiceTemporarilyUnavailableException" => {
+                    return UpdateAssessmentTargetError::ServiceTemporarilyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateAssessmentTargetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateAssessmentTargetError::Unknown(String::from(body)),
         }
+        return UpdateAssessmentTargetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateAssessmentTargetError {
     fn from(err: serde_json::error::Error) -> UpdateAssessmentTargetError {
-        UpdateAssessmentTargetError::Unknown(err.description().to_string())
+        UpdateAssessmentTargetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateAssessmentTargetError {
@@ -5143,7 +5248,8 @@ impl Error for UpdateAssessmentTargetError {
             UpdateAssessmentTargetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateAssessmentTargetError::Unknown(ref cause) => cause,
+            UpdateAssessmentTargetError::ParseError(ref cause) => cause,
+            UpdateAssessmentTargetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5429,13 +5535,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<AddAttributesToFindingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddAttributesToFindingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AddAttributesToFindingsError::from_response(response))
                 }))
             }
         })
@@ -5464,14 +5569,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<CreateAssessmentTargetResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateAssessmentTargetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateAssessmentTargetError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5499,13 +5605,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<CreateAssessmentTemplateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateAssessmentTemplateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateAssessmentTemplateError::from_response(response))
                 }))
             }
         })
@@ -5534,13 +5639,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<CreateExclusionsPreviewResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateExclusionsPreviewError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateExclusionsPreviewError::from_response(response))
                 }))
             }
         })
@@ -5569,14 +5673,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<CreateResourceGroupResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateResourceGroupError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateResourceGroupError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5597,11 +5702,11 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteAssessmentRunError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteAssessmentRunError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5622,11 +5727,11 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteAssessmentTargetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteAssessmentTargetError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5648,9 +5753,7 @@ impl Inspector for InspectorClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteAssessmentTemplateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteAssessmentTemplateError::from_response(response))
                 }))
             }
         })
@@ -5679,14 +5782,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeAssessmentRunsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAssessmentRunsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeAssessmentRunsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5714,13 +5818,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeAssessmentTargetsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAssessmentTargetsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeAssessmentTargetsError::from_response(response))
                 }))
             }
         })
@@ -5752,13 +5855,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeAssessmentTemplatesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAssessmentTemplatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeAssessmentTemplatesError::from_response(response))
                 }))
             }
         })
@@ -5789,13 +5891,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeCrossAccountAccessRoleResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCrossAccountAccessRoleError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeCrossAccountAccessRoleError::from_response(response))
                 }))
             }
         })
@@ -5824,14 +5925,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeExclusionsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeExclusionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeExclusionsError::from_response(response))),
+                )
             }
         })
     }
@@ -5859,14 +5962,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeFindingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeFindingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeFindingsError::from_response(response))),
+                )
             }
         })
     }
@@ -5894,14 +5999,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeResourceGroupsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeResourceGroupsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeResourceGroupsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5929,14 +6035,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<DescribeRulesPackagesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeRulesPackagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeRulesPackagesError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5964,14 +6071,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<GetAssessmentReportResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAssessmentReportError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetAssessmentReportError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5999,14 +6107,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<GetExclusionsPreviewResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetExclusionsPreviewError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetExclusionsPreviewError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6034,14 +6143,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<GetTelemetryMetadataResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetTelemetryMetadataError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetTelemetryMetadataError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6069,13 +6179,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListAssessmentRunAgentsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAssessmentRunAgentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListAssessmentRunAgentsError::from_response(response))
                 }))
             }
         })
@@ -6104,14 +6213,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListAssessmentRunsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAssessmentRunsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListAssessmentRunsError::from_response(response))),
+                )
             }
         })
     }
@@ -6139,14 +6250,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListAssessmentTargetsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAssessmentTargetsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListAssessmentTargetsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6174,13 +6286,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListAssessmentTemplatesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAssessmentTemplatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListAssessmentTemplatesError::from_response(response))
                 }))
             }
         })
@@ -6209,14 +6320,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListEventSubscriptionsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListEventSubscriptionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListEventSubscriptionsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6244,14 +6356,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListExclusionsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListExclusionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListExclusionsError::from_response(response))),
+                )
             }
         })
     }
@@ -6279,14 +6393,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListFindingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListFindingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListFindingsError::from_response(response))),
+                )
             }
         })
     }
@@ -6314,14 +6430,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListRulesPackagesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListRulesPackagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListRulesPackagesError::from_response(response))),
+                )
             }
         })
     }
@@ -6349,14 +6467,15 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<ListTagsForResourceResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTagsForResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListTagsForResourceError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6384,14 +6503,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<PreviewAgentsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PreviewAgentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PreviewAgentsError::from_response(response))),
+                )
             }
         })
     }
@@ -6416,9 +6537,7 @@ impl Inspector for InspectorClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RegisterCrossAccountAccessRoleError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RegisterCrossAccountAccessRoleError::from_response(response))
                 }))
             }
         })
@@ -6450,13 +6569,12 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<RemoveAttributesFromFindingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveAttributesFromFindingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RemoveAttributesFromFindingsError::from_response(response))
                 }))
             }
         })
@@ -6478,11 +6596,12 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SetTagsForResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SetTagsForResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -6510,14 +6629,16 @@ impl Inspector for InspectorClient {
 
                     serde_json::from_str::<StartAssessmentRunResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartAssessmentRunError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StartAssessmentRunError::from_response(response))),
+                )
             }
         })
     }
@@ -6538,11 +6659,12 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StopAssessmentRunError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StopAssessmentRunError::from_response(response))),
+                )
             }
         })
     }
@@ -6563,11 +6685,12 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SubscribeToEventError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SubscribeToEventError::from_response(response))),
+                )
             }
         })
     }
@@ -6588,11 +6711,11 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UnsubscribeFromEventError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UnsubscribeFromEventError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6613,11 +6736,11 @@ impl Inspector for InspectorClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateAssessmentTargetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateAssessmentTargetError::from_response(response))
+                    }),
+                )
             }
         })
     }

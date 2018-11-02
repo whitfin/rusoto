@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,7 +27,7 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AbortDocumentVersionUploadRequest {
@@ -55,6 +55,7 @@ pub struct ActivateUserRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ActivateUserResponse {
     /// <p>The user information.</p>
     #[serde(rename = "User")]
@@ -64,6 +65,7 @@ pub struct ActivateUserResponse {
 
 /// <p>Describes the activity information.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Activity {
     /// <p>Metadata of the commenting activity. This is an optional field and is filled for commenting activities.</p>
     #[serde(rename = "CommentMetadata")]
@@ -118,6 +120,7 @@ pub struct AddResourcePermissionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddResourcePermissionsResponse {
     /// <p>The share results.</p>
     #[serde(rename = "ShareResults")]
@@ -127,6 +130,7 @@ pub struct AddResourcePermissionsResponse {
 
 /// <p>Describes a comment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Comment {
     /// <p>The ID of the comment.</p>
     #[serde(rename = "CommentId")]
@@ -167,6 +171,7 @@ pub struct Comment {
 
 /// <p>Describes the metadata of a comment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CommentMetadata {
     /// <p>The ID of the comment.</p>
     #[serde(rename = "CommentId")]
@@ -224,6 +229,7 @@ pub struct CreateCommentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateCommentResponse {
     /// <p>The comment that has been created.</p>
     #[serde(rename = "Comment")]
@@ -250,6 +256,7 @@ pub struct CreateCustomMetadataRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateCustomMetadataResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -268,6 +275,7 @@ pub struct CreateFolderRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateFolderResponse {
     /// <p>The metadata of the folder.</p>
     #[serde(rename = "Metadata")]
@@ -290,6 +298,7 @@ pub struct CreateLabelsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateLabelsResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -309,6 +318,7 @@ pub struct CreateNotificationSubscriptionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateNotificationSubscriptionResponse {
     /// <p>The subscription.</p>
     #[serde(rename = "Subscription")]
@@ -353,6 +363,7 @@ pub struct CreateUserRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateUserResponse {
     /// <p>The user information.</p>
     #[serde(rename = "User")]
@@ -412,6 +423,7 @@ pub struct DeleteCustomMetadataRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteCustomMetadataResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -467,6 +479,7 @@ pub struct DeleteLabelsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteLabelsResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -523,6 +536,7 @@ pub struct DescribeActivitiesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeActivitiesResponse {
     /// <p>The marker for the next set of results.</p>
     #[serde(rename = "Marker")]
@@ -557,6 +571,7 @@ pub struct DescribeCommentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCommentsResponse {
     /// <p>The list of comments for the specified document version.</p>
     #[serde(rename = "Comments")]
@@ -596,6 +611,7 @@ pub struct DescribeDocumentVersionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeDocumentVersionsResponse {
     /// <p>The document versions.</p>
     #[serde(rename = "DocumentVersions")]
@@ -643,6 +659,7 @@ pub struct DescribeFolderContentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeFolderContentsResponse {
     /// <p>The documents in the specified folder.</p>
     #[serde(rename = "Documents")]
@@ -682,6 +699,7 @@ pub struct DescribeGroupsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeGroupsResponse {
     /// <p>The list of groups.</p>
     #[serde(rename = "Groups")]
@@ -709,6 +727,7 @@ pub struct DescribeNotificationSubscriptionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeNotificationSubscriptionsResponse {
     /// <p>The marker to use when requesting the next set of results. If there are no additional results, the string is empty.</p>
     #[serde(rename = "Marker")]
@@ -744,6 +763,7 @@ pub struct DescribeResourcePermissionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeResourcePermissionsResponse {
     /// <p>The marker to use when requesting the next set of results. If there are no additional results, the string is empty.</p>
     #[serde(rename = "Marker")]
@@ -771,6 +791,7 @@ pub struct DescribeRootFoldersRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeRootFoldersResponse {
     /// <p>The user's special folders.</p>
     #[serde(rename = "Folders")]
@@ -827,6 +848,7 @@ pub struct DescribeUsersRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeUsersResponse {
     /// <p>The marker to use when requesting the next set of results. If there are no additional results, the string is empty.</p>
     #[serde(rename = "Marker")]
@@ -840,6 +862,7 @@ pub struct DescribeUsersResponse {
 
 /// <p>Describes the document.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentMetadata {
     /// <p>The time when the document was created.</p>
     #[serde(rename = "CreatedTimestamp")]
@@ -877,6 +900,7 @@ pub struct DocumentMetadata {
 
 /// <p>Describes a version of a document.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentVersionMetadata {
     /// <p>The timestamp when the content of the document was originally created.</p>
     #[serde(rename = "ContentCreatedTimestamp")]
@@ -934,6 +958,7 @@ pub struct DocumentVersionMetadata {
 
 /// <p>Describes a folder.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FolderMetadata {
     /// <p>The time when the folder was created.</p>
     #[serde(rename = "CreatedTimestamp")]
@@ -989,6 +1014,7 @@ pub struct GetCurrentUserRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCurrentUserResponse {
     /// <p>Metadata of the user.</p>
     #[serde(rename = "User")]
@@ -1020,6 +1046,7 @@ pub struct GetDocumentPathRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDocumentPathResponse {
     /// <p>The path information.</p>
     #[serde(rename = "Path")]
@@ -1043,6 +1070,7 @@ pub struct GetDocumentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDocumentResponse {
     /// <p>The custom metadata on the document.</p>
     #[serde(rename = "CustomMetadata")]
@@ -1077,6 +1105,7 @@ pub struct GetDocumentVersionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDocumentVersionResponse {
     /// <p>The custom metadata on the document version.</p>
     #[serde(rename = "CustomMetadata")]
@@ -1112,6 +1141,7 @@ pub struct GetFolderPathRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetFolderPathResponse {
     /// <p>The path information.</p>
     #[serde(rename = "Path")]
@@ -1135,6 +1165,7 @@ pub struct GetFolderRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetFolderResponse {
     /// <p>The custom metadata on the folder.</p>
     #[serde(rename = "CustomMetadata")]
@@ -1148,6 +1179,7 @@ pub struct GetFolderResponse {
 
 /// <p>Describes the metadata of a user group.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GroupMetadata {
     /// <p>The ID of the user group.</p>
     #[serde(rename = "Id")]
@@ -1195,6 +1227,7 @@ pub struct InitiateDocumentVersionUploadRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InitiateDocumentVersionUploadResponse {
     /// <p>The document metadata.</p>
     #[serde(rename = "Metadata")]
@@ -1221,6 +1254,7 @@ pub struct NotificationOptions {
 
 /// <p>Describes the users or user groups.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Participants {
     /// <p>The list of user groups.</p>
     #[serde(rename = "Groups")]
@@ -1234,6 +1268,7 @@ pub struct Participants {
 
 /// <p>Describes the permissions.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PermissionInfo {
     /// <p>The role of the user.</p>
     #[serde(rename = "Role")]
@@ -1247,6 +1282,7 @@ pub struct PermissionInfo {
 
 /// <p>Describes a resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Principal {
     /// <p>The ID of the resource.</p>
     #[serde(rename = "Id")]
@@ -1293,6 +1329,7 @@ pub struct RemoveResourcePermissionRequest {
 
 /// <p>Describes the metadata of a resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourceMetadata {
     /// <p>The ID of the resource.</p>
     #[serde(rename = "Id")]
@@ -1326,6 +1363,7 @@ pub struct ResourceMetadata {
 
 /// <p>Describes the path information of a resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourcePath {
     /// <p>The components of the resource path.</p>
     #[serde(rename = "Components")]
@@ -1335,6 +1373,7 @@ pub struct ResourcePath {
 
 /// <p>Describes the resource path.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourcePathComponent {
     /// <p>The ID of the resource path.</p>
     #[serde(rename = "Id")]
@@ -1362,6 +1401,7 @@ pub struct SharePrincipal {
 
 /// <p>Describes the share results of a resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ShareResult {
     /// <p>The ID of the principal.</p>
     #[serde(rename = "PrincipalId")]
@@ -1400,6 +1440,7 @@ pub struct StorageRuleType {
 
 /// <p>Describes a subscription.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Subscription {
     /// <p>The endpoint of the subscription.</p>
     #[serde(rename = "EndPoint")]
@@ -1519,6 +1560,7 @@ pub struct UpdateUserRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateUserResponse {
     /// <p>The user information.</p>
     #[serde(rename = "User")]
@@ -1528,6 +1570,7 @@ pub struct UpdateUserResponse {
 
 /// <p>Describes the upload.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UploadMetadata {
     /// <p>The signed headers.</p>
     #[serde(rename = "SignedHeaders")]
@@ -1541,6 +1584,7 @@ pub struct UploadMetadata {
 
 /// <p>Describes a user.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct User {
     /// <p>The time when the user was created.</p>
     #[serde(rename = "CreatedTimestamp")]
@@ -1606,6 +1650,7 @@ pub struct User {
 
 /// <p>Describes the metadata of the user.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UserMetadata {
     /// <p>The email address of the user.</p>
     #[serde(rename = "EmailAddress")]
@@ -1631,6 +1676,7 @@ pub struct UserMetadata {
 
 /// <p>Describes the storage for a user.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UserStorageMetadata {
     /// <p>The storage for a user.</p>
     #[serde(rename = "StorageRule")]
@@ -1663,64 +1709,82 @@ pub enum AbortDocumentVersionUploadError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AbortDocumentVersionUploadError {
-    pub fn from_body(body: &str) -> AbortDocumentVersionUploadError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> AbortDocumentVersionUploadError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => AbortDocumentVersionUploadError::EntityNotExists(
-                        String::from(error_message),
-                    ),
-                    "FailedDependencyException" => {
-                        AbortDocumentVersionUploadError::FailedDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ProhibitedStateException" => AbortDocumentVersionUploadError::ProhibitedState(
-                        String::from(error_message),
-                    ),
-                    "ServiceUnavailableException" => {
-                        AbortDocumentVersionUploadError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        AbortDocumentVersionUploadError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        AbortDocumentVersionUploadError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AbortDocumentVersionUploadError::Validation(error_message.to_string())
-                    }
-                    _ => AbortDocumentVersionUploadError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return AbortDocumentVersionUploadError::EntityNotExists(String::from(
+                        error_message,
+                    ))
                 }
+                "FailedDependencyException" => {
+                    return AbortDocumentVersionUploadError::FailedDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "ProhibitedStateException" => {
+                    return AbortDocumentVersionUploadError::ProhibitedState(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return AbortDocumentVersionUploadError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return AbortDocumentVersionUploadError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return AbortDocumentVersionUploadError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return AbortDocumentVersionUploadError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AbortDocumentVersionUploadError::Unknown(String::from(body)),
         }
+        return AbortDocumentVersionUploadError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AbortDocumentVersionUploadError {
     fn from(err: serde_json::error::Error) -> AbortDocumentVersionUploadError {
-        AbortDocumentVersionUploadError::Unknown(err.description().to_string())
+        AbortDocumentVersionUploadError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AbortDocumentVersionUploadError {
@@ -1757,7 +1821,8 @@ impl Error for AbortDocumentVersionUploadError {
             AbortDocumentVersionUploadError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AbortDocumentVersionUploadError::Unknown(ref cause) => cause,
+            AbortDocumentVersionUploadError::ParseError(ref cause) => cause,
+            AbortDocumentVersionUploadError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1780,53 +1845,69 @@ pub enum ActivateUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ActivateUserError {
-    pub fn from_body(body: &str) -> ActivateUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ActivateUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        ActivateUserError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        ActivateUserError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ActivateUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        ActivateUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        ActivateUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ActivateUserError::Validation(error_message.to_string())
-                    }
-                    _ => ActivateUserError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return ActivateUserError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return ActivateUserError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return ActivateUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return ActivateUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return ActivateUserError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ActivateUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ActivateUserError::Unknown(String::from(body)),
         }
+        return ActivateUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ActivateUserError {
     fn from(err: serde_json::error::Error) -> ActivateUserError {
-        ActivateUserError::Unknown(err.description().to_string())
+        ActivateUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ActivateUserError {
@@ -1860,7 +1941,8 @@ impl Error for ActivateUserError {
             ActivateUserError::Validation(ref cause) => cause,
             ActivateUserError::Credentials(ref err) => err.description(),
             ActivateUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ActivateUserError::Unknown(ref cause) => cause,
+            ActivateUserError::ParseError(ref cause) => cause,
+            ActivateUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1881,54 +1963,72 @@ pub enum AddResourcePermissionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddResourcePermissionsError {
-    pub fn from_body(body: &str) -> AddResourcePermissionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> AddResourcePermissionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        AddResourcePermissionsError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        AddResourcePermissionsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        AddResourcePermissionsError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        AddResourcePermissionsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AddResourcePermissionsError::Validation(error_message.to_string())
-                    }
-                    _ => AddResourcePermissionsError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return AddResourcePermissionsError::FailedDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceUnavailableException" => {
+                    return AddResourcePermissionsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return AddResourcePermissionsError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return AddResourcePermissionsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AddResourcePermissionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddResourcePermissionsError::Unknown(String::from(body)),
         }
+        return AddResourcePermissionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddResourcePermissionsError {
     fn from(err: serde_json::error::Error) -> AddResourcePermissionsError {
-        AddResourcePermissionsError::Unknown(err.description().to_string())
+        AddResourcePermissionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddResourcePermissionsError {
@@ -1963,7 +2063,8 @@ impl Error for AddResourcePermissionsError {
             AddResourcePermissionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddResourcePermissionsError::Unknown(ref cause) => cause,
+            AddResourcePermissionsError::ParseError(ref cause) => cause,
+            AddResourcePermissionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1990,59 +2091,77 @@ pub enum CreateCommentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateCommentError {
-    pub fn from_body(body: &str) -> CreateCommentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateCommentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "DocumentLockedForCommentsException" => {
-                        CreateCommentError::DocumentLockedForComments(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        CreateCommentError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        CreateCommentError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        CreateCommentError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateCommentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        CreateCommentError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateCommentError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateCommentError::Validation(error_message.to_string())
-                    }
-                    _ => CreateCommentError::Unknown(String::from(body)),
+            match error_type {
+                "DocumentLockedForCommentsException" => {
+                    return CreateCommentError::DocumentLockedForComments(String::from(
+                        error_message,
+                    ))
                 }
+                "EntityNotExistsException" => {
+                    return CreateCommentError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return CreateCommentError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return CreateCommentError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateCommentError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return CreateCommentError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateCommentError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateCommentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateCommentError::Unknown(String::from(body)),
         }
+        return CreateCommentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateCommentError {
     fn from(err: serde_json::error::Error) -> CreateCommentError {
-        CreateCommentError::Unknown(err.description().to_string())
+        CreateCommentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateCommentError {
@@ -2078,7 +2197,8 @@ impl Error for CreateCommentError {
             CreateCommentError::Validation(ref cause) => cause,
             CreateCommentError::Credentials(ref err) => err.description(),
             CreateCommentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateCommentError::Unknown(ref cause) => cause,
+            CreateCommentError::ParseError(ref cause) => cause,
+            CreateCommentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2105,65 +2225,81 @@ pub enum CreateCustomMetadataError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateCustomMetadataError {
-    pub fn from_body(body: &str) -> CreateCustomMetadataError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateCustomMetadataError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "CustomMetadataLimitExceededException" => {
-                        CreateCustomMetadataError::CustomMetadataLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EntityNotExistsException" => {
-                        CreateCustomMetadataError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        CreateCustomMetadataError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        CreateCustomMetadataError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateCustomMetadataError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        CreateCustomMetadataError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateCustomMetadataError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateCustomMetadataError::Validation(error_message.to_string())
-                    }
-                    _ => CreateCustomMetadataError::Unknown(String::from(body)),
+            match error_type {
+                "CustomMetadataLimitExceededException" => {
+                    return CreateCustomMetadataError::CustomMetadataLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "EntityNotExistsException" => {
+                    return CreateCustomMetadataError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return CreateCustomMetadataError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return CreateCustomMetadataError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateCustomMetadataError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return CreateCustomMetadataError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateCustomMetadataError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateCustomMetadataError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateCustomMetadataError::Unknown(String::from(body)),
         }
+        return CreateCustomMetadataError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateCustomMetadataError {
     fn from(err: serde_json::error::Error) -> CreateCustomMetadataError {
-        CreateCustomMetadataError::Unknown(err.description().to_string())
+        CreateCustomMetadataError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateCustomMetadataError {
@@ -2201,7 +2337,8 @@ impl Error for CreateCustomMetadataError {
             CreateCustomMetadataError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateCustomMetadataError::Unknown(ref cause) => cause,
+            CreateCustomMetadataError::ParseError(ref cause) => cause,
+            CreateCustomMetadataError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2230,62 +2367,78 @@ pub enum CreateFolderError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateFolderError {
-    pub fn from_body(body: &str) -> CreateFolderError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateFolderError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityAlreadyExistsException" => {
-                        CreateFolderError::EntityAlreadyExists(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        CreateFolderError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        CreateFolderError::FailedDependency(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateFolderError::LimitExceeded(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        CreateFolderError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateFolderError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        CreateFolderError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateFolderError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateFolderError::Validation(error_message.to_string())
-                    }
-                    _ => CreateFolderError::Unknown(String::from(body)),
+            match error_type {
+                "EntityAlreadyExistsException" => {
+                    return CreateFolderError::EntityAlreadyExists(String::from(error_message))
                 }
+                "EntityNotExistsException" => {
+                    return CreateFolderError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return CreateFolderError::FailedDependency(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateFolderError::LimitExceeded(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return CreateFolderError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateFolderError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return CreateFolderError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateFolderError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateFolderError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateFolderError::Unknown(String::from(body)),
         }
+        return CreateFolderError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateFolderError {
     fn from(err: serde_json::error::Error) -> CreateFolderError {
-        CreateFolderError::Unknown(err.description().to_string())
+        CreateFolderError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateFolderError {
@@ -2322,7 +2475,8 @@ impl Error for CreateFolderError {
             CreateFolderError::Validation(ref cause) => cause,
             CreateFolderError::Credentials(ref err) => err.description(),
             CreateFolderError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateFolderError::Unknown(ref cause) => cause,
+            CreateFolderError::ParseError(ref cause) => cause,
+            CreateFolderError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2347,56 +2501,72 @@ pub enum CreateLabelsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateLabelsError {
-    pub fn from_body(body: &str) -> CreateLabelsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateLabelsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        CreateLabelsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        CreateLabelsError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateLabelsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "TooManyLabelsException" => {
-                        CreateLabelsError::TooManyLabels(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        CreateLabelsError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateLabelsError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateLabelsError::Validation(error_message.to_string())
-                    }
-                    _ => CreateLabelsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return CreateLabelsError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return CreateLabelsError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateLabelsError::ServiceUnavailable(String::from(error_message))
+                }
+                "TooManyLabelsException" => {
+                    return CreateLabelsError::TooManyLabels(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return CreateLabelsError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateLabelsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateLabelsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateLabelsError::Unknown(String::from(body)),
         }
+        return CreateLabelsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateLabelsError {
     fn from(err: serde_json::error::Error) -> CreateLabelsError {
-        CreateLabelsError::Unknown(err.description().to_string())
+        CreateLabelsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateLabelsError {
@@ -2431,7 +2601,8 @@ impl Error for CreateLabelsError {
             CreateLabelsError::Validation(ref cause) => cause,
             CreateLabelsError::Credentials(ref err) => err.description(),
             CreateLabelsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateLabelsError::Unknown(ref cause) => cause,
+            CreateLabelsError::ParseError(ref cause) => cause,
+            CreateLabelsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2450,53 +2621,69 @@ pub enum CreateNotificationSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateNotificationSubscriptionError {
-    pub fn from_body(body: &str) -> CreateNotificationSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateNotificationSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ServiceUnavailableException" => {
-                        CreateNotificationSubscriptionError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TooManySubscriptionsException" => {
-                        CreateNotificationSubscriptionError::TooManySubscriptions(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateNotificationSubscriptionError::UnauthorizedResourceAccess(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        CreateNotificationSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateNotificationSubscriptionError::Unknown(String::from(body)),
+            match error_type {
+                "ServiceUnavailableException" => {
+                    return CreateNotificationSubscriptionError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
                 }
+                "TooManySubscriptionsException" => {
+                    return CreateNotificationSubscriptionError::TooManySubscriptions(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateNotificationSubscriptionError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return CreateNotificationSubscriptionError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => CreateNotificationSubscriptionError::Unknown(String::from(body)),
         }
+        return CreateNotificationSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateNotificationSubscriptionError {
     fn from(err: serde_json::error::Error) -> CreateNotificationSubscriptionError {
-        CreateNotificationSubscriptionError::Unknown(err.description().to_string())
+        CreateNotificationSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateNotificationSubscriptionError {
@@ -2530,7 +2717,8 @@ impl Error for CreateNotificationSubscriptionError {
             CreateNotificationSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateNotificationSubscriptionError::Unknown(ref cause) => cause,
+            CreateNotificationSubscriptionError::ParseError(ref cause) => cause,
+            CreateNotificationSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2553,51 +2741,67 @@ pub enum CreateUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateUserError {
-    pub fn from_body(body: &str) -> CreateUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityAlreadyExistsException" => {
-                        CreateUserError::EntityAlreadyExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        CreateUserError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        CreateUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        CreateUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => CreateUserError::Validation(error_message.to_string()),
-                    _ => CreateUserError::Unknown(String::from(body)),
+            match error_type {
+                "EntityAlreadyExistsException" => {
+                    return CreateUserError::EntityAlreadyExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return CreateUserError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return CreateUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return CreateUserError::UnauthorizedResourceAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateUserError::Unknown(String::from(body)),
         }
+        return CreateUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateUserError {
     fn from(err: serde_json::error::Error) -> CreateUserError {
-        CreateUserError::Unknown(err.description().to_string())
+        CreateUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateUserError {
@@ -2631,7 +2835,8 @@ impl Error for CreateUserError {
             CreateUserError::Validation(ref cause) => cause,
             CreateUserError::Credentials(ref err) => err.description(),
             CreateUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateUserError::Unknown(ref cause) => cause,
+            CreateUserError::ParseError(ref cause) => cause,
+            CreateUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2654,53 +2859,69 @@ pub enum DeactivateUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeactivateUserError {
-    pub fn from_body(body: &str) -> DeactivateUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeactivateUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeactivateUserError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeactivateUserError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeactivateUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeactivateUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeactivateUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeactivateUserError::Validation(error_message.to_string())
-                    }
-                    _ => DeactivateUserError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeactivateUserError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DeactivateUserError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeactivateUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeactivateUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeactivateUserError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeactivateUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeactivateUserError::Unknown(String::from(body)),
         }
+        return DeactivateUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeactivateUserError {
     fn from(err: serde_json::error::Error) -> DeactivateUserError {
-        DeactivateUserError::Unknown(err.description().to_string())
+        DeactivateUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeactivateUserError {
@@ -2734,7 +2955,8 @@ impl Error for DeactivateUserError {
             DeactivateUserError::Validation(ref cause) => cause,
             DeactivateUserError::Credentials(ref err) => err.description(),
             DeactivateUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeactivateUserError::Unknown(ref cause) => cause,
+            DeactivateUserError::ParseError(ref cause) => cause,
+            DeactivateUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2761,59 +2983,77 @@ pub enum DeleteCommentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteCommentError {
-    pub fn from_body(body: &str) -> DeleteCommentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteCommentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "DocumentLockedForCommentsException" => {
-                        DeleteCommentError::DocumentLockedForComments(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        DeleteCommentError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteCommentError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DeleteCommentError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteCommentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteCommentError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteCommentError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteCommentError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteCommentError::Unknown(String::from(body)),
+            match error_type {
+                "DocumentLockedForCommentsException" => {
+                    return DeleteCommentError::DocumentLockedForComments(String::from(
+                        error_message,
+                    ))
                 }
+                "EntityNotExistsException" => {
+                    return DeleteCommentError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return DeleteCommentError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DeleteCommentError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteCommentError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteCommentError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteCommentError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteCommentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteCommentError::Unknown(String::from(body)),
         }
+        return DeleteCommentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteCommentError {
     fn from(err: serde_json::error::Error) -> DeleteCommentError {
-        DeleteCommentError::Unknown(err.description().to_string())
+        DeleteCommentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteCommentError {
@@ -2849,7 +3089,8 @@ impl Error for DeleteCommentError {
             DeleteCommentError::Validation(ref cause) => cause,
             DeleteCommentError::Credentials(ref err) => err.description(),
             DeleteCommentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteCommentError::Unknown(ref cause) => cause,
+            DeleteCommentError::ParseError(ref cause) => cause,
+            DeleteCommentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2874,60 +3115,76 @@ pub enum DeleteCustomMetadataError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteCustomMetadataError {
-    pub fn from_body(body: &str) -> DeleteCustomMetadataError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteCustomMetadataError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeleteCustomMetadataError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteCustomMetadataError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DeleteCustomMetadataError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteCustomMetadataError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteCustomMetadataError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteCustomMetadataError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteCustomMetadataError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteCustomMetadataError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeleteCustomMetadataError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DeleteCustomMetadataError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DeleteCustomMetadataError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteCustomMetadataError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteCustomMetadataError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteCustomMetadataError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteCustomMetadataError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteCustomMetadataError::Unknown(String::from(body)),
         }
+        return DeleteCustomMetadataError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteCustomMetadataError {
     fn from(err: serde_json::error::Error) -> DeleteCustomMetadataError {
-        DeleteCustomMetadataError::Unknown(err.description().to_string())
+        DeleteCustomMetadataError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteCustomMetadataError {
@@ -2964,7 +3221,8 @@ impl Error for DeleteCustomMetadataError {
             DeleteCustomMetadataError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteCustomMetadataError::Unknown(ref cause) => cause,
+            DeleteCustomMetadataError::ParseError(ref cause) => cause,
+            DeleteCustomMetadataError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2991,59 +3249,75 @@ pub enum DeleteDocumentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDocumentError {
-    pub fn from_body(body: &str) -> DeleteDocumentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDocumentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteDocumentError::ConcurrentModification(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        DeleteDocumentError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteDocumentError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DeleteDocumentError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteDocumentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteDocumentError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteDocumentError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDocumentError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDocumentError::Unknown(String::from(body)),
+            match error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteDocumentError::ConcurrentModification(String::from(error_message))
                 }
+                "EntityNotExistsException" => {
+                    return DeleteDocumentError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return DeleteDocumentError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DeleteDocumentError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteDocumentError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteDocumentError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteDocumentError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteDocumentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDocumentError::Unknown(String::from(body)),
         }
+        return DeleteDocumentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDocumentError {
     fn from(err: serde_json::error::Error) -> DeleteDocumentError {
-        DeleteDocumentError::Unknown(err.description().to_string())
+        DeleteDocumentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDocumentError {
@@ -3079,7 +3353,8 @@ impl Error for DeleteDocumentError {
             DeleteDocumentError::Validation(ref cause) => cause,
             DeleteDocumentError::Credentials(ref err) => err.description(),
             DeleteDocumentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteDocumentError::Unknown(ref cause) => cause,
+            DeleteDocumentError::ParseError(ref cause) => cause,
+            DeleteDocumentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3106,59 +3381,75 @@ pub enum DeleteFolderError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteFolderError {
-    pub fn from_body(body: &str) -> DeleteFolderError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteFolderError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteFolderError::ConcurrentModification(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        DeleteFolderError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteFolderError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DeleteFolderError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteFolderError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteFolderError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteFolderError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteFolderError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteFolderError::Unknown(String::from(body)),
+            match error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteFolderError::ConcurrentModification(String::from(error_message))
                 }
+                "EntityNotExistsException" => {
+                    return DeleteFolderError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return DeleteFolderError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DeleteFolderError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteFolderError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteFolderError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteFolderError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteFolderError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteFolderError::Unknown(String::from(body)),
         }
+        return DeleteFolderError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteFolderError {
     fn from(err: serde_json::error::Error) -> DeleteFolderError {
-        DeleteFolderError::Unknown(err.description().to_string())
+        DeleteFolderError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteFolderError {
@@ -3194,7 +3485,8 @@ impl Error for DeleteFolderError {
             DeleteFolderError::Validation(ref cause) => cause,
             DeleteFolderError::Credentials(ref err) => err.description(),
             DeleteFolderError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteFolderError::Unknown(ref cause) => cause,
+            DeleteFolderError::ParseError(ref cause) => cause,
+            DeleteFolderError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3217,57 +3509,73 @@ pub enum DeleteFolderContentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteFolderContentsError {
-    pub fn from_body(body: &str) -> DeleteFolderContentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteFolderContentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeleteFolderContentsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteFolderContentsError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteFolderContentsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteFolderContentsError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteFolderContentsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteFolderContentsError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteFolderContentsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeleteFolderContentsError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DeleteFolderContentsError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteFolderContentsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteFolderContentsError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteFolderContentsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteFolderContentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteFolderContentsError::Unknown(String::from(body)),
         }
+        return DeleteFolderContentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteFolderContentsError {
     fn from(err: serde_json::error::Error) -> DeleteFolderContentsError {
-        DeleteFolderContentsError::Unknown(err.description().to_string())
+        DeleteFolderContentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteFolderContentsError {
@@ -3303,7 +3611,8 @@ impl Error for DeleteFolderContentsError {
             DeleteFolderContentsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteFolderContentsError::Unknown(ref cause) => cause,
+            DeleteFolderContentsError::ParseError(ref cause) => cause,
+            DeleteFolderContentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3326,53 +3635,69 @@ pub enum DeleteLabelsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteLabelsError {
-    pub fn from_body(body: &str) -> DeleteLabelsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteLabelsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeleteLabelsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteLabelsError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteLabelsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteLabelsError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteLabelsError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteLabelsError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteLabelsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeleteLabelsError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DeleteLabelsError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteLabelsError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteLabelsError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteLabelsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteLabelsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteLabelsError::Unknown(String::from(body)),
         }
+        return DeleteLabelsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteLabelsError {
     fn from(err: serde_json::error::Error) -> DeleteLabelsError {
-        DeleteLabelsError::Unknown(err.description().to_string())
+        DeleteLabelsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteLabelsError {
@@ -3406,7 +3731,8 @@ impl Error for DeleteLabelsError {
             DeleteLabelsError::Validation(ref cause) => cause,
             DeleteLabelsError::Credentials(ref err) => err.description(),
             DeleteLabelsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteLabelsError::Unknown(ref cause) => cause,
+            DeleteLabelsError::ParseError(ref cause) => cause,
+            DeleteLabelsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3427,58 +3753,74 @@ pub enum DeleteNotificationSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteNotificationSubscriptionError {
-    pub fn from_body(body: &str) -> DeleteNotificationSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteNotificationSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeleteNotificationSubscriptionError::EntityNotExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ProhibitedStateException" => {
-                        DeleteNotificationSubscriptionError::ProhibitedState(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteNotificationSubscriptionError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteNotificationSubscriptionError::UnauthorizedResourceAccess(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        DeleteNotificationSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteNotificationSubscriptionError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeleteNotificationSubscriptionError::EntityNotExists(String::from(
+                        error_message,
+                    ))
                 }
+                "ProhibitedStateException" => {
+                    return DeleteNotificationSubscriptionError::ProhibitedState(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteNotificationSubscriptionError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteNotificationSubscriptionError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DeleteNotificationSubscriptionError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DeleteNotificationSubscriptionError::Unknown(String::from(body)),
         }
+        return DeleteNotificationSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteNotificationSubscriptionError {
     fn from(err: serde_json::error::Error) -> DeleteNotificationSubscriptionError {
-        DeleteNotificationSubscriptionError::Unknown(err.description().to_string())
+        DeleteNotificationSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteNotificationSubscriptionError {
@@ -3513,7 +3855,8 @@ impl Error for DeleteNotificationSubscriptionError {
             DeleteNotificationSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteNotificationSubscriptionError::Unknown(ref cause) => cause,
+            DeleteNotificationSubscriptionError::ParseError(ref cause) => cause,
+            DeleteNotificationSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3536,51 +3879,67 @@ pub enum DeleteUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteUserError {
-    pub fn from_body(body: &str) -> DeleteUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DeleteUserError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DeleteUserError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DeleteUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DeleteUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => DeleteUserError::Validation(error_message.to_string()),
-                    _ => DeleteUserError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DeleteUserError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DeleteUserError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DeleteUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DeleteUserError::UnauthorizedResourceAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteUserError::Unknown(String::from(body)),
         }
+        return DeleteUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteUserError {
     fn from(err: serde_json::error::Error) -> DeleteUserError {
-        DeleteUserError::Unknown(err.description().to_string())
+        DeleteUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteUserError {
@@ -3614,7 +3973,8 @@ impl Error for DeleteUserError {
             DeleteUserError::Validation(ref cause) => cause,
             DeleteUserError::Credentials(ref err) => err.description(),
             DeleteUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteUserError::Unknown(ref cause) => cause,
+            DeleteUserError::ParseError(ref cause) => cause,
+            DeleteUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3637,55 +3997,71 @@ pub enum DescribeActivitiesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeActivitiesError {
-    pub fn from_body(body: &str) -> DescribeActivitiesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeActivitiesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        DescribeActivitiesError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        DescribeActivitiesError::InvalidArgument(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeActivitiesError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeActivitiesError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeActivitiesError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeActivitiesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeActivitiesError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return DescribeActivitiesError::FailedDependency(String::from(error_message))
                 }
+                "InvalidArgumentException" => {
+                    return DescribeActivitiesError::InvalidArgument(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeActivitiesError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeActivitiesError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeActivitiesError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeActivitiesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeActivitiesError::Unknown(String::from(body)),
         }
+        return DescribeActivitiesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeActivitiesError {
     fn from(err: serde_json::error::Error) -> DescribeActivitiesError {
-        DescribeActivitiesError::Unknown(err.description().to_string())
+        DescribeActivitiesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeActivitiesError {
@@ -3721,7 +4097,8 @@ impl Error for DescribeActivitiesError {
             DescribeActivitiesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeActivitiesError::Unknown(ref cause) => cause,
+            DescribeActivitiesError::ParseError(ref cause) => cause,
+            DescribeActivitiesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3746,58 +4123,72 @@ pub enum DescribeCommentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCommentsError {
-    pub fn from_body(body: &str) -> DescribeCommentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCommentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DescribeCommentsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DescribeCommentsError::FailedDependency(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DescribeCommentsError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeCommentsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeCommentsError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeCommentsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeCommentsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCommentsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DescribeCommentsError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DescribeCommentsError::FailedDependency(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DescribeCommentsError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeCommentsError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeCommentsError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeCommentsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeCommentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeCommentsError::Unknown(String::from(body)),
         }
+        return DescribeCommentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCommentsError {
     fn from(err: serde_json::error::Error) -> DescribeCommentsError {
-        DescribeCommentsError::Unknown(err.description().to_string())
+        DescribeCommentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCommentsError {
@@ -3832,7 +4223,8 @@ impl Error for DescribeCommentsError {
             DescribeCommentsError::Validation(ref cause) => cause,
             DescribeCommentsError::Credentials(ref err) => err.description(),
             DescribeCommentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeCommentsError::Unknown(ref cause) => cause,
+            DescribeCommentsError::ParseError(ref cause) => cause,
+            DescribeCommentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3859,65 +4251,87 @@ pub enum DescribeDocumentVersionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeDocumentVersionsError {
-    pub fn from_body(body: &str) -> DescribeDocumentVersionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeDocumentVersionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DescribeDocumentVersionsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DescribeDocumentVersionsError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        DescribeDocumentVersionsError::InvalidArgument(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DescribeDocumentVersionsError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeDocumentVersionsError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeDocumentVersionsError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeDocumentVersionsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeDocumentVersionsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeDocumentVersionsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DescribeDocumentVersionsError::EntityNotExists(String::from(
+                        error_message,
+                    ))
                 }
+                "FailedDependencyException" => {
+                    return DescribeDocumentVersionsError::FailedDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidArgumentException" => {
+                    return DescribeDocumentVersionsError::InvalidArgument(String::from(
+                        error_message,
+                    ))
+                }
+                "ProhibitedStateException" => {
+                    return DescribeDocumentVersionsError::ProhibitedState(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeDocumentVersionsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeDocumentVersionsError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeDocumentVersionsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeDocumentVersionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeDocumentVersionsError::Unknown(String::from(body)),
         }
+        return DescribeDocumentVersionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeDocumentVersionsError {
     fn from(err: serde_json::error::Error) -> DescribeDocumentVersionsError {
-        DescribeDocumentVersionsError::Unknown(err.description().to_string())
+        DescribeDocumentVersionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeDocumentVersionsError {
@@ -3955,7 +4369,8 @@ impl Error for DescribeDocumentVersionsError {
             DescribeDocumentVersionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeDocumentVersionsError::Unknown(ref cause) => cause,
+            DescribeDocumentVersionsError::ParseError(ref cause) => cause,
+            DescribeDocumentVersionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3980,58 +4395,76 @@ pub enum DescribeFolderContentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeFolderContentsError {
-    pub fn from_body(body: &str) -> DescribeFolderContentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeFolderContentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DescribeFolderContentsError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        DescribeFolderContentsError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        DescribeFolderContentsError::InvalidArgument(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        DescribeFolderContentsError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeFolderContentsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeFolderContentsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeFolderContentsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeFolderContentsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DescribeFolderContentsError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return DescribeFolderContentsError::FailedDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidArgumentException" => {
+                    return DescribeFolderContentsError::InvalidArgument(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return DescribeFolderContentsError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeFolderContentsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeFolderContentsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeFolderContentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeFolderContentsError::Unknown(String::from(body)),
         }
+        return DescribeFolderContentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeFolderContentsError {
     fn from(err: serde_json::error::Error) -> DescribeFolderContentsError {
-        DescribeFolderContentsError::Unknown(err.description().to_string())
+        DescribeFolderContentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeFolderContentsError {
@@ -4068,7 +4501,8 @@ impl Error for DescribeFolderContentsError {
             DescribeFolderContentsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeFolderContentsError::Unknown(ref cause) => cause,
+            DescribeFolderContentsError::ParseError(ref cause) => cause,
+            DescribeFolderContentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4089,50 +4523,66 @@ pub enum DescribeGroupsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeGroupsError {
-    pub fn from_body(body: &str) -> DescribeGroupsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeGroupsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        DescribeGroupsError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeGroupsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeGroupsError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeGroupsError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeGroupsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeGroupsError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return DescribeGroupsError::FailedDependency(String::from(error_message))
                 }
+                "ServiceUnavailableException" => {
+                    return DescribeGroupsError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeGroupsError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeGroupsError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeGroupsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeGroupsError::Unknown(String::from(body)),
         }
+        return DescribeGroupsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeGroupsError {
     fn from(err: serde_json::error::Error) -> DescribeGroupsError {
-        DescribeGroupsError::Unknown(err.description().to_string())
+        DescribeGroupsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeGroupsError {
@@ -4165,7 +4615,8 @@ impl Error for DescribeGroupsError {
             DescribeGroupsError::Validation(ref cause) => cause,
             DescribeGroupsError::Credentials(ref err) => err.description(),
             DescribeGroupsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeGroupsError::Unknown(ref cause) => cause,
+            DescribeGroupsError::ParseError(ref cause) => cause,
+            DescribeGroupsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4184,53 +4635,69 @@ pub enum DescribeNotificationSubscriptionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeNotificationSubscriptionsError {
-    pub fn from_body(body: &str) -> DescribeNotificationSubscriptionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeNotificationSubscriptionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        DescribeNotificationSubscriptionsError::EntityNotExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeNotificationSubscriptionsError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeNotificationSubscriptionsError::UnauthorizedResourceAccess(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => DescribeNotificationSubscriptionsError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => DescribeNotificationSubscriptionsError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return DescribeNotificationSubscriptionsError::EntityNotExists(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceUnavailableException" => {
+                    return DescribeNotificationSubscriptionsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeNotificationSubscriptionsError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DescribeNotificationSubscriptionsError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeNotificationSubscriptionsError::Unknown(String::from(body)),
         }
+        return DescribeNotificationSubscriptionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeNotificationSubscriptionsError {
     fn from(err: serde_json::error::Error) -> DescribeNotificationSubscriptionsError {
-        DescribeNotificationSubscriptionsError::Unknown(err.description().to_string())
+        DescribeNotificationSubscriptionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeNotificationSubscriptionsError {
@@ -4264,7 +4731,8 @@ impl Error for DescribeNotificationSubscriptionsError {
             DescribeNotificationSubscriptionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeNotificationSubscriptionsError::Unknown(ref cause) => cause,
+            DescribeNotificationSubscriptionsError::ParseError(ref cause) => cause,
+            DescribeNotificationSubscriptionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4285,58 +4753,72 @@ pub enum DescribeResourcePermissionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeResourcePermissionsError {
-    pub fn from_body(body: &str) -> DescribeResourcePermissionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeResourcePermissionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        DescribeResourcePermissionsError::FailedDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeResourcePermissionsError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeResourcePermissionsError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeResourcePermissionsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeResourcePermissionsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeResourcePermissionsError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return DescribeResourcePermissionsError::FailedDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceUnavailableException" => {
+                    return DescribeResourcePermissionsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeResourcePermissionsError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeResourcePermissionsError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DescribeResourcePermissionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeResourcePermissionsError::Unknown(String::from(body)),
         }
+        return DescribeResourcePermissionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeResourcePermissionsError {
     fn from(err: serde_json::error::Error) -> DescribeResourcePermissionsError {
-        DescribeResourcePermissionsError::Unknown(err.description().to_string())
+        DescribeResourcePermissionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeResourcePermissionsError {
@@ -4371,7 +4853,8 @@ impl Error for DescribeResourcePermissionsError {
             DescribeResourcePermissionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeResourcePermissionsError::Unknown(ref cause) => cause,
+            DescribeResourcePermissionsError::ParseError(ref cause) => cause,
+            DescribeResourcePermissionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4394,55 +4877,71 @@ pub enum DescribeRootFoldersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeRootFoldersError {
-    pub fn from_body(body: &str) -> DescribeRootFoldersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeRootFoldersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        DescribeRootFoldersError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        DescribeRootFoldersError::InvalidArgument(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeRootFoldersError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeRootFoldersError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeRootFoldersError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeRootFoldersError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeRootFoldersError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return DescribeRootFoldersError::FailedDependency(String::from(error_message))
                 }
+                "InvalidArgumentException" => {
+                    return DescribeRootFoldersError::InvalidArgument(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeRootFoldersError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeRootFoldersError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeRootFoldersError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeRootFoldersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeRootFoldersError::Unknown(String::from(body)),
         }
+        return DescribeRootFoldersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeRootFoldersError {
     fn from(err: serde_json::error::Error) -> DescribeRootFoldersError {
-        DescribeRootFoldersError::Unknown(err.description().to_string())
+        DescribeRootFoldersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeRootFoldersError {
@@ -4478,7 +4977,8 @@ impl Error for DescribeRootFoldersError {
             DescribeRootFoldersError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeRootFoldersError::Unknown(ref cause) => cause,
+            DescribeRootFoldersError::ParseError(ref cause) => cause,
+            DescribeRootFoldersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4501,53 +5001,69 @@ pub enum DescribeUsersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeUsersError {
-    pub fn from_body(body: &str) -> DescribeUsersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeUsersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        DescribeUsersError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        DescribeUsersError::InvalidArgument(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeUsersError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        DescribeUsersError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        DescribeUsersError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeUsersError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeUsersError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return DescribeUsersError::FailedDependency(String::from(error_message))
                 }
+                "InvalidArgumentException" => {
+                    return DescribeUsersError::InvalidArgument(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeUsersError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return DescribeUsersError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return DescribeUsersError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeUsersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeUsersError::Unknown(String::from(body)),
         }
+        return DescribeUsersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeUsersError {
     fn from(err: serde_json::error::Error) -> DescribeUsersError {
-        DescribeUsersError::Unknown(err.description().to_string())
+        DescribeUsersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeUsersError {
@@ -4581,7 +5097,8 @@ impl Error for DescribeUsersError {
             DescribeUsersError::Validation(ref cause) => cause,
             DescribeUsersError::Credentials(ref err) => err.description(),
             DescribeUsersError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeUsersError::Unknown(ref cause) => cause,
+            DescribeUsersError::ParseError(ref cause) => cause,
+            DescribeUsersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4604,53 +5121,69 @@ pub enum GetCurrentUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCurrentUserError {
-    pub fn from_body(body: &str) -> GetCurrentUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetCurrentUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetCurrentUserError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetCurrentUserError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetCurrentUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetCurrentUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetCurrentUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetCurrentUserError::Validation(error_message.to_string())
-                    }
-                    _ => GetCurrentUserError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetCurrentUserError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetCurrentUserError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetCurrentUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetCurrentUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetCurrentUserError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetCurrentUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCurrentUserError::Unknown(String::from(body)),
         }
+        return GetCurrentUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCurrentUserError {
     fn from(err: serde_json::error::Error) -> GetCurrentUserError {
-        GetCurrentUserError::Unknown(err.description().to_string())
+        GetCurrentUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCurrentUserError {
@@ -4684,7 +5217,8 @@ impl Error for GetCurrentUserError {
             GetCurrentUserError::Validation(ref cause) => cause,
             GetCurrentUserError::Credentials(ref err) => err.description(),
             GetCurrentUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetCurrentUserError::Unknown(ref cause) => cause,
+            GetCurrentUserError::ParseError(ref cause) => cause,
+            GetCurrentUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4711,59 +5245,73 @@ pub enum GetDocumentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentError {
-    pub fn from_body(body: &str) -> GetDocumentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetDocumentError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetDocumentError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        GetDocumentError::InvalidArgument(String::from(error_message))
-                    }
-                    "InvalidPasswordException" => {
-                        GetDocumentError::InvalidPassword(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDocumentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetDocumentError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetDocumentError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDocumentError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetDocumentError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetDocumentError::FailedDependency(String::from(error_message))
+                }
+                "InvalidArgumentException" => {
+                    return GetDocumentError::InvalidArgument(String::from(error_message))
+                }
+                "InvalidPasswordException" => {
+                    return GetDocumentError::InvalidPassword(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetDocumentError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetDocumentError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetDocumentError::UnauthorizedResourceAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDocumentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentError::Unknown(String::from(body)),
         }
+        return GetDocumentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentError {
     fn from(err: serde_json::error::Error) -> GetDocumentError {
-        GetDocumentError::Unknown(err.description().to_string())
+        GetDocumentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentError {
@@ -4799,7 +5347,8 @@ impl Error for GetDocumentError {
             GetDocumentError::Validation(ref cause) => cause,
             GetDocumentError::Credentials(ref err) => err.description(),
             GetDocumentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDocumentError::Unknown(ref cause) => cause,
+            GetDocumentError::ParseError(ref cause) => cause,
+            GetDocumentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4822,55 +5371,69 @@ pub enum GetDocumentPathError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentPathError {
-    pub fn from_body(body: &str) -> GetDocumentPathError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentPathError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetDocumentPathError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetDocumentPathError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDocumentPathError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetDocumentPathError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetDocumentPathError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetDocumentPathError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentPathError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetDocumentPathError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetDocumentPathError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetDocumentPathError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetDocumentPathError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetDocumentPathError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetDocumentPathError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentPathError::Unknown(String::from(body)),
         }
+        return GetDocumentPathError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentPathError {
     fn from(err: serde_json::error::Error) -> GetDocumentPathError {
-        GetDocumentPathError::Unknown(err.description().to_string())
+        GetDocumentPathError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentPathError {
@@ -4904,7 +5467,8 @@ impl Error for GetDocumentPathError {
             GetDocumentPathError::Validation(ref cause) => cause,
             GetDocumentPathError::Credentials(ref err) => err.description(),
             GetDocumentPathError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDocumentPathError::Unknown(ref cause) => cause,
+            GetDocumentPathError::ParseError(ref cause) => cause,
+            GetDocumentPathError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4931,61 +5495,77 @@ pub enum GetDocumentVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDocumentVersionError {
-    pub fn from_body(body: &str) -> GetDocumentVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetDocumentVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetDocumentVersionError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetDocumentVersionError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidPasswordException" => {
-                        GetDocumentVersionError::InvalidPassword(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        GetDocumentVersionError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetDocumentVersionError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetDocumentVersionError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetDocumentVersionError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetDocumentVersionError::Validation(error_message.to_string())
-                    }
-                    _ => GetDocumentVersionError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetDocumentVersionError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetDocumentVersionError::FailedDependency(String::from(error_message))
+                }
+                "InvalidPasswordException" => {
+                    return GetDocumentVersionError::InvalidPassword(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return GetDocumentVersionError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetDocumentVersionError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetDocumentVersionError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetDocumentVersionError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetDocumentVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDocumentVersionError::Unknown(String::from(body)),
         }
+        return GetDocumentVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDocumentVersionError {
     fn from(err: serde_json::error::Error) -> GetDocumentVersionError {
-        GetDocumentVersionError::Unknown(err.description().to_string())
+        GetDocumentVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDocumentVersionError {
@@ -5023,7 +5603,8 @@ impl Error for GetDocumentVersionError {
             GetDocumentVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDocumentVersionError::Unknown(ref cause) => cause,
+            GetDocumentVersionError::ParseError(ref cause) => cause,
+            GetDocumentVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5050,57 +5631,73 @@ pub enum GetFolderError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetFolderError {
-    pub fn from_body(body: &str) -> GetFolderError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetFolderError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetFolderError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetFolderError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        GetFolderError::InvalidArgument(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        GetFolderError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetFolderError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetFolderError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetFolderError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => GetFolderError::Validation(error_message.to_string()),
-                    _ => GetFolderError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetFolderError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetFolderError::FailedDependency(String::from(error_message))
+                }
+                "InvalidArgumentException" => {
+                    return GetFolderError::InvalidArgument(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return GetFolderError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetFolderError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetFolderError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetFolderError::UnauthorizedResourceAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetFolderError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetFolderError::Unknown(String::from(body)),
         }
+        return GetFolderError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetFolderError {
     fn from(err: serde_json::error::Error) -> GetFolderError {
-        GetFolderError::Unknown(err.description().to_string())
+        GetFolderError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetFolderError {
@@ -5136,7 +5733,8 @@ impl Error for GetFolderError {
             GetFolderError::Validation(ref cause) => cause,
             GetFolderError::Credentials(ref err) => err.description(),
             GetFolderError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetFolderError::Unknown(ref cause) => cause,
+            GetFolderError::ParseError(ref cause) => cause,
+            GetFolderError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5159,53 +5757,69 @@ pub enum GetFolderPathError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetFolderPathError {
-    pub fn from_body(body: &str) -> GetFolderPathError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetFolderPathError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EntityNotExistsException" => {
-                        GetFolderPathError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        GetFolderPathError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        GetFolderPathError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        GetFolderPathError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        GetFolderPathError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetFolderPathError::Validation(error_message.to_string())
-                    }
-                    _ => GetFolderPathError::Unknown(String::from(body)),
+            match error_type {
+                "EntityNotExistsException" => {
+                    return GetFolderPathError::EntityNotExists(String::from(error_message))
                 }
+                "FailedDependencyException" => {
+                    return GetFolderPathError::FailedDependency(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return GetFolderPathError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return GetFolderPathError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return GetFolderPathError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetFolderPathError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetFolderPathError::Unknown(String::from(body)),
         }
+        return GetFolderPathError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetFolderPathError {
     fn from(err: serde_json::error::Error) -> GetFolderPathError {
-        GetFolderPathError::Unknown(err.description().to_string())
+        GetFolderPathError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetFolderPathError {
@@ -5239,7 +5853,8 @@ impl Error for GetFolderPathError {
             GetFolderPathError::Validation(ref cause) => cause,
             GetFolderPathError::Credentials(ref err) => err.description(),
             GetFolderPathError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetFolderPathError::Unknown(ref cause) => cause,
+            GetFolderPathError::ParseError(ref cause) => cause,
+            GetFolderPathError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5274,93 +5889,107 @@ pub enum InitiateDocumentVersionUploadError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InitiateDocumentVersionUploadError {
-    pub fn from_body(body: &str) -> InitiateDocumentVersionUploadError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> InitiateDocumentVersionUploadError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "DraftUploadOutOfSyncException" => {
-                        InitiateDocumentVersionUploadError::DraftUploadOutOfSync(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EntityAlreadyExistsException" => {
-                        InitiateDocumentVersionUploadError::EntityAlreadyExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EntityNotExistsException" => {
-                        InitiateDocumentVersionUploadError::EntityNotExists(String::from(
-                            error_message,
-                        ))
-                    }
-                    "FailedDependencyException" => {
-                        InitiateDocumentVersionUploadError::FailedDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ProhibitedStateException" => {
-                        InitiateDocumentVersionUploadError::ProhibitedState(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceAlreadyCheckedOutException" => {
-                        InitiateDocumentVersionUploadError::ResourceAlreadyCheckedOut(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        InitiateDocumentVersionUploadError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "StorageLimitExceededException" => {
-                        InitiateDocumentVersionUploadError::StorageLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "StorageLimitWillExceedException" => {
-                        InitiateDocumentVersionUploadError::StorageLimitWillExceed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        InitiateDocumentVersionUploadError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        InitiateDocumentVersionUploadError::UnauthorizedResourceAccess(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        InitiateDocumentVersionUploadError::Validation(error_message.to_string())
-                    }
-                    _ => InitiateDocumentVersionUploadError::Unknown(String::from(body)),
+            match error_type {
+                "DraftUploadOutOfSyncException" => {
+                    return InitiateDocumentVersionUploadError::DraftUploadOutOfSync(String::from(
+                        error_message,
+                    ))
                 }
+                "EntityAlreadyExistsException" => {
+                    return InitiateDocumentVersionUploadError::EntityAlreadyExists(String::from(
+                        error_message,
+                    ))
+                }
+                "EntityNotExistsException" => {
+                    return InitiateDocumentVersionUploadError::EntityNotExists(String::from(
+                        error_message,
+                    ))
+                }
+                "FailedDependencyException" => {
+                    return InitiateDocumentVersionUploadError::FailedDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "ProhibitedStateException" => {
+                    return InitiateDocumentVersionUploadError::ProhibitedState(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceAlreadyCheckedOutException" => {
+                    return InitiateDocumentVersionUploadError::ResourceAlreadyCheckedOut(
+                        String::from(error_message),
+                    )
+                }
+                "ServiceUnavailableException" => {
+                    return InitiateDocumentVersionUploadError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "StorageLimitExceededException" => {
+                    return InitiateDocumentVersionUploadError::StorageLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "StorageLimitWillExceedException" => {
+                    return InitiateDocumentVersionUploadError::StorageLimitWillExceed(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return InitiateDocumentVersionUploadError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return InitiateDocumentVersionUploadError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return InitiateDocumentVersionUploadError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => InitiateDocumentVersionUploadError::Unknown(String::from(body)),
         }
+        return InitiateDocumentVersionUploadError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InitiateDocumentVersionUploadError {
     fn from(err: serde_json::error::Error) -> InitiateDocumentVersionUploadError {
-        InitiateDocumentVersionUploadError::Unknown(err.description().to_string())
+        InitiateDocumentVersionUploadError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InitiateDocumentVersionUploadError {
@@ -5402,7 +6031,8 @@ impl Error for InitiateDocumentVersionUploadError {
             InitiateDocumentVersionUploadError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            InitiateDocumentVersionUploadError::Unknown(ref cause) => cause,
+            InitiateDocumentVersionUploadError::ParseError(ref cause) => cause,
+            InitiateDocumentVersionUploadError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5423,58 +6053,72 @@ pub enum RemoveAllResourcePermissionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveAllResourcePermissionsError {
-    pub fn from_body(body: &str) -> RemoveAllResourcePermissionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveAllResourcePermissionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        RemoveAllResourcePermissionsError::FailedDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        RemoveAllResourcePermissionsError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        RemoveAllResourcePermissionsError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        RemoveAllResourcePermissionsError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RemoveAllResourcePermissionsError::Validation(error_message.to_string())
-                    }
-                    _ => RemoveAllResourcePermissionsError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return RemoveAllResourcePermissionsError::FailedDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceUnavailableException" => {
+                    return RemoveAllResourcePermissionsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return RemoveAllResourcePermissionsError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return RemoveAllResourcePermissionsError::UnauthorizedResourceAccess(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return RemoveAllResourcePermissionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveAllResourcePermissionsError::Unknown(String::from(body)),
         }
+        return RemoveAllResourcePermissionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveAllResourcePermissionsError {
     fn from(err: serde_json::error::Error) -> RemoveAllResourcePermissionsError {
-        RemoveAllResourcePermissionsError::Unknown(err.description().to_string())
+        RemoveAllResourcePermissionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveAllResourcePermissionsError {
@@ -5509,7 +6153,8 @@ impl Error for RemoveAllResourcePermissionsError {
             RemoveAllResourcePermissionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveAllResourcePermissionsError::Unknown(ref cause) => cause,
+            RemoveAllResourcePermissionsError::ParseError(ref cause) => cause,
+            RemoveAllResourcePermissionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5530,56 +6175,72 @@ pub enum RemoveResourcePermissionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveResourcePermissionError {
-    pub fn from_body(body: &str) -> RemoveResourcePermissionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveResourcePermissionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "FailedDependencyException" => {
-                        RemoveResourcePermissionError::FailedDependency(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        RemoveResourcePermissionError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperationException" => {
-                        RemoveResourcePermissionError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        RemoveResourcePermissionError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RemoveResourcePermissionError::Validation(error_message.to_string())
-                    }
-                    _ => RemoveResourcePermissionError::Unknown(String::from(body)),
+            match error_type {
+                "FailedDependencyException" => {
+                    return RemoveResourcePermissionError::FailedDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "ServiceUnavailableException" => {
+                    return RemoveResourcePermissionError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return RemoveResourcePermissionError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return RemoveResourcePermissionError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RemoveResourcePermissionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveResourcePermissionError::Unknown(String::from(body)),
         }
+        return RemoveResourcePermissionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveResourcePermissionError {
     fn from(err: serde_json::error::Error) -> RemoveResourcePermissionError {
-        RemoveResourcePermissionError::Unknown(err.description().to_string())
+        RemoveResourcePermissionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveResourcePermissionError {
@@ -5614,7 +6275,8 @@ impl Error for RemoveResourcePermissionError {
             RemoveResourcePermissionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveResourcePermissionError::Unknown(ref cause) => cause,
+            RemoveResourcePermissionError::ParseError(ref cause) => cause,
+            RemoveResourcePermissionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5645,65 +6307,81 @@ pub enum UpdateDocumentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDocumentError {
-    pub fn from_body(body: &str) -> UpdateDocumentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDocumentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        UpdateDocumentError::ConcurrentModification(String::from(error_message))
-                    }
-                    "EntityAlreadyExistsException" => {
-                        UpdateDocumentError::EntityAlreadyExists(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        UpdateDocumentError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        UpdateDocumentError::FailedDependency(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UpdateDocumentError::LimitExceeded(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        UpdateDocumentError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        UpdateDocumentError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        UpdateDocumentError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        UpdateDocumentError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDocumentError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDocumentError::Unknown(String::from(body)),
+            match error_type {
+                "ConcurrentModificationException" => {
+                    return UpdateDocumentError::ConcurrentModification(String::from(error_message))
                 }
+                "EntityAlreadyExistsException" => {
+                    return UpdateDocumentError::EntityAlreadyExists(String::from(error_message))
+                }
+                "EntityNotExistsException" => {
+                    return UpdateDocumentError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return UpdateDocumentError::FailedDependency(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UpdateDocumentError::LimitExceeded(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return UpdateDocumentError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return UpdateDocumentError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return UpdateDocumentError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return UpdateDocumentError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateDocumentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDocumentError::Unknown(String::from(body)),
         }
+        return UpdateDocumentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDocumentError {
     fn from(err: serde_json::error::Error) -> UpdateDocumentError {
-        UpdateDocumentError::Unknown(err.description().to_string())
+        UpdateDocumentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDocumentError {
@@ -5741,7 +6419,8 @@ impl Error for UpdateDocumentError {
             UpdateDocumentError::Validation(ref cause) => cause,
             UpdateDocumentError::Credentials(ref err) => err.description(),
             UpdateDocumentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateDocumentError::Unknown(ref cause) => cause,
+            UpdateDocumentError::ParseError(ref cause) => cause,
+            UpdateDocumentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5770,68 +6449,84 @@ pub enum UpdateDocumentVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDocumentVersionError {
-    pub fn from_body(body: &str) -> UpdateDocumentVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDocumentVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        UpdateDocumentVersionError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EntityNotExistsException" => {
-                        UpdateDocumentVersionError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        UpdateDocumentVersionError::FailedDependency(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        UpdateDocumentVersionError::InvalidOperation(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        UpdateDocumentVersionError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        UpdateDocumentVersionError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        UpdateDocumentVersionError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        UpdateDocumentVersionError::UnauthorizedResourceAccess(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateDocumentVersionError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDocumentVersionError::Unknown(String::from(body)),
+            match error_type {
+                "ConcurrentModificationException" => {
+                    return UpdateDocumentVersionError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
                 }
+                "EntityNotExistsException" => {
+                    return UpdateDocumentVersionError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return UpdateDocumentVersionError::FailedDependency(String::from(error_message))
+                }
+                "InvalidOperationException" => {
+                    return UpdateDocumentVersionError::InvalidOperation(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return UpdateDocumentVersionError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return UpdateDocumentVersionError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperationException" => {
+                    return UpdateDocumentVersionError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return UpdateDocumentVersionError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateDocumentVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDocumentVersionError::Unknown(String::from(body)),
         }
+        return UpdateDocumentVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDocumentVersionError {
     fn from(err: serde_json::error::Error) -> UpdateDocumentVersionError {
-        UpdateDocumentVersionError::Unknown(err.description().to_string())
+        UpdateDocumentVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDocumentVersionError {
@@ -5870,7 +6565,8 @@ impl Error for UpdateDocumentVersionError {
             UpdateDocumentVersionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDocumentVersionError::Unknown(ref cause) => cause,
+            UpdateDocumentVersionError::ParseError(ref cause) => cause,
+            UpdateDocumentVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5901,65 +6597,81 @@ pub enum UpdateFolderError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateFolderError {
-    pub fn from_body(body: &str) -> UpdateFolderError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateFolderError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        UpdateFolderError::ConcurrentModification(String::from(error_message))
-                    }
-                    "EntityAlreadyExistsException" => {
-                        UpdateFolderError::EntityAlreadyExists(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        UpdateFolderError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        UpdateFolderError::FailedDependency(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UpdateFolderError::LimitExceeded(String::from(error_message))
-                    }
-                    "ProhibitedStateException" => {
-                        UpdateFolderError::ProhibitedState(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        UpdateFolderError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        UpdateFolderError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        UpdateFolderError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateFolderError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateFolderError::Unknown(String::from(body)),
+            match error_type {
+                "ConcurrentModificationException" => {
+                    return UpdateFolderError::ConcurrentModification(String::from(error_message))
                 }
+                "EntityAlreadyExistsException" => {
+                    return UpdateFolderError::EntityAlreadyExists(String::from(error_message))
+                }
+                "EntityNotExistsException" => {
+                    return UpdateFolderError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return UpdateFolderError::FailedDependency(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UpdateFolderError::LimitExceeded(String::from(error_message))
+                }
+                "ProhibitedStateException" => {
+                    return UpdateFolderError::ProhibitedState(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return UpdateFolderError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return UpdateFolderError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return UpdateFolderError::UnauthorizedResourceAccess(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateFolderError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateFolderError::Unknown(String::from(body)),
         }
+        return UpdateFolderError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateFolderError {
     fn from(err: serde_json::error::Error) -> UpdateFolderError {
-        UpdateFolderError::Unknown(err.description().to_string())
+        UpdateFolderError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateFolderError {
@@ -5997,7 +6709,8 @@ impl Error for UpdateFolderError {
             UpdateFolderError::Validation(ref cause) => cause,
             UpdateFolderError::Credentials(ref err) => err.description(),
             UpdateFolderError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateFolderError::Unknown(ref cause) => cause,
+            UpdateFolderError::ParseError(ref cause) => cause,
+            UpdateFolderError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6026,60 +6739,76 @@ pub enum UpdateUserError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateUserError {
-    pub fn from_body(body: &str) -> UpdateUserError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateUserError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "DeactivatingLastSystemUserException" => {
-                        UpdateUserError::DeactivatingLastSystemUser(String::from(error_message))
-                    }
-                    "EntityNotExistsException" => {
-                        UpdateUserError::EntityNotExists(String::from(error_message))
-                    }
-                    "FailedDependencyException" => {
-                        UpdateUserError::FailedDependency(String::from(error_message))
-                    }
-                    "IllegalUserStateException" => {
-                        UpdateUserError::IllegalUserState(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        UpdateUserError::InvalidArgument(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        UpdateUserError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperationException" => {
-                        UpdateUserError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "UnauthorizedResourceAccessException" => {
-                        UpdateUserError::UnauthorizedResourceAccess(String::from(error_message))
-                    }
-                    "ValidationException" => UpdateUserError::Validation(error_message.to_string()),
-                    _ => UpdateUserError::Unknown(String::from(body)),
+            match error_type {
+                "DeactivatingLastSystemUserException" => {
+                    return UpdateUserError::DeactivatingLastSystemUser(String::from(error_message))
                 }
+                "EntityNotExistsException" => {
+                    return UpdateUserError::EntityNotExists(String::from(error_message))
+                }
+                "FailedDependencyException" => {
+                    return UpdateUserError::FailedDependency(String::from(error_message))
+                }
+                "IllegalUserStateException" => {
+                    return UpdateUserError::IllegalUserState(String::from(error_message))
+                }
+                "InvalidArgumentException" => {
+                    return UpdateUserError::InvalidArgument(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return UpdateUserError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperationException" => {
+                    return UpdateUserError::UnauthorizedOperation(String::from(error_message))
+                }
+                "UnauthorizedResourceAccessException" => {
+                    return UpdateUserError::UnauthorizedResourceAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateUserError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateUserError::Unknown(String::from(body)),
         }
+        return UpdateUserError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateUserError {
     fn from(err: serde_json::error::Error) -> UpdateUserError {
-        UpdateUserError::Unknown(err.description().to_string())
+        UpdateUserError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateUserError {
@@ -6116,7 +6845,8 @@ impl Error for UpdateUserError {
             UpdateUserError::Validation(ref cause) => cause,
             UpdateUserError::Credentials(ref err) => err.description(),
             UpdateUserError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateUserError::Unknown(ref cause) => cause,
+            UpdateUserError::ParseError(ref cause) => cause,
+            UpdateUserError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6416,9 +7146,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AbortDocumentVersionUploadError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AbortDocumentVersionUploadError::from_response(response))
                 }))
             }
         })
@@ -6457,11 +7185,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ActivateUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ActivateUserError::from_response(response))),
+                )
             }
         })
     }
@@ -6503,11 +7232,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddResourcePermissionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddResourcePermissionsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6549,11 +7278,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateCommentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateCommentError::from_response(response))),
+                )
             }
         })
     }
@@ -6600,11 +7330,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateCustomMetadataError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateCustomMetadataError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6642,11 +7372,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateFolderError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateFolderError::from_response(response))),
+                )
             }
         })
     }
@@ -6687,11 +7418,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateLabelsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateLabelsError::from_response(response))),
+                )
             }
         })
     }
@@ -6732,9 +7464,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateNotificationSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateNotificationSubscriptionError::from_response(response))
                 }))
             }
         })
@@ -6773,11 +7503,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateUserError::from_response(response))),
+                )
             }
         })
     }
@@ -6807,11 +7538,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeactivateUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeactivateUserError::from_response(response))),
+                )
             }
         })
     }
@@ -6840,11 +7572,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteCommentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteCommentError::from_response(response))),
+                )
             }
         })
     }
@@ -6896,11 +7629,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteCustomMetadataError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteCustomMetadataError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6930,11 +7663,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDocumentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteDocumentError::from_response(response))),
+                )
             }
         })
     }
@@ -6958,11 +7692,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteFolderError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteFolderError::from_response(response))),
+                )
             }
         })
     }
@@ -6992,11 +7727,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteFolderContentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteFolderContentsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7044,11 +7779,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteLabelsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteLabelsError::from_response(response))),
+                )
             }
         })
     }
@@ -7076,9 +7812,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteNotificationSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteNotificationSubscriptionError::from_response(response))
                 }))
             }
         })
@@ -7103,11 +7837,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteUserError::from_response(response))),
+                )
             }
         })
     }
@@ -7163,11 +7898,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeActivitiesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeActivitiesError::from_response(response))),
+                )
             }
         })
     }
@@ -7214,11 +7950,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCommentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeCommentsError::from_response(response))),
+                )
             }
         })
     }
@@ -7272,9 +8009,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeDocumentVersionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeDocumentVersionsError::from_response(response))
                 }))
             }
         })
@@ -7334,11 +8069,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeFolderContentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeFolderContentsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7385,11 +8120,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeGroupsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeGroupsError::from_response(response))),
+                )
             }
         })
     }
@@ -7438,8 +8174,8 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeNotificationSubscriptionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(DescribeNotificationSubscriptionsError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -7493,9 +8229,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeResourcePermissionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeResourcePermissionsError::from_response(response))
                 }))
             }
         })
@@ -7538,11 +8272,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeRootFoldersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeRootFoldersError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7606,11 +8340,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeUsersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeUsersError::from_response(response))),
+                )
             }
         })
     }
@@ -7643,11 +8378,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCurrentUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetCurrentUserError::from_response(response))),
+                )
             }
         })
     }
@@ -7690,11 +8426,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDocumentError::from_response(response))),
+                )
             }
         })
     }
@@ -7743,11 +8480,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentPathError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDocumentPathError::from_response(response))),
+                )
             }
         })
     }
@@ -7795,11 +8533,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDocumentVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDocumentVersionError::from_response(response))),
+                )
             }
         })
     }
@@ -7839,11 +8578,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetFolderError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetFolderError::from_response(response))),
+                )
             }
         })
     }
@@ -7892,11 +8632,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetFolderPathError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetFolderPathError::from_response(response))),
+                )
             }
         })
     }
@@ -7938,9 +8679,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InitiateDocumentVersionUploadError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(InitiateDocumentVersionUploadError::from_response(response))
                 }))
             }
         })
@@ -7972,9 +8711,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveAllResourcePermissionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RemoveAllResourcePermissionsError::from_response(response))
                 }))
             }
         })
@@ -8012,9 +8749,7 @@ impl Workdocs for WorkdocsClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveResourcePermissionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RemoveResourcePermissionError::from_response(response))
                 }))
             }
         })
@@ -8048,11 +8783,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDocumentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateDocumentError::from_response(response))),
+                )
             }
         })
     }
@@ -8086,11 +8822,11 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDocumentVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateDocumentVersionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8117,11 +8853,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateFolderError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateFolderError::from_response(response))),
+                )
             }
         })
     }
@@ -8159,11 +8896,12 @@ impl Workdocs for WorkdocsClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateUserError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateUserError::from_response(response))),
+                )
             }
         })
     }

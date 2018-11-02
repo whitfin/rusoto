@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct BatchDeleteBuildsInput {
@@ -36,6 +36,7 @@ pub struct BatchDeleteBuildsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchDeleteBuildsOutput {
     /// <p>The IDs of the builds that were successfully deleted.</p>
     #[serde(rename = "buildsDeleted")]
@@ -55,6 +56,7 @@ pub struct BatchGetBuildsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetBuildsOutput {
     /// <p>Information about the requested builds.</p>
     #[serde(rename = "builds")]
@@ -74,6 +76,7 @@ pub struct BatchGetProjectsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetProjectsOutput {
     /// <p>Information about the requested build projects.</p>
     #[serde(rename = "projects")]
@@ -87,6 +90,7 @@ pub struct BatchGetProjectsOutput {
 
 /// <p>Information about a build.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Build {
     /// <p>The Amazon Resource Name (ARN) of the build.</p>
     #[serde(rename = "arn")]
@@ -176,6 +180,7 @@ pub struct Build {
 
 /// <p>Information about build output artifacts.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BuildArtifacts {
     /// <p> Information that tells you if encryption for build artifacts is disabled. </p>
     #[serde(rename = "encryptionDisabled")]
@@ -197,6 +202,7 @@ pub struct BuildArtifacts {
 
 /// <p>Information about a build that could not be successfully deleted.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BuildNotDeleted {
     /// <p>The ID of the build that could not be successfully deleted.</p>
     #[serde(rename = "id")]
@@ -210,6 +216,7 @@ pub struct BuildNotDeleted {
 
 /// <p>Information about a stage for a build.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BuildPhase {
     /// <p>Additional information about a build phase, especially to help troubleshoot a failed build.</p>
     #[serde(rename = "contexts")]
@@ -285,6 +292,7 @@ pub struct CreateProjectInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateProjectOutput {
     /// <p>Information about the build project that was created.</p>
     #[serde(rename = "project")]
@@ -304,6 +312,7 @@ pub struct CreateWebhookInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateWebhookOutput {
     /// <p>Information about a webhook in GitHub that connects repository events to a build project in AWS CodeBuild.</p>
     #[serde(rename = "webhook")]
@@ -319,6 +328,7 @@ pub struct DeleteProjectInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteProjectOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -329,10 +339,12 @@ pub struct DeleteWebhookInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteWebhookOutput {}
 
 /// <p>Information about a Docker image that is managed by AWS CodeBuild.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnvironmentImage {
     /// <p>The description of the Docker image.</p>
     #[serde(rename = "description")]
@@ -350,6 +362,7 @@ pub struct EnvironmentImage {
 
 /// <p>A set of Docker images that are related by programming language and are managed by AWS CodeBuild.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnvironmentLanguage {
     /// <p>The list of Docker images that are related by the specified programming language.</p>
     #[serde(rename = "images")]
@@ -363,6 +376,7 @@ pub struct EnvironmentLanguage {
 
 /// <p>A set of Docker images that are related by platform and are managed by AWS CodeBuild.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnvironmentPlatform {
     /// <p>The list of programming languages that are available for the specified platform.</p>
     #[serde(rename = "languages")]
@@ -397,6 +411,7 @@ pub struct InvalidateProjectCacheInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InvalidateProjectCacheOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -415,6 +430,7 @@ pub struct ListBuildsForProjectInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListBuildsForProjectOutput {
     /// <p>A list of build IDs for the specified build project, with each build ID representing a single build.</p>
     #[serde(rename = "ids")]
@@ -439,6 +455,7 @@ pub struct ListBuildsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListBuildsOutput {
     /// <p>A list of build IDs, with each build ID representing a single build.</p>
     #[serde(rename = "ids")]
@@ -454,6 +471,7 @@ pub struct ListBuildsOutput {
 pub struct ListCuratedEnvironmentImagesInput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListCuratedEnvironmentImagesOutput {
     /// <p>Information about supported platforms for Docker images that are managed by AWS CodeBuild.</p>
     #[serde(rename = "platforms")]
@@ -478,6 +496,7 @@ pub struct ListProjectsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListProjectsOutput {
     /// <p>If there are more than 100 items in the list, only the first 100 items are returned, along with a unique string called a <i>next token</i>. To get the next batch of items in the list, call this operation again, adding the next token to the call.</p>
     #[serde(rename = "nextToken")]
@@ -491,6 +510,7 @@ pub struct ListProjectsOutput {
 
 /// <p>Information about build logs in Amazon CloudWatch Logs.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LogsLocation {
     /// <p>The URL to an individual build log in Amazon CloudWatch Logs.</p>
     #[serde(rename = "deepLink")]
@@ -508,6 +528,7 @@ pub struct LogsLocation {
 
 /// <p>Describes a network interface.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct NetworkInterface {
     /// <p>The ID of the network interface.</p>
     #[serde(rename = "networkInterfaceId")]
@@ -521,6 +542,7 @@ pub struct NetworkInterface {
 
 /// <p>Additional information about a build phase that has an error. You can use this information to help troubleshoot a failed build.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PhaseContext {
     /// <p>An explanation of the build phase's context. This explanation might include a command ID and an exit code.</p>
     #[serde(rename = "message")]
@@ -534,6 +556,7 @@ pub struct PhaseContext {
 
 /// <p>Information about a build project.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Project {
     /// <p>The Amazon Resource Name (ARN) of the build project.</p>
     #[serde(rename = "arn")]
@@ -635,6 +658,7 @@ pub struct ProjectArtifacts {
 
 /// <p>Information about the build badge for the build project.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ProjectBadge {
     /// <p>Set this to true to generate a publicly-accessible URL for your project's build badge.</p>
     #[serde(rename = "badgeEnabled")]
@@ -812,6 +836,7 @@ pub struct StartBuildInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartBuildOutput {
     /// <p>Information about the build to be run.</p>
     #[serde(rename = "build")]
@@ -827,6 +852,7 @@ pub struct StopBuildInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StopBuildOutput {
     /// <p>Information about the build.</p>
     #[serde(rename = "build")]
@@ -899,6 +925,7 @@ pub struct UpdateProjectInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateProjectOutput {
     /// <p>Information about the build project that was changed.</p>
     #[serde(rename = "project")]
@@ -922,6 +949,7 @@ pub struct UpdateWebhookInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateWebhookOutput {
     /// <p> Information about a repository's webhook that is associated with a project in AWS CodeBuild. </p>
     #[serde(rename = "webhook")]
@@ -948,6 +976,7 @@ pub struct VpcConfig {
 
 /// <p>Information about a webhook in GitHub that connects repository events to a build project in AWS CodeBuild.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Webhook {
     /// <p>A regular expression used to determine which branches in a repository are built when a webhook is triggered. If the name of a branch matches the regular expression, then it is built. If it doesn't match, then it is not. If branchFilter is empty, then all branches are built.</p>
     #[serde(rename = "branchFilter")]
@@ -982,41 +1011,41 @@ pub enum BatchDeleteBuildsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchDeleteBuildsError {
-    pub fn from_body(body: &str) -> BatchDeleteBuildsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchDeleteBuildsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        BatchDeleteBuildsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        BatchDeleteBuildsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchDeleteBuildsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return BatchDeleteBuildsError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return BatchDeleteBuildsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchDeleteBuildsError::Unknown(String::from(body)),
         }
+        return BatchDeleteBuildsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchDeleteBuildsError {
     fn from(err: serde_json::error::Error) -> BatchDeleteBuildsError {
-        BatchDeleteBuildsError::Unknown(err.description().to_string())
+        BatchDeleteBuildsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchDeleteBuildsError {
@@ -1048,7 +1077,8 @@ impl Error for BatchDeleteBuildsError {
             BatchDeleteBuildsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchDeleteBuildsError::Unknown(ref cause) => cause,
+            BatchDeleteBuildsError::ParseError(ref cause) => cause,
+            BatchDeleteBuildsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1063,41 +1093,41 @@ pub enum BatchGetBuildsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetBuildsError {
-    pub fn from_body(body: &str) -> BatchGetBuildsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetBuildsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        BatchGetBuildsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        BatchGetBuildsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetBuildsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return BatchGetBuildsError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return BatchGetBuildsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetBuildsError::Unknown(String::from(body)),
         }
+        return BatchGetBuildsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetBuildsError {
     fn from(err: serde_json::error::Error) -> BatchGetBuildsError {
-        BatchGetBuildsError::Unknown(err.description().to_string())
+        BatchGetBuildsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetBuildsError {
@@ -1127,7 +1157,8 @@ impl Error for BatchGetBuildsError {
             BatchGetBuildsError::Validation(ref cause) => cause,
             BatchGetBuildsError::Credentials(ref err) => err.description(),
             BatchGetBuildsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            BatchGetBuildsError::Unknown(ref cause) => cause,
+            BatchGetBuildsError::ParseError(ref cause) => cause,
+            BatchGetBuildsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1142,41 +1173,41 @@ pub enum BatchGetProjectsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetProjectsError {
-    pub fn from_body(body: &str) -> BatchGetProjectsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetProjectsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        BatchGetProjectsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        BatchGetProjectsError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetProjectsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return BatchGetProjectsError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return BatchGetProjectsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetProjectsError::Unknown(String::from(body)),
         }
+        return BatchGetProjectsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetProjectsError {
     fn from(err: serde_json::error::Error) -> BatchGetProjectsError {
-        BatchGetProjectsError::Unknown(err.description().to_string())
+        BatchGetProjectsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetProjectsError {
@@ -1206,7 +1237,8 @@ impl Error for BatchGetProjectsError {
             BatchGetProjectsError::Validation(ref cause) => cause,
             BatchGetProjectsError::Credentials(ref err) => err.description(),
             BatchGetProjectsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            BatchGetProjectsError::Unknown(ref cause) => cause,
+            BatchGetProjectsError::ParseError(ref cause) => cause,
+            BatchGetProjectsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1225,47 +1257,47 @@ pub enum CreateProjectError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateProjectError {
-    pub fn from_body(body: &str) -> CreateProjectError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateProjectError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccountLimitExceededException" => {
-                        CreateProjectError::AccountLimitExceeded(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateProjectError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceAlreadyExistsException" => {
-                        CreateProjectError::ResourceAlreadyExists(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateProjectError::Validation(error_message.to_string())
-                    }
-                    _ => CreateProjectError::Unknown(String::from(body)),
+            match *error_type {
+                "AccountLimitExceededException" => {
+                    return CreateProjectError::AccountLimitExceeded(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return CreateProjectError::InvalidInput(String::from(error_message))
+                }
+                "ResourceAlreadyExistsException" => {
+                    return CreateProjectError::ResourceAlreadyExists(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateProjectError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateProjectError::Unknown(String::from(body)),
         }
+        return CreateProjectError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateProjectError {
     fn from(err: serde_json::error::Error) -> CreateProjectError {
-        CreateProjectError::Unknown(err.description().to_string())
+        CreateProjectError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateProjectError {
@@ -1297,7 +1329,8 @@ impl Error for CreateProjectError {
             CreateProjectError::Validation(ref cause) => cause,
             CreateProjectError::Credentials(ref err) => err.description(),
             CreateProjectError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateProjectError::Unknown(ref cause) => cause,
+            CreateProjectError::ParseError(ref cause) => cause,
+            CreateProjectError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1318,50 +1351,50 @@ pub enum CreateWebhookError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateWebhookError {
-    pub fn from_body(body: &str) -> CreateWebhookError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateWebhookError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        CreateWebhookError::InvalidInput(String::from(error_message))
-                    }
-                    "OAuthProviderException" => {
-                        CreateWebhookError::OAuthProvider(String::from(error_message))
-                    }
-                    "ResourceAlreadyExistsException" => {
-                        CreateWebhookError::ResourceAlreadyExists(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        CreateWebhookError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateWebhookError::Validation(error_message.to_string())
-                    }
-                    _ => CreateWebhookError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return CreateWebhookError::InvalidInput(String::from(error_message))
                 }
+                "OAuthProviderException" => {
+                    return CreateWebhookError::OAuthProvider(String::from(error_message))
+                }
+                "ResourceAlreadyExistsException" => {
+                    return CreateWebhookError::ResourceAlreadyExists(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return CreateWebhookError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateWebhookError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateWebhookError::Unknown(String::from(body)),
         }
+        return CreateWebhookError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateWebhookError {
     fn from(err: serde_json::error::Error) -> CreateWebhookError {
-        CreateWebhookError::Unknown(err.description().to_string())
+        CreateWebhookError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateWebhookError {
@@ -1394,7 +1427,8 @@ impl Error for CreateWebhookError {
             CreateWebhookError::Validation(ref cause) => cause,
             CreateWebhookError::Credentials(ref err) => err.description(),
             CreateWebhookError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateWebhookError::Unknown(ref cause) => cause,
+            CreateWebhookError::ParseError(ref cause) => cause,
+            CreateWebhookError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1409,41 +1443,41 @@ pub enum DeleteProjectError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteProjectError {
-    pub fn from_body(body: &str) -> DeleteProjectError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteProjectError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        DeleteProjectError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteProjectError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteProjectError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return DeleteProjectError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return DeleteProjectError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteProjectError::Unknown(String::from(body)),
         }
+        return DeleteProjectError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteProjectError {
     fn from(err: serde_json::error::Error) -> DeleteProjectError {
-        DeleteProjectError::Unknown(err.description().to_string())
+        DeleteProjectError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteProjectError {
@@ -1473,7 +1507,8 @@ impl Error for DeleteProjectError {
             DeleteProjectError::Validation(ref cause) => cause,
             DeleteProjectError::Credentials(ref err) => err.description(),
             DeleteProjectError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteProjectError::Unknown(ref cause) => cause,
+            DeleteProjectError::ParseError(ref cause) => cause,
+            DeleteProjectError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1492,47 +1527,47 @@ pub enum DeleteWebhookError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteWebhookError {
-    pub fn from_body(body: &str) -> DeleteWebhookError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteWebhookError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        DeleteWebhookError::InvalidInput(String::from(error_message))
-                    }
-                    "OAuthProviderException" => {
-                        DeleteWebhookError::OAuthProvider(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteWebhookError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteWebhookError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteWebhookError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return DeleteWebhookError::InvalidInput(String::from(error_message))
                 }
+                "OAuthProviderException" => {
+                    return DeleteWebhookError::OAuthProvider(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteWebhookError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteWebhookError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteWebhookError::Unknown(String::from(body)),
         }
+        return DeleteWebhookError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteWebhookError {
     fn from(err: serde_json::error::Error) -> DeleteWebhookError {
-        DeleteWebhookError::Unknown(err.description().to_string())
+        DeleteWebhookError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteWebhookError {
@@ -1564,7 +1599,8 @@ impl Error for DeleteWebhookError {
             DeleteWebhookError::Validation(ref cause) => cause,
             DeleteWebhookError::Credentials(ref err) => err.description(),
             DeleteWebhookError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteWebhookError::Unknown(ref cause) => cause,
+            DeleteWebhookError::ParseError(ref cause) => cause,
+            DeleteWebhookError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1581,44 +1617,46 @@ pub enum InvalidateProjectCacheError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InvalidateProjectCacheError {
-    pub fn from_body(body: &str) -> InvalidateProjectCacheError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> InvalidateProjectCacheError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        InvalidateProjectCacheError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        InvalidateProjectCacheError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        InvalidateProjectCacheError::Validation(error_message.to_string())
-                    }
-                    _ => InvalidateProjectCacheError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return InvalidateProjectCacheError::InvalidInput(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return InvalidateProjectCacheError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return InvalidateProjectCacheError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => InvalidateProjectCacheError::Unknown(String::from(body)),
         }
+        return InvalidateProjectCacheError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InvalidateProjectCacheError {
     fn from(err: serde_json::error::Error) -> InvalidateProjectCacheError {
-        InvalidateProjectCacheError::Unknown(err.description().to_string())
+        InvalidateProjectCacheError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InvalidateProjectCacheError {
@@ -1651,7 +1689,8 @@ impl Error for InvalidateProjectCacheError {
             InvalidateProjectCacheError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            InvalidateProjectCacheError::Unknown(ref cause) => cause,
+            InvalidateProjectCacheError::ParseError(ref cause) => cause,
+            InvalidateProjectCacheError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1666,39 +1705,41 @@ pub enum ListBuildsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListBuildsError {
-    pub fn from_body(body: &str) -> ListBuildsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListBuildsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        ListBuildsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => ListBuildsError::Validation(error_message.to_string()),
-                    _ => ListBuildsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return ListBuildsError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return ListBuildsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListBuildsError::Unknown(String::from(body)),
         }
+        return ListBuildsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListBuildsError {
     fn from(err: serde_json::error::Error) -> ListBuildsError {
-        ListBuildsError::Unknown(err.description().to_string())
+        ListBuildsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListBuildsError {
@@ -1728,7 +1769,8 @@ impl Error for ListBuildsError {
             ListBuildsError::Validation(ref cause) => cause,
             ListBuildsError::Credentials(ref err) => err.description(),
             ListBuildsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListBuildsError::Unknown(ref cause) => cause,
+            ListBuildsError::ParseError(ref cause) => cause,
+            ListBuildsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1745,44 +1787,44 @@ pub enum ListBuildsForProjectError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListBuildsForProjectError {
-    pub fn from_body(body: &str) -> ListBuildsForProjectError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListBuildsForProjectError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        ListBuildsForProjectError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListBuildsForProjectError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListBuildsForProjectError::Validation(error_message.to_string())
-                    }
-                    _ => ListBuildsForProjectError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return ListBuildsForProjectError::InvalidInput(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ListBuildsForProjectError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListBuildsForProjectError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListBuildsForProjectError::Unknown(String::from(body)),
         }
+        return ListBuildsForProjectError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListBuildsForProjectError {
     fn from(err: serde_json::error::Error) -> ListBuildsForProjectError {
-        ListBuildsForProjectError::Unknown(err.description().to_string())
+        ListBuildsForProjectError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListBuildsForProjectError {
@@ -1815,7 +1857,8 @@ impl Error for ListBuildsForProjectError {
             ListBuildsForProjectError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListBuildsForProjectError::Unknown(ref cause) => cause,
+            ListBuildsForProjectError::ParseError(ref cause) => cause,
+            ListBuildsForProjectError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1828,38 +1871,38 @@ pub enum ListCuratedEnvironmentImagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListCuratedEnvironmentImagesError {
-    pub fn from_body(body: &str) -> ListCuratedEnvironmentImagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListCuratedEnvironmentImagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ValidationException" => {
-                        ListCuratedEnvironmentImagesError::Validation(error_message.to_string())
-                    }
-                    _ => ListCuratedEnvironmentImagesError::Unknown(String::from(body)),
+            match *error_type {
+                "ValidationException" => {
+                    return ListCuratedEnvironmentImagesError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => ListCuratedEnvironmentImagesError::Unknown(String::from(body)),
         }
+        return ListCuratedEnvironmentImagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListCuratedEnvironmentImagesError {
     fn from(err: serde_json::error::Error) -> ListCuratedEnvironmentImagesError {
-        ListCuratedEnvironmentImagesError::Unknown(err.description().to_string())
+        ListCuratedEnvironmentImagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListCuratedEnvironmentImagesError {
@@ -1890,7 +1933,8 @@ impl Error for ListCuratedEnvironmentImagesError {
             ListCuratedEnvironmentImagesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListCuratedEnvironmentImagesError::Unknown(ref cause) => cause,
+            ListCuratedEnvironmentImagesError::ParseError(ref cause) => cause,
+            ListCuratedEnvironmentImagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1905,41 +1949,41 @@ pub enum ListProjectsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListProjectsError {
-    pub fn from_body(body: &str) -> ListProjectsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListProjectsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        ListProjectsError::InvalidInput(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListProjectsError::Validation(error_message.to_string())
-                    }
-                    _ => ListProjectsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return ListProjectsError::InvalidInput(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return ListProjectsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListProjectsError::Unknown(String::from(body)),
         }
+        return ListProjectsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListProjectsError {
     fn from(err: serde_json::error::Error) -> ListProjectsError {
-        ListProjectsError::Unknown(err.description().to_string())
+        ListProjectsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListProjectsError {
@@ -1969,7 +2013,8 @@ impl Error for ListProjectsError {
             ListProjectsError::Validation(ref cause) => cause,
             ListProjectsError::Credentials(ref err) => err.description(),
             ListProjectsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListProjectsError::Unknown(ref cause) => cause,
+            ListProjectsError::ParseError(ref cause) => cause,
+            ListProjectsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1988,45 +2033,47 @@ pub enum StartBuildError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartBuildError {
-    pub fn from_body(body: &str) -> StartBuildError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartBuildError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccountLimitExceededException" => {
-                        StartBuildError::AccountLimitExceeded(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        StartBuildError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        StartBuildError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => StartBuildError::Validation(error_message.to_string()),
-                    _ => StartBuildError::Unknown(String::from(body)),
+            match *error_type {
+                "AccountLimitExceededException" => {
+                    return StartBuildError::AccountLimitExceeded(String::from(error_message))
                 }
+                "InvalidInputException" => {
+                    return StartBuildError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return StartBuildError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StartBuildError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartBuildError::Unknown(String::from(body)),
         }
+        return StartBuildError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartBuildError {
     fn from(err: serde_json::error::Error) -> StartBuildError {
-        StartBuildError::Unknown(err.description().to_string())
+        StartBuildError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartBuildError {
@@ -2058,7 +2105,8 @@ impl Error for StartBuildError {
             StartBuildError::Validation(ref cause) => cause,
             StartBuildError::Credentials(ref err) => err.description(),
             StartBuildError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StartBuildError::Unknown(ref cause) => cause,
+            StartBuildError::ParseError(ref cause) => cause,
+            StartBuildError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2075,42 +2123,44 @@ pub enum StopBuildError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StopBuildError {
-    pub fn from_body(body: &str) -> StopBuildError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StopBuildError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        StopBuildError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        StopBuildError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => StopBuildError::Validation(error_message.to_string()),
-                    _ => StopBuildError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return StopBuildError::InvalidInput(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return StopBuildError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StopBuildError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StopBuildError::Unknown(String::from(body)),
         }
+        return StopBuildError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StopBuildError {
     fn from(err: serde_json::error::Error) -> StopBuildError {
-        StopBuildError::Unknown(err.description().to_string())
+        StopBuildError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StopBuildError {
@@ -2141,7 +2191,8 @@ impl Error for StopBuildError {
             StopBuildError::Validation(ref cause) => cause,
             StopBuildError::Credentials(ref err) => err.description(),
             StopBuildError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StopBuildError::Unknown(ref cause) => cause,
+            StopBuildError::ParseError(ref cause) => cause,
+            StopBuildError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2158,44 +2209,44 @@ pub enum UpdateProjectError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateProjectError {
-    pub fn from_body(body: &str) -> UpdateProjectError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateProjectError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        UpdateProjectError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateProjectError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateProjectError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateProjectError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return UpdateProjectError::InvalidInput(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return UpdateProjectError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateProjectError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateProjectError::Unknown(String::from(body)),
         }
+        return UpdateProjectError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateProjectError {
     fn from(err: serde_json::error::Error) -> UpdateProjectError {
-        UpdateProjectError::Unknown(err.description().to_string())
+        UpdateProjectError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateProjectError {
@@ -2226,7 +2277,8 @@ impl Error for UpdateProjectError {
             UpdateProjectError::Validation(ref cause) => cause,
             UpdateProjectError::Credentials(ref err) => err.description(),
             UpdateProjectError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateProjectError::Unknown(ref cause) => cause,
+            UpdateProjectError::ParseError(ref cause) => cause,
+            UpdateProjectError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2245,47 +2297,47 @@ pub enum UpdateWebhookError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateWebhookError {
-    pub fn from_body(body: &str) -> UpdateWebhookError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateWebhookError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidInputException" => {
-                        UpdateWebhookError::InvalidInput(String::from(error_message))
-                    }
-                    "OAuthProviderException" => {
-                        UpdateWebhookError::OAuthProvider(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateWebhookError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateWebhookError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateWebhookError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidInputException" => {
+                    return UpdateWebhookError::InvalidInput(String::from(error_message))
                 }
+                "OAuthProviderException" => {
+                    return UpdateWebhookError::OAuthProvider(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateWebhookError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateWebhookError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateWebhookError::Unknown(String::from(body)),
         }
+        return UpdateWebhookError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateWebhookError {
     fn from(err: serde_json::error::Error) -> UpdateWebhookError {
-        UpdateWebhookError::Unknown(err.description().to_string())
+        UpdateWebhookError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateWebhookError {
@@ -2317,7 +2369,8 @@ impl Error for UpdateWebhookError {
             UpdateWebhookError::Validation(ref cause) => cause,
             UpdateWebhookError::Credentials(ref err) => err.description(),
             UpdateWebhookError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateWebhookError::Unknown(ref cause) => cause,
+            UpdateWebhookError::ParseError(ref cause) => cause,
+            UpdateWebhookError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2474,14 +2527,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<BatchDeleteBuildsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchDeleteBuildsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(BatchDeleteBuildsError::from_response(response))),
+                )
             }
         })
     }
@@ -2509,14 +2564,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<BatchGetBuildsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetBuildsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(BatchGetBuildsError::from_response(response))),
+                )
             }
         })
     }
@@ -2544,14 +2601,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<BatchGetProjectsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetProjectsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(BatchGetProjectsError::from_response(response))),
+                )
             }
         })
     }
@@ -2579,14 +2638,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<CreateProjectOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateProjectError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateProjectError::from_response(response))),
+                )
             }
         })
     }
@@ -2614,14 +2675,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<CreateWebhookOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateWebhookError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateWebhookError::from_response(response))),
+                )
             }
         })
     }
@@ -2649,14 +2712,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<DeleteProjectOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteProjectError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteProjectError::from_response(response))),
+                )
             }
         })
     }
@@ -2684,14 +2749,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<DeleteWebhookOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteWebhookError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteWebhookError::from_response(response))),
+                )
             }
         })
     }
@@ -2719,14 +2786,15 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<InvalidateProjectCacheOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InvalidateProjectCacheError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(InvalidateProjectCacheError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2754,14 +2822,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<ListBuildsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListBuildsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListBuildsError::from_response(response))),
+                )
             }
         })
     }
@@ -2789,14 +2859,15 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<ListBuildsForProjectOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListBuildsForProjectError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListBuildsForProjectError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2825,13 +2896,12 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<ListCuratedEnvironmentImagesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListCuratedEnvironmentImagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListCuratedEnvironmentImagesError::from_response(response))
                 }))
             }
         })
@@ -2860,14 +2930,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<ListProjectsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListProjectsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListProjectsError::from_response(response))),
+                )
             }
         })
     }
@@ -2895,14 +2967,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<StartBuildOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartBuildError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StartBuildError::from_response(response))),
+                )
             }
         })
     }
@@ -2927,14 +3001,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<StopBuildOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StopBuildError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StopBuildError::from_response(response))),
+                )
             }
         })
     }
@@ -2962,14 +3038,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<UpdateProjectOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateProjectError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateProjectError::from_response(response))),
+                )
             }
         })
     }
@@ -2997,14 +3075,16 @@ impl CodeBuild for CodeBuildClient {
 
                     serde_json::from_str::<UpdateWebhookOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateWebhookError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateWebhookError::from_response(response))),
+                )
             }
         })
     }

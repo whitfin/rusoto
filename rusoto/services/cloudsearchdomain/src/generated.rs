@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,10 +27,11 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>A container for facet information. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Bucket {
     /// <p>The number of hits that contain the facet value in the specified facet field.</p>
     #[serde(rename = "count")]
@@ -44,6 +45,7 @@ pub struct Bucket {
 
 /// <p>A container for the calculated facet values and counts.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BucketInfo {
     /// <p>A list of the calculated facet values and counts.</p>
     #[serde(rename = "buckets")]
@@ -53,6 +55,7 @@ pub struct BucketInfo {
 
 /// <p>A warning returned by the document service when an issue is discovered while processing an upload request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DocumentServiceWarning {
     /// <p>The description for a warning returned by the document service.</p>
     #[serde(rename = "message")]
@@ -62,6 +65,7 @@ pub struct DocumentServiceWarning {
 
 /// <p>The statistics for a field calculated in the request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FieldStats {
     /// <p>The number of documents that contain a value in the specified field in the result set.</p>
     #[serde(rename = "count")]
@@ -99,6 +103,7 @@ pub struct FieldStats {
 
 /// <p>Information about a document that matches the search request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Hit {
     /// <p>The expressions returned from a document that matches the search request.</p>
     #[serde(rename = "exprs")]
@@ -120,6 +125,7 @@ pub struct Hit {
 
 /// <p>The collection of documents that match the search request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Hits {
     /// <p>A cursor that can be used to retrieve the next set of matching documents when you want to page through a large result set.</p>
     #[serde(rename = "cursor")]
@@ -201,6 +207,7 @@ pub struct SearchRequest {
 
 /// <p>The result of a <code>Search</code> request. Contains the documents that match the specified search criteria and any requested fields, highlights, and facet information.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SearchResponse {
     /// <p>The requested facet information.</p>
     #[serde(rename = "facets")]
@@ -222,6 +229,7 @@ pub struct SearchResponse {
 
 /// <p>Contains the resource id (<code>rid</code>) and the time it took to process the request (<code>timems</code>).</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SearchStatus {
     /// <p>The encrypted resource ID for the request.</p>
     #[serde(rename = "rid")]
@@ -235,6 +243,7 @@ pub struct SearchStatus {
 
 /// <p>Container for the suggestion information returned in a <code>SuggestResponse</code>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SuggestModel {
     /// <p>The number of documents that were found to match the query string.</p>
     #[serde(rename = "found")]
@@ -267,6 +276,7 @@ pub struct SuggestRequest {
 
 /// <p>Contains the response to a <code>Suggest</code> request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SuggestResponse {
     /// <p>The status of a <code>SuggestRequest</code>. Contains the resource ID (<code>rid</code>) and how long it took to process the request (<code>timems</code>).</p>
     #[serde(rename = "status")]
@@ -280,6 +290,7 @@ pub struct SuggestResponse {
 
 /// <p>Contains the resource id (<code>rid</code>) and the time it took to process the request (<code>timems</code>).</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SuggestStatus {
     /// <p>The encrypted resource ID for the request.</p>
     #[serde(rename = "rid")]
@@ -293,6 +304,7 @@ pub struct SuggestStatus {
 
 /// <p>An autocomplete suggestion that matches the query string specified in a <code>SuggestRequest</code>. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SuggestionMatch {
     /// <p>The document ID of the suggested document.</p>
     #[serde(rename = "id")]
@@ -319,13 +331,14 @@ pub struct UploadDocumentsRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub documents: Vec<u8>,
 }
 
 /// <p>Contains the response to an <code>UploadDocuments</code> request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UploadDocumentsResponse {
     /// <p>The number of documents that were added to the search domain.</p>
     #[serde(rename = "adds")]
@@ -356,37 +369,51 @@ pub enum SearchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SearchError {
-    pub fn from_body(body: &str) -> SearchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> SearchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "SearchException" => SearchError::Search(String::from(error_message)),
-                    "ValidationException" => SearchError::Validation(error_message.to_string()),
-                    _ => SearchError::Unknown(String::from(body)),
-                }
+            match error_type {
+                "SearchException" => return SearchError::Search(String::from(error_message)),
+                "ValidationException" => return SearchError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => SearchError::Unknown(String::from(body)),
         }
+        return SearchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SearchError {
     fn from(err: serde_json::error::Error) -> SearchError {
-        SearchError::Unknown(err.description().to_string())
+        SearchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SearchError {
@@ -416,7 +443,8 @@ impl Error for SearchError {
             SearchError::Validation(ref cause) => cause,
             SearchError::Credentials(ref err) => err.description(),
             SearchError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SearchError::Unknown(ref cause) => cause,
+            SearchError::ParseError(ref cause) => cause,
+            SearchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -431,37 +459,51 @@ pub enum SuggestError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SuggestError {
-    pub fn from_body(body: &str) -> SuggestError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> SuggestError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "SearchException" => SuggestError::Search(String::from(error_message)),
-                    "ValidationException" => SuggestError::Validation(error_message.to_string()),
-                    _ => SuggestError::Unknown(String::from(body)),
-                }
+            match error_type {
+                "SearchException" => return SuggestError::Search(String::from(error_message)),
+                "ValidationException" => return SuggestError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => SuggestError::Unknown(String::from(body)),
         }
+        return SuggestError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SuggestError {
     fn from(err: serde_json::error::Error) -> SuggestError {
-        SuggestError::Unknown(err.description().to_string())
+        SuggestError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SuggestError {
@@ -491,7 +533,8 @@ impl Error for SuggestError {
             SuggestError::Validation(ref cause) => cause,
             SuggestError::Credentials(ref err) => err.description(),
             SuggestError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            SuggestError::Unknown(ref cause) => cause,
+            SuggestError::ParseError(ref cause) => cause,
+            SuggestError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -506,41 +549,55 @@ pub enum UploadDocumentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UploadDocumentsError {
-    pub fn from_body(body: &str) -> UploadDocumentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UploadDocumentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "DocumentServiceException" => {
-                        UploadDocumentsError::DocumentService(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UploadDocumentsError::Validation(error_message.to_string())
-                    }
-                    _ => UploadDocumentsError::Unknown(String::from(body)),
+            match error_type {
+                "DocumentServiceException" => {
+                    return UploadDocumentsError::DocumentService(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return UploadDocumentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UploadDocumentsError::Unknown(String::from(body)),
         }
+        return UploadDocumentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UploadDocumentsError {
     fn from(err: serde_json::error::Error) -> UploadDocumentsError {
-        UploadDocumentsError::Unknown(err.description().to_string())
+        UploadDocumentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UploadDocumentsError {
@@ -570,7 +627,8 @@ impl Error for UploadDocumentsError {
             UploadDocumentsError::Validation(ref cause) => cause,
             UploadDocumentsError::Credentials(ref err) => err.description(),
             UploadDocumentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UploadDocumentsError::Unknown(ref cause) => cause,
+            UploadDocumentsError::ParseError(ref cause) => cause,
+            UploadDocumentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -693,11 +751,12 @@ impl CloudSearchDomain for CloudSearchDomainClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SearchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SearchError::from_response(response))),
+                )
             }
         })
     }
@@ -736,11 +795,12 @@ impl CloudSearchDomain for CloudSearchDomainClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SuggestError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(SuggestError::from_response(response))),
+                )
             }
         })
     }
@@ -779,11 +839,12 @@ impl CloudSearchDomain for CloudSearchDomainClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UploadDocumentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UploadDocumentsError::from_response(response))),
+                )
             }
         })
     }

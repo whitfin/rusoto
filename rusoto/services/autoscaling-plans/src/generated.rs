@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Represents an application source.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -55,6 +55,7 @@ pub struct CreateScalingPlanRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateScalingPlanResponse {
     /// <p>The version of the scaling plan. This value is always 1.</p>
     #[serde(rename = "ScalingPlanVersion")]
@@ -94,6 +95,7 @@ pub struct DeleteScalingPlanRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteScalingPlanResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -115,6 +117,7 @@ pub struct DescribeScalingPlanResourcesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeScalingPlanResourcesResponse {
     /// <p>The token required to get the next set of results. This value is <code>null</code> if there are no more results to return.</p>
     #[serde(rename = "NextToken")]
@@ -151,6 +154,7 @@ pub struct DescribeScalingPlansRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeScalingPlansResponse {
     /// <p>The token required to get the next set of results. This value is <code>null</code> if there are no more results to return.</p>
     #[serde(rename = "NextToken")]
@@ -210,6 +214,7 @@ pub struct ScalingInstruction {
 
 /// <p>Represents a scaling plan.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ScalingPlan {
     /// <p>The application source.</p>
     #[serde(rename = "ApplicationSource")]
@@ -242,6 +247,7 @@ pub struct ScalingPlan {
 
 /// <p>Represents a scalable resource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ScalingPlanResource {
     /// <p><p>The ID of the resource. This string consists of the resource type and unique identifier.</p> <ul> <li> <p>Auto Scaling group - The resource type is <code>autoScalingGroup</code> and the unique identifier is the name of the Auto Scaling group. Example: <code>autoScalingGroup/my-asg</code>.</p> </li> <li> <p>ECS service - The resource type is <code>service</code> and the unique identifier is the cluster name and service name. Example: <code>service/default/sample-webapp</code>.</p> </li> <li> <p>Spot fleet request - The resource type is <code>spot-fleet-request</code> and the unique identifier is the Spot fleet request ID. Example: <code>spot-fleet-request/sfr-73fbd2ce-aa30-494c-8788-1cee4EXAMPLE</code>.</p> </li> <li> <p>DynamoDB table - The resource type is <code>table</code> and the unique identifier is the resource ID. Example: <code>table/my-table</code>.</p> </li> <li> <p>DynamoDB global secondary index - The resource type is <code>index</code> and the unique identifier is the resource ID. Example: <code>table/my-table/index/my-table-index</code>.</p> </li> <li> <p>Aurora DB cluster - The resource type is <code>cluster</code> and the unique identifier is the cluster name. Example: <code>cluster:my-db-cluster</code>.</p> </li> </ul></p>
     #[serde(rename = "ResourceId")]
@@ -273,6 +279,7 @@ pub struct ScalingPlanResource {
 
 /// <p>Represents a scaling policy.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ScalingPolicy {
     /// <p>The name of the scaling policy.</p>
     #[serde(rename = "PolicyName")]
@@ -350,6 +357,7 @@ pub struct UpdateScalingPlanRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateScalingPlanResponse {}
 
 /// Errors returned by CreateScalingPlan
@@ -367,47 +375,47 @@ pub enum CreateScalingPlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateScalingPlanError {
-    pub fn from_body(body: &str) -> CreateScalingPlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateScalingPlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentUpdateException" => {
-                        CreateScalingPlanError::ConcurrentUpdate(String::from(error_message))
-                    }
-                    "InternalServiceException" => {
-                        CreateScalingPlanError::InternalService(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateScalingPlanError::LimitExceeded(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateScalingPlanError::Validation(error_message.to_string())
-                    }
-                    _ => CreateScalingPlanError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentUpdateException" => {
+                    return CreateScalingPlanError::ConcurrentUpdate(String::from(error_message))
                 }
+                "InternalServiceException" => {
+                    return CreateScalingPlanError::InternalService(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateScalingPlanError::LimitExceeded(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateScalingPlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateScalingPlanError::Unknown(String::from(body)),
         }
+        return CreateScalingPlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateScalingPlanError {
     fn from(err: serde_json::error::Error) -> CreateScalingPlanError {
-        CreateScalingPlanError::Unknown(err.description().to_string())
+        CreateScalingPlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateScalingPlanError {
@@ -441,7 +449,8 @@ impl Error for CreateScalingPlanError {
             CreateScalingPlanError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateScalingPlanError::Unknown(ref cause) => cause,
+            CreateScalingPlanError::ParseError(ref cause) => cause,
+            CreateScalingPlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -460,47 +469,47 @@ pub enum DeleteScalingPlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteScalingPlanError {
-    pub fn from_body(body: &str) -> DeleteScalingPlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteScalingPlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentUpdateException" => {
-                        DeleteScalingPlanError::ConcurrentUpdate(String::from(error_message))
-                    }
-                    "InternalServiceException" => {
-                        DeleteScalingPlanError::InternalService(String::from(error_message))
-                    }
-                    "ObjectNotFoundException" => {
-                        DeleteScalingPlanError::ObjectNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteScalingPlanError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteScalingPlanError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentUpdateException" => {
+                    return DeleteScalingPlanError::ConcurrentUpdate(String::from(error_message))
                 }
+                "InternalServiceException" => {
+                    return DeleteScalingPlanError::InternalService(String::from(error_message))
+                }
+                "ObjectNotFoundException" => {
+                    return DeleteScalingPlanError::ObjectNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteScalingPlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteScalingPlanError::Unknown(String::from(body)),
         }
+        return DeleteScalingPlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteScalingPlanError {
     fn from(err: serde_json::error::Error) -> DeleteScalingPlanError {
-        DeleteScalingPlanError::Unknown(err.description().to_string())
+        DeleteScalingPlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteScalingPlanError {
@@ -534,7 +543,8 @@ impl Error for DeleteScalingPlanError {
             DeleteScalingPlanError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteScalingPlanError::Unknown(ref cause) => cause,
+            DeleteScalingPlanError::ParseError(ref cause) => cause,
+            DeleteScalingPlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -553,53 +563,53 @@ pub enum DescribeScalingPlanResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeScalingPlanResourcesError {
-    pub fn from_body(body: &str) -> DescribeScalingPlanResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeScalingPlanResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentUpdateException" => {
-                        DescribeScalingPlanResourcesError::ConcurrentUpdate(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalServiceException" => {
-                        DescribeScalingPlanResourcesError::InternalService(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidNextTokenException" => {
-                        DescribeScalingPlanResourcesError::InvalidNextToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeScalingPlanResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeScalingPlanResourcesError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentUpdateException" => {
+                    return DescribeScalingPlanResourcesError::ConcurrentUpdate(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalServiceException" => {
+                    return DescribeScalingPlanResourcesError::InternalService(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidNextTokenException" => {
+                    return DescribeScalingPlanResourcesError::InvalidNextToken(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeScalingPlanResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeScalingPlanResourcesError::Unknown(String::from(body)),
         }
+        return DescribeScalingPlanResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeScalingPlanResourcesError {
     fn from(err: serde_json::error::Error) -> DescribeScalingPlanResourcesError {
-        DescribeScalingPlanResourcesError::Unknown(err.description().to_string())
+        DescribeScalingPlanResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeScalingPlanResourcesError {
@@ -633,7 +643,8 @@ impl Error for DescribeScalingPlanResourcesError {
             DescribeScalingPlanResourcesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeScalingPlanResourcesError::Unknown(ref cause) => cause,
+            DescribeScalingPlanResourcesError::ParseError(ref cause) => cause,
+            DescribeScalingPlanResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -652,47 +663,47 @@ pub enum DescribeScalingPlansError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeScalingPlansError {
-    pub fn from_body(body: &str) -> DescribeScalingPlansError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeScalingPlansError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentUpdateException" => {
-                        DescribeScalingPlansError::ConcurrentUpdate(String::from(error_message))
-                    }
-                    "InternalServiceException" => {
-                        DescribeScalingPlansError::InternalService(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        DescribeScalingPlansError::InvalidNextToken(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeScalingPlansError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeScalingPlansError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentUpdateException" => {
+                    return DescribeScalingPlansError::ConcurrentUpdate(String::from(error_message))
                 }
+                "InternalServiceException" => {
+                    return DescribeScalingPlansError::InternalService(String::from(error_message))
+                }
+                "InvalidNextTokenException" => {
+                    return DescribeScalingPlansError::InvalidNextToken(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeScalingPlansError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeScalingPlansError::Unknown(String::from(body)),
         }
+        return DescribeScalingPlansError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeScalingPlansError {
     fn from(err: serde_json::error::Error) -> DescribeScalingPlansError {
-        DescribeScalingPlansError::Unknown(err.description().to_string())
+        DescribeScalingPlansError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeScalingPlansError {
@@ -726,7 +737,8 @@ impl Error for DescribeScalingPlansError {
             DescribeScalingPlansError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeScalingPlansError::Unknown(ref cause) => cause,
+            DescribeScalingPlansError::ParseError(ref cause) => cause,
+            DescribeScalingPlansError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -745,47 +757,47 @@ pub enum UpdateScalingPlanError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateScalingPlanError {
-    pub fn from_body(body: &str) -> UpdateScalingPlanError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateScalingPlanError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentUpdateException" => {
-                        UpdateScalingPlanError::ConcurrentUpdate(String::from(error_message))
-                    }
-                    "InternalServiceException" => {
-                        UpdateScalingPlanError::InternalService(String::from(error_message))
-                    }
-                    "ObjectNotFoundException" => {
-                        UpdateScalingPlanError::ObjectNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateScalingPlanError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateScalingPlanError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentUpdateException" => {
+                    return UpdateScalingPlanError::ConcurrentUpdate(String::from(error_message))
                 }
+                "InternalServiceException" => {
+                    return UpdateScalingPlanError::InternalService(String::from(error_message))
+                }
+                "ObjectNotFoundException" => {
+                    return UpdateScalingPlanError::ObjectNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateScalingPlanError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateScalingPlanError::Unknown(String::from(body)),
         }
+        return UpdateScalingPlanError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateScalingPlanError {
     fn from(err: serde_json::error::Error) -> UpdateScalingPlanError {
-        UpdateScalingPlanError::Unknown(err.description().to_string())
+        UpdateScalingPlanError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateScalingPlanError {
@@ -819,7 +831,8 @@ impl Error for UpdateScalingPlanError {
             UpdateScalingPlanError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateScalingPlanError::Unknown(ref cause) => cause,
+            UpdateScalingPlanError::ParseError(ref cause) => cause,
+            UpdateScalingPlanError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -917,14 +930,16 @@ impl AutoscalingPlans for AutoscalingPlansClient {
 
                     serde_json::from_str::<CreateScalingPlanResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateScalingPlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateScalingPlanError::from_response(response))),
+                )
             }
         })
     }
@@ -955,14 +970,16 @@ impl AutoscalingPlans for AutoscalingPlansClient {
 
                     serde_json::from_str::<DeleteScalingPlanResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteScalingPlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteScalingPlanError::from_response(response))),
+                )
             }
         })
     }
@@ -993,13 +1010,12 @@ impl AutoscalingPlans for AutoscalingPlansClient {
 
                     serde_json::from_str::<DescribeScalingPlanResourcesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeScalingPlanResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeScalingPlanResourcesError::from_response(response))
                 }))
             }
         })
@@ -1031,14 +1047,15 @@ impl AutoscalingPlans for AutoscalingPlansClient {
 
                     serde_json::from_str::<DescribeScalingPlansResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeScalingPlansError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeScalingPlansError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -1069,14 +1086,16 @@ impl AutoscalingPlans for AutoscalingPlansClient {
 
                     serde_json::from_str::<UpdateScalingPlanResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateScalingPlanError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateScalingPlanError::from_response(response))),
+                )
             }
         })
     }

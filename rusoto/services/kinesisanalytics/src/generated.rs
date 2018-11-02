@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AddApplicationCloudWatchLoggingOptionRequest {
@@ -42,6 +42,7 @@ pub struct AddApplicationCloudWatchLoggingOptionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddApplicationCloudWatchLoggingOptionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -61,6 +62,7 @@ pub struct AddApplicationInputProcessingConfigurationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddApplicationInputProcessingConfigurationResponse {}
 
 /// <p><p/></p>
@@ -79,6 +81,7 @@ pub struct AddApplicationInputRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddApplicationInputResponse {}
 
 /// <p><p/></p>
@@ -97,6 +100,7 @@ pub struct AddApplicationOutputRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddApplicationOutputResponse {}
 
 /// <p><p/></p>
@@ -115,10 +119,12 @@ pub struct AddApplicationReferenceDataSourceRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddApplicationReferenceDataSourceResponse {}
 
 /// <p>Provides a description of the application, including the application Amazon Resource Name (ARN), status, latest version, and input and output configuration.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApplicationDetail {
     /// <p>ARN of the application.</p>
     #[serde(rename = "ApplicationARN")]
@@ -168,6 +174,7 @@ pub struct ApplicationDetail {
 
 /// <p>Provides application summary information, including the application Amazon Resource Name (ARN), name, and status.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ApplicationSummary {
     /// <p>ARN of the application.</p>
     #[serde(rename = "ApplicationARN")]
@@ -229,6 +236,7 @@ pub struct CloudWatchLoggingOption {
 
 /// <p>Description of the CloudWatch logging option.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CloudWatchLoggingOptionDescription {
     /// <p>ID of the CloudWatch logging option description.</p>
     #[serde(rename = "CloudWatchLoggingOptionId")]
@@ -288,6 +296,7 @@ pub struct CreateApplicationRequest {
 
 /// <p>TBD</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateApplicationResponse {
     /// <p>In response to your <code>CreateApplication</code> request, Amazon Kinesis Analytics returns a response with a summary of the application it created, including the application Amazon Resource Name (ARN), name, and status.</p>
     #[serde(rename = "ApplicationSummary")]
@@ -308,6 +317,7 @@ pub struct DeleteApplicationCloudWatchLoggingOptionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteApplicationCloudWatchLoggingOptionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -324,6 +334,7 @@ pub struct DeleteApplicationInputProcessingConfigurationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteApplicationInputProcessingConfigurationResponse {}
 
 /// <p><p/></p>
@@ -342,6 +353,7 @@ pub struct DeleteApplicationOutputRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteApplicationOutputResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -358,6 +370,7 @@ pub struct DeleteApplicationReferenceDataSourceRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteApplicationReferenceDataSourceResponse {}
 
 /// <p><p/></p>
@@ -373,6 +386,7 @@ pub struct DeleteApplicationRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteApplicationResponse {}
 
 /// <p><p/></p>
@@ -385,6 +399,7 @@ pub struct DescribeApplicationRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeApplicationResponse {
     /// <p>Provides a description of the application, such as the application Amazon Resource Name (ARN), status, latest version, and input and output configuration details.</p>
     #[serde(rename = "ApplicationDetail")]
@@ -426,6 +441,7 @@ pub struct DiscoverInputSchemaRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DiscoverInputSchemaResponse {
     /// <p>Schema inferred from the streaming source. It identifies the format of the data in the streaming source and how each data element maps to corresponding columns in the in-application stream that you can create.</p>
     #[serde(rename = "InputSchema")]
@@ -485,6 +501,7 @@ pub struct InputConfiguration {
 
 /// <p>Describes the application input configuration. For more information, see <a href="http://docs.aws.amazon.com/kinesisanalytics/latest/dev/how-it-works-input.html">Configuring Application Input</a>. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InputDescription {
     /// <p>Returns the in-application stream names that are mapped to the stream source.</p>
     #[serde(rename = "InAppStreamNames")]
@@ -537,6 +554,7 @@ pub struct InputLambdaProcessor {
 
 /// <p>An object that contains the Amazon Resource Name (ARN) of the <a href="https://aws.amazon.com/documentation/lambda/">AWS Lambda</a> function that is used to preprocess records in the stream, and the ARN of the IAM role that is used to access the AWS Lambda expression.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InputLambdaProcessorDescription {
     /// <p>The ARN of the <a href="https://aws.amazon.com/documentation/lambda/">AWS Lambda</a> function that is used to preprocess the records in the stream.</p>
     #[serde(rename = "ResourceARN")]
@@ -589,6 +607,7 @@ pub struct InputProcessingConfiguration {
 
 /// <p>Provides configuration information about an input processor. Currently, the only input processor available is <a href="https://aws.amazon.com/documentation/lambda/">AWS Lambda</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InputProcessingConfigurationDescription {
     /// <p>Provides configuration information about the associated <a>InputLambdaProcessorDescription</a>.</p>
     #[serde(rename = "InputLambdaProcessorDescription")]
@@ -683,6 +702,7 @@ pub struct KinesisFirehoseInput {
 
 /// <p> Describes the Amazon Kinesis Firehose delivery stream that is configured as the streaming source in the application input configuration. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KinesisFirehoseInputDescription {
     /// <p>Amazon Resource Name (ARN) of the Amazon Kinesis Firehose delivery stream.</p>
     #[serde(rename = "ResourceARN")]
@@ -720,6 +740,7 @@ pub struct KinesisFirehoseOutput {
 
 /// <p> For an application output, describes the Amazon Kinesis Firehose delivery stream configured as its destination. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KinesisFirehoseOutputDescription {
     /// <p>Amazon Resource Name (ARN) of the Amazon Kinesis Firehose delivery stream.</p>
     #[serde(rename = "ResourceARN")]
@@ -757,6 +778,7 @@ pub struct KinesisStreamsInput {
 
 /// <p> Describes the Amazon Kinesis stream that is configured as the streaming source in the application input configuration. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KinesisStreamsInputDescription {
     /// <p>Amazon Resource Name (ARN) of the Amazon Kinesis stream.</p>
     #[serde(rename = "ResourceARN")]
@@ -794,6 +816,7 @@ pub struct KinesisStreamsOutput {
 
 /// <p> For an application output, describes the Amazon Kinesis stream configured as its destination. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KinesisStreamsOutputDescription {
     /// <p>Amazon Resource Name (ARN) of the Amazon Kinesis stream.</p>
     #[serde(rename = "ResourceARN")]
@@ -831,6 +854,7 @@ pub struct LambdaOutput {
 
 /// <p>For an application output, describes the AWS Lambda function configured as its destination. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LambdaOutputDescription {
     /// <p>Amazon Resource Name (ARN) of the destination Lambda function.</p>
     #[serde(rename = "ResourceARN")]
@@ -870,6 +894,7 @@ pub struct ListApplicationsRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListApplicationsResponse {
     /// <p>List of <code>ApplicationSummary</code> objects. </p>
     #[serde(rename = "ApplicationSummaries")]
@@ -917,6 +942,7 @@ pub struct Output {
 
 /// <p>Describes the application output configuration, which includes the in-application stream name and the destination where the stream data is written. The destination can be an Amazon Kinesis stream or an Amazon Kinesis Firehose delivery stream. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct OutputDescription {
     /// <p>Data format used for writing data to the destination.</p>
     #[serde(rename = "DestinationSchema")]
@@ -1016,6 +1042,7 @@ pub struct ReferenceDataSource {
 
 /// <p>Describes the reference data source configured for an application.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ReferenceDataSourceDescription {
     /// <p>ID of the reference data source. This is the ID that Amazon Kinesis Analytics assigns when you add the reference data source to your application using the <a>AddApplicationReferenceDataSource</a> operation.</p>
     #[serde(rename = "ReferenceId")]
@@ -1082,6 +1109,7 @@ pub struct S3ReferenceDataSource {
 
 /// <p>Provides the bucket name and object key name that stores the reference data.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct S3ReferenceDataSourceDescription {
     /// <p>Amazon Resource Name (ARN) of the S3 bucket.</p>
     #[serde(rename = "BucketARN")]
@@ -1139,6 +1167,7 @@ pub struct StartApplicationRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartApplicationResponse {}
 
 /// <p><p/></p>
@@ -1151,6 +1180,7 @@ pub struct StopApplicationRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StopApplicationResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -1167,6 +1197,7 @@ pub struct UpdateApplicationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateApplicationResponse {}
 
 /// Errors returned by AddApplicationCloudWatchLoggingOption
@@ -1186,60 +1217,60 @@ pub enum AddApplicationCloudWatchLoggingOptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddApplicationCloudWatchLoggingOptionError {
-    pub fn from_body(body: &str) -> AddApplicationCloudWatchLoggingOptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddApplicationCloudWatchLoggingOptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        AddApplicationCloudWatchLoggingOptionError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        AddApplicationCloudWatchLoggingOptionError::InvalidArgument(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceInUseException" => {
-                        AddApplicationCloudWatchLoggingOptionError::ResourceInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddApplicationCloudWatchLoggingOptionError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AddApplicationCloudWatchLoggingOptionError::Validation(
-                            error_message.to_string(),
-                        )
-                    }
-                    _ => AddApplicationCloudWatchLoggingOptionError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return AddApplicationCloudWatchLoggingOptionError::ConcurrentModification(
+                        String::from(error_message),
+                    )
                 }
+                "InvalidArgumentException" => {
+                    return AddApplicationCloudWatchLoggingOptionError::InvalidArgument(
+                        String::from(error_message),
+                    )
+                }
+                "ResourceInUseException" => {
+                    return AddApplicationCloudWatchLoggingOptionError::ResourceInUse(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return AddApplicationCloudWatchLoggingOptionError::ResourceNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return AddApplicationCloudWatchLoggingOptionError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => AddApplicationCloudWatchLoggingOptionError::Unknown(String::from(body)),
         }
+        return AddApplicationCloudWatchLoggingOptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddApplicationCloudWatchLoggingOptionError {
     fn from(err: serde_json::error::Error) -> AddApplicationCloudWatchLoggingOptionError {
-        AddApplicationCloudWatchLoggingOptionError::Unknown(err.description().to_string())
+        AddApplicationCloudWatchLoggingOptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddApplicationCloudWatchLoggingOptionError {
@@ -1274,7 +1305,8 @@ impl Error for AddApplicationCloudWatchLoggingOptionError {
             AddApplicationCloudWatchLoggingOptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddApplicationCloudWatchLoggingOptionError::Unknown(ref cause) => cause,
+            AddApplicationCloudWatchLoggingOptionError::ParseError(ref cause) => cause,
+            AddApplicationCloudWatchLoggingOptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1297,55 +1329,55 @@ pub enum AddApplicationInputError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddApplicationInputError {
-    pub fn from_body(body: &str) -> AddApplicationInputError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddApplicationInputError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CodeValidationException" => {
-                        AddApplicationInputError::CodeValidation(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        AddApplicationInputError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidArgumentException" => {
-                        AddApplicationInputError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        AddApplicationInputError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddApplicationInputError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddApplicationInputError::Validation(error_message.to_string())
-                    }
-                    _ => AddApplicationInputError::Unknown(String::from(body)),
+            match *error_type {
+                "CodeValidationException" => {
+                    return AddApplicationInputError::CodeValidation(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return AddApplicationInputError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidArgumentException" => {
+                    return AddApplicationInputError::InvalidArgument(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return AddApplicationInputError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AddApplicationInputError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AddApplicationInputError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddApplicationInputError::Unknown(String::from(body)),
         }
+        return AddApplicationInputError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddApplicationInputError {
     fn from(err: serde_json::error::Error) -> AddApplicationInputError {
-        AddApplicationInputError::Unknown(err.description().to_string())
+        AddApplicationInputError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddApplicationInputError {
@@ -1381,7 +1413,8 @@ impl Error for AddApplicationInputError {
             AddApplicationInputError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddApplicationInputError::Unknown(ref cause) => cause,
+            AddApplicationInputError::ParseError(ref cause) => cause,
+            AddApplicationInputError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1402,62 +1435,62 @@ pub enum AddApplicationInputProcessingConfigurationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddApplicationInputProcessingConfigurationError {
-    pub fn from_body(body: &str) -> AddApplicationInputProcessingConfigurationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(
+        res: BufferedHttpResponse,
+    ) -> AddApplicationInputProcessingConfigurationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        AddApplicationInputProcessingConfigurationError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        AddApplicationInputProcessingConfigurationError::InvalidArgument(
-                            String::from(error_message),
-                        )
-                    }
-                    "ResourceInUseException" => {
-                        AddApplicationInputProcessingConfigurationError::ResourceInUse(
-                            String::from(error_message),
-                        )
-                    }
-                    "ResourceNotFoundException" => {
-                        AddApplicationInputProcessingConfigurationError::ResourceNotFound(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        AddApplicationInputProcessingConfigurationError::Validation(
-                            error_message.to_string(),
-                        )
-                    }
-                    _ => {
-                        AddApplicationInputProcessingConfigurationError::Unknown(String::from(body))
-                    }
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return AddApplicationInputProcessingConfigurationError::ConcurrentModification(
+                        String::from(error_message),
+                    )
                 }
+                "InvalidArgumentException" => {
+                    return AddApplicationInputProcessingConfigurationError::InvalidArgument(
+                        String::from(error_message),
+                    )
+                }
+                "ResourceInUseException" => {
+                    return AddApplicationInputProcessingConfigurationError::ResourceInUse(
+                        String::from(error_message),
+                    )
+                }
+                "ResourceNotFoundException" => {
+                    return AddApplicationInputProcessingConfigurationError::ResourceNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return AddApplicationInputProcessingConfigurationError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => AddApplicationInputProcessingConfigurationError::Unknown(String::from(body)),
         }
+        return AddApplicationInputProcessingConfigurationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddApplicationInputProcessingConfigurationError {
     fn from(err: serde_json::error::Error) -> AddApplicationInputProcessingConfigurationError {
-        AddApplicationInputProcessingConfigurationError::Unknown(err.description().to_string())
+        AddApplicationInputProcessingConfigurationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddApplicationInputProcessingConfigurationError {
@@ -1496,7 +1529,8 @@ impl Error for AddApplicationInputProcessingConfigurationError {
             AddApplicationInputProcessingConfigurationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddApplicationInputProcessingConfigurationError::Unknown(ref cause) => cause,
+            AddApplicationInputProcessingConfigurationError::ParseError(ref cause) => cause,
+            AddApplicationInputProcessingConfigurationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1517,52 +1551,52 @@ pub enum AddApplicationOutputError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddApplicationOutputError {
-    pub fn from_body(body: &str) -> AddApplicationOutputError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddApplicationOutputError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        AddApplicationOutputError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidArgumentException" => {
-                        AddApplicationOutputError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        AddApplicationOutputError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddApplicationOutputError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddApplicationOutputError::Validation(error_message.to_string())
-                    }
-                    _ => AddApplicationOutputError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return AddApplicationOutputError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidArgumentException" => {
+                    return AddApplicationOutputError::InvalidArgument(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return AddApplicationOutputError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AddApplicationOutputError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AddApplicationOutputError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddApplicationOutputError::Unknown(String::from(body)),
         }
+        return AddApplicationOutputError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddApplicationOutputError {
     fn from(err: serde_json::error::Error) -> AddApplicationOutputError {
-        AddApplicationOutputError::Unknown(err.description().to_string())
+        AddApplicationOutputError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddApplicationOutputError {
@@ -1597,7 +1631,8 @@ impl Error for AddApplicationOutputError {
             AddApplicationOutputError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddApplicationOutputError::Unknown(ref cause) => cause,
+            AddApplicationOutputError::ParseError(ref cause) => cause,
+            AddApplicationOutputError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1618,58 +1653,60 @@ pub enum AddApplicationReferenceDataSourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddApplicationReferenceDataSourceError {
-    pub fn from_body(body: &str) -> AddApplicationReferenceDataSourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddApplicationReferenceDataSourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        AddApplicationReferenceDataSourceError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        AddApplicationReferenceDataSourceError::InvalidArgument(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceInUseException" => {
-                        AddApplicationReferenceDataSourceError::ResourceInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddApplicationReferenceDataSourceError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => AddApplicationReferenceDataSourceError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => AddApplicationReferenceDataSourceError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return AddApplicationReferenceDataSourceError::ConcurrentModification(
+                        String::from(error_message),
+                    )
                 }
+                "InvalidArgumentException" => {
+                    return AddApplicationReferenceDataSourceError::InvalidArgument(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceInUseException" => {
+                    return AddApplicationReferenceDataSourceError::ResourceInUse(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return AddApplicationReferenceDataSourceError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AddApplicationReferenceDataSourceError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => AddApplicationReferenceDataSourceError::Unknown(String::from(body)),
         }
+        return AddApplicationReferenceDataSourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddApplicationReferenceDataSourceError {
     fn from(err: serde_json::error::Error) -> AddApplicationReferenceDataSourceError {
-        AddApplicationReferenceDataSourceError::Unknown(err.description().to_string())
+        AddApplicationReferenceDataSourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddApplicationReferenceDataSourceError {
@@ -1704,7 +1741,8 @@ impl Error for AddApplicationReferenceDataSourceError {
             AddApplicationReferenceDataSourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddApplicationReferenceDataSourceError::Unknown(ref cause) => cause,
+            AddApplicationReferenceDataSourceError::ParseError(ref cause) => cause,
+            AddApplicationReferenceDataSourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1725,50 +1763,50 @@ pub enum CreateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateApplicationError {
-    pub fn from_body(body: &str) -> CreateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CodeValidationException" => {
-                        CreateApplicationError::CodeValidation(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        CreateApplicationError::InvalidArgument(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateApplicationError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        CreateApplicationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => CreateApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "CodeValidationException" => {
+                    return CreateApplicationError::CodeValidation(String::from(error_message))
                 }
+                "InvalidArgumentException" => {
+                    return CreateApplicationError::InvalidArgument(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return CreateApplicationError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return CreateApplicationError::ResourceInUse(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateApplicationError::Unknown(String::from(body)),
         }
+        return CreateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateApplicationError {
     fn from(err: serde_json::error::Error) -> CreateApplicationError {
-        CreateApplicationError::Unknown(err.description().to_string())
+        CreateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateApplicationError {
@@ -1803,7 +1841,8 @@ impl Error for CreateApplicationError {
             CreateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateApplicationError::Unknown(ref cause) => cause,
+            CreateApplicationError::ParseError(ref cause) => cause,
+            CreateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1822,47 +1861,49 @@ pub enum DeleteApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationError {
-    pub fn from_body(body: &str) -> DeleteApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteApplicationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        DeleteApplicationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteApplicationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteApplicationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceInUseException" => {
+                    return DeleteApplicationError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteApplicationError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationError::Unknown(String::from(body)),
         }
+        return DeleteApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationError {
-        DeleteApplicationError::Unknown(err.description().to_string())
+        DeleteApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationError {
@@ -1896,7 +1937,8 @@ impl Error for DeleteApplicationError {
             DeleteApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationError::Unknown(ref cause) => cause,
+            DeleteApplicationError::ParseError(ref cause) => cause,
+            DeleteApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1917,60 +1959,62 @@ pub enum DeleteApplicationCloudWatchLoggingOptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationCloudWatchLoggingOptionError {
-    pub fn from_body(body: &str) -> DeleteApplicationCloudWatchLoggingOptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(
+        res: BufferedHttpResponse,
+    ) -> DeleteApplicationCloudWatchLoggingOptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteApplicationCloudWatchLoggingOptionError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        DeleteApplicationCloudWatchLoggingOptionError::InvalidArgument(
-                            String::from(error_message),
-                        )
-                    }
-                    "ResourceInUseException" => {
-                        DeleteApplicationCloudWatchLoggingOptionError::ResourceInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteApplicationCloudWatchLoggingOptionError::ResourceNotFound(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationCloudWatchLoggingOptionError::Validation(
-                            error_message.to_string(),
-                        )
-                    }
-                    _ => DeleteApplicationCloudWatchLoggingOptionError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteApplicationCloudWatchLoggingOptionError::ConcurrentModification(
+                        String::from(error_message),
+                    )
                 }
+                "InvalidArgumentException" => {
+                    return DeleteApplicationCloudWatchLoggingOptionError::InvalidArgument(
+                        String::from(error_message),
+                    )
+                }
+                "ResourceInUseException" => {
+                    return DeleteApplicationCloudWatchLoggingOptionError::ResourceInUse(
+                        String::from(error_message),
+                    )
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteApplicationCloudWatchLoggingOptionError::ResourceNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DeleteApplicationCloudWatchLoggingOptionError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationCloudWatchLoggingOptionError::Unknown(String::from(body)),
         }
+        return DeleteApplicationCloudWatchLoggingOptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationCloudWatchLoggingOptionError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationCloudWatchLoggingOptionError {
-        DeleteApplicationCloudWatchLoggingOptionError::Unknown(err.description().to_string())
+        DeleteApplicationCloudWatchLoggingOptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationCloudWatchLoggingOptionError {
@@ -2009,7 +2053,8 @@ impl Error for DeleteApplicationCloudWatchLoggingOptionError {
             DeleteApplicationCloudWatchLoggingOptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationCloudWatchLoggingOptionError::Unknown(ref cause) => cause,
+            DeleteApplicationCloudWatchLoggingOptionError::ParseError(ref cause) => cause,
+            DeleteApplicationCloudWatchLoggingOptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2030,64 +2075,44 @@ pub enum DeleteApplicationInputProcessingConfigurationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationInputProcessingConfigurationError {
-    pub fn from_body(body: &str) -> DeleteApplicationInputProcessingConfigurationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(
+        res: BufferedHttpResponse,
+    ) -> DeleteApplicationInputProcessingConfigurationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteApplicationInputProcessingConfigurationError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        DeleteApplicationInputProcessingConfigurationError::InvalidArgument(
-                            String::from(error_message),
-                        )
-                    }
-                    "ResourceInUseException" => {
-                        DeleteApplicationInputProcessingConfigurationError::ResourceInUse(
-                            String::from(error_message),
-                        )
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteApplicationInputProcessingConfigurationError::ResourceNotFound(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationInputProcessingConfigurationError::Validation(
-                            error_message.to_string(),
-                        )
-                    }
-                    _ => DeleteApplicationInputProcessingConfigurationError::Unknown(String::from(
-                        body,
-                    )),
-                }
-            }
-            Err(_) => {
-                DeleteApplicationInputProcessingConfigurationError::Unknown(String::from(body))
-            }
+            match *error_type {
+                                "ConcurrentModificationException" => return DeleteApplicationInputProcessingConfigurationError::ConcurrentModification(String::from(error_message)),
+"InvalidArgumentException" => return DeleteApplicationInputProcessingConfigurationError::InvalidArgument(String::from(error_message)),
+"ResourceInUseException" => return DeleteApplicationInputProcessingConfigurationError::ResourceInUse(String::from(error_message)),
+"ResourceNotFoundException" => return DeleteApplicationInputProcessingConfigurationError::ResourceNotFound(String::from(error_message)),
+"ValidationException" => return DeleteApplicationInputProcessingConfigurationError::Validation(error_message.to_string()),
+_ => {}
+                            }
         }
+        return DeleteApplicationInputProcessingConfigurationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationInputProcessingConfigurationError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationInputProcessingConfigurationError {
-        DeleteApplicationInputProcessingConfigurationError::Unknown(err.description().to_string())
+        DeleteApplicationInputProcessingConfigurationError::ParseError(
+            err.description().to_string(),
+        )
     }
 }
 impl From<CredentialsError> for DeleteApplicationInputProcessingConfigurationError {
@@ -2130,7 +2155,8 @@ impl Error for DeleteApplicationInputProcessingConfigurationError {
             DeleteApplicationInputProcessingConfigurationError::HttpDispatch(
                 ref dispatch_error,
             ) => dispatch_error.description(),
-            DeleteApplicationInputProcessingConfigurationError::Unknown(ref cause) => cause,
+            DeleteApplicationInputProcessingConfigurationError::ParseError(ref cause) => cause,
+            DeleteApplicationInputProcessingConfigurationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2151,52 +2177,56 @@ pub enum DeleteApplicationOutputError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationOutputError {
-    pub fn from_body(body: &str) -> DeleteApplicationOutputError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApplicationOutputError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteApplicationOutputError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidArgumentException" => {
-                        DeleteApplicationOutputError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        DeleteApplicationOutputError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteApplicationOutputError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteApplicationOutputError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteApplicationOutputError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteApplicationOutputError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidArgumentException" => {
+                    return DeleteApplicationOutputError::InvalidArgument(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceInUseException" => {
+                    return DeleteApplicationOutputError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteApplicationOutputError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteApplicationOutputError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationOutputError::Unknown(String::from(body)),
         }
+        return DeleteApplicationOutputError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationOutputError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationOutputError {
-        DeleteApplicationOutputError::Unknown(err.description().to_string())
+        DeleteApplicationOutputError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationOutputError {
@@ -2231,7 +2261,8 @@ impl Error for DeleteApplicationOutputError {
             DeleteApplicationOutputError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationOutputError::Unknown(ref cause) => cause,
+            DeleteApplicationOutputError::ParseError(ref cause) => cause,
+            DeleteApplicationOutputError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2252,58 +2283,60 @@ pub enum DeleteApplicationReferenceDataSourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteApplicationReferenceDataSourceError {
-    pub fn from_body(body: &str) -> DeleteApplicationReferenceDataSourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteApplicationReferenceDataSourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        DeleteApplicationReferenceDataSourceError::ConcurrentModification(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidArgumentException" => {
-                        DeleteApplicationReferenceDataSourceError::InvalidArgument(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceInUseException" => {
-                        DeleteApplicationReferenceDataSourceError::ResourceInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteApplicationReferenceDataSourceError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => DeleteApplicationReferenceDataSourceError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => DeleteApplicationReferenceDataSourceError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return DeleteApplicationReferenceDataSourceError::ConcurrentModification(
+                        String::from(error_message),
+                    )
                 }
+                "InvalidArgumentException" => {
+                    return DeleteApplicationReferenceDataSourceError::InvalidArgument(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceInUseException" => {
+                    return DeleteApplicationReferenceDataSourceError::ResourceInUse(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteApplicationReferenceDataSourceError::ResourceNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return DeleteApplicationReferenceDataSourceError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DeleteApplicationReferenceDataSourceError::Unknown(String::from(body)),
         }
+        return DeleteApplicationReferenceDataSourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteApplicationReferenceDataSourceError {
     fn from(err: serde_json::error::Error) -> DeleteApplicationReferenceDataSourceError {
-        DeleteApplicationReferenceDataSourceError::Unknown(err.description().to_string())
+        DeleteApplicationReferenceDataSourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteApplicationReferenceDataSourceError {
@@ -2338,7 +2371,8 @@ impl Error for DeleteApplicationReferenceDataSourceError {
             DeleteApplicationReferenceDataSourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteApplicationReferenceDataSourceError::Unknown(ref cause) => cause,
+            DeleteApplicationReferenceDataSourceError::ParseError(ref cause) => cause,
+            DeleteApplicationReferenceDataSourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2353,41 +2387,41 @@ pub enum DescribeApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeApplicationError {
-    pub fn from_body(body: &str) -> DescribeApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ResourceNotFoundException" => {
-                        DescribeApplicationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ResourceNotFoundException" => {
+                    return DescribeApplicationError::ResourceNotFound(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return DescribeApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeApplicationError::Unknown(String::from(body)),
         }
+        return DescribeApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeApplicationError {
     fn from(err: serde_json::error::Error) -> DescribeApplicationError {
-        DescribeApplicationError::Unknown(err.description().to_string())
+        DescribeApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeApplicationError {
@@ -2419,7 +2453,8 @@ impl Error for DescribeApplicationError {
             DescribeApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeApplicationError::Unknown(ref cause) => cause,
+            DescribeApplicationError::ParseError(ref cause) => cause,
+            DescribeApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2440,52 +2475,54 @@ pub enum DiscoverInputSchemaError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DiscoverInputSchemaError {
-    pub fn from_body(body: &str) -> DiscoverInputSchemaError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DiscoverInputSchemaError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        DiscoverInputSchemaError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceProvisionedThroughputExceededException" => {
-                        DiscoverInputSchemaError::ResourceProvisionedThroughputExceeded(
-                            String::from(error_message),
-                        )
-                    }
-                    "ServiceUnavailableException" => {
-                        DiscoverInputSchemaError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnableToDetectSchemaException" => {
-                        DiscoverInputSchemaError::UnableToDetectSchema(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DiscoverInputSchemaError::Validation(error_message.to_string())
-                    }
-                    _ => DiscoverInputSchemaError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return DiscoverInputSchemaError::InvalidArgument(String::from(error_message))
                 }
+                "ResourceProvisionedThroughputExceededException" => {
+                    return DiscoverInputSchemaError::ResourceProvisionedThroughputExceeded(
+                        String::from(error_message),
+                    )
+                }
+                "ServiceUnavailableException" => {
+                    return DiscoverInputSchemaError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnableToDetectSchemaException" => {
+                    return DiscoverInputSchemaError::UnableToDetectSchema(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DiscoverInputSchemaError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DiscoverInputSchemaError::Unknown(String::from(body)),
         }
+        return DiscoverInputSchemaError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DiscoverInputSchemaError {
     fn from(err: serde_json::error::Error) -> DiscoverInputSchemaError {
-        DiscoverInputSchemaError::Unknown(err.description().to_string())
+        DiscoverInputSchemaError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DiscoverInputSchemaError {
@@ -2520,7 +2557,8 @@ impl Error for DiscoverInputSchemaError {
             DiscoverInputSchemaError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DiscoverInputSchemaError::Unknown(ref cause) => cause,
+            DiscoverInputSchemaError::ParseError(ref cause) => cause,
+            DiscoverInputSchemaError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2533,38 +2571,38 @@ pub enum ListApplicationsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListApplicationsError {
-    pub fn from_body(body: &str) -> ListApplicationsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListApplicationsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ValidationException" => {
-                        ListApplicationsError::Validation(error_message.to_string())
-                    }
-                    _ => ListApplicationsError::Unknown(String::from(body)),
+            match *error_type {
+                "ValidationException" => {
+                    return ListApplicationsError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => ListApplicationsError::Unknown(String::from(body)),
         }
+        return ListApplicationsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListApplicationsError {
     fn from(err: serde_json::error::Error) -> ListApplicationsError {
-        ListApplicationsError::Unknown(err.description().to_string())
+        ListApplicationsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListApplicationsError {
@@ -2593,7 +2631,8 @@ impl Error for ListApplicationsError {
             ListApplicationsError::Validation(ref cause) => cause,
             ListApplicationsError::Credentials(ref err) => err.description(),
             ListApplicationsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListApplicationsError::Unknown(ref cause) => cause,
+            ListApplicationsError::ParseError(ref cause) => cause,
+            ListApplicationsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2614,52 +2653,52 @@ pub enum StartApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartApplicationError {
-    pub fn from_body(body: &str) -> StartApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidApplicationConfigurationException" => {
-                        StartApplicationError::InvalidApplicationConfiguration(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidArgumentException" => {
-                        StartApplicationError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        StartApplicationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        StartApplicationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StartApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => StartApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidApplicationConfigurationException" => {
+                    return StartApplicationError::InvalidApplicationConfiguration(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidArgumentException" => {
+                    return StartApplicationError::InvalidArgument(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return StartApplicationError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return StartApplicationError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StartApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartApplicationError::Unknown(String::from(body)),
         }
+        return StartApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartApplicationError {
     fn from(err: serde_json::error::Error) -> StartApplicationError {
-        StartApplicationError::Unknown(err.description().to_string())
+        StartApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartApplicationError {
@@ -2692,7 +2731,8 @@ impl Error for StartApplicationError {
             StartApplicationError::Validation(ref cause) => cause,
             StartApplicationError::Credentials(ref err) => err.description(),
             StartApplicationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StartApplicationError::Unknown(ref cause) => cause,
+            StartApplicationError::ParseError(ref cause) => cause,
+            StartApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2709,44 +2749,44 @@ pub enum StopApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StopApplicationError {
-    pub fn from_body(body: &str) -> StopApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StopApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ResourceInUseException" => {
-                        StopApplicationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        StopApplicationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StopApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => StopApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "ResourceInUseException" => {
+                    return StopApplicationError::ResourceInUse(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return StopApplicationError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StopApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StopApplicationError::Unknown(String::from(body)),
         }
+        return StopApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StopApplicationError {
     fn from(err: serde_json::error::Error) -> StopApplicationError {
-        StopApplicationError::Unknown(err.description().to_string())
+        StopApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StopApplicationError {
@@ -2777,7 +2817,8 @@ impl Error for StopApplicationError {
             StopApplicationError::Validation(ref cause) => cause,
             StopApplicationError::Credentials(ref err) => err.description(),
             StopApplicationError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StopApplicationError::Unknown(ref cause) => cause,
+            StopApplicationError::ParseError(ref cause) => cause,
+            StopApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2800,53 +2841,55 @@ pub enum UpdateApplicationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateApplicationError {
-    pub fn from_body(body: &str) -> UpdateApplicationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateApplicationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CodeValidationException" => {
-                        UpdateApplicationError::CodeValidation(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        UpdateApplicationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        UpdateApplicationError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        UpdateApplicationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateApplicationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateApplicationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateApplicationError::Unknown(String::from(body)),
+            match *error_type {
+                "CodeValidationException" => {
+                    return UpdateApplicationError::CodeValidation(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return UpdateApplicationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidArgumentException" => {
+                    return UpdateApplicationError::InvalidArgument(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return UpdateApplicationError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateApplicationError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateApplicationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateApplicationError::Unknown(String::from(body)),
         }
+        return UpdateApplicationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateApplicationError {
     fn from(err: serde_json::error::Error) -> UpdateApplicationError {
-        UpdateApplicationError::Unknown(err.description().to_string())
+        UpdateApplicationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateApplicationError {
@@ -2882,7 +2925,8 @@ impl Error for UpdateApplicationError {
             UpdateApplicationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateApplicationError::Unknown(ref cause) => cause,
+            UpdateApplicationError::ParseError(ref cause) => cause,
+            UpdateApplicationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3073,12 +3117,13 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<AddApplicationCloudWatchLoggingOptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddApplicationCloudWatchLoggingOptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(AddApplicationCloudWatchLoggingOptionError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -3111,14 +3156,15 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<AddApplicationInputResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddApplicationInputError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddApplicationInputError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3152,13 +3198,12 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<AddApplicationInputProcessingConfigurationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddApplicationInputProcessingConfigurationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AddApplicationInputProcessingConfigurationError::from_response(response))
                 }))
             }
         })
@@ -3190,14 +3235,15 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<AddApplicationOutputResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddApplicationOutputError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddApplicationOutputError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3231,12 +3277,13 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<AddApplicationReferenceDataSourceResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddApplicationReferenceDataSourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(AddApplicationReferenceDataSourceError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -3269,14 +3316,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<CreateApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -3307,14 +3356,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DeleteApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -3348,13 +3399,12 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DeleteApplicationCloudWatchLoggingOptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationCloudWatchLoggingOptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteApplicationCloudWatchLoggingOptionError::from_response(response))
                 }))
             }
         })
@@ -3389,15 +3439,12 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DeleteApplicationInputProcessingConfigurationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(
-                        DeleteApplicationInputProcessingConfigurationError::from_body(
-                            String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                        ),
-                    )
+                    Err(DeleteApplicationInputProcessingConfigurationError::from_response(response))
                 }))
             }
         })
@@ -3429,13 +3476,12 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DeleteApplicationOutputResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationOutputError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteApplicationOutputError::from_response(response))
                 }))
             }
         })
@@ -3470,12 +3516,13 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DeleteApplicationReferenceDataSourceResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteApplicationReferenceDataSourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(DeleteApplicationReferenceDataSourceError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -3508,14 +3555,15 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DescribeApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeApplicationError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3546,14 +3594,15 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<DiscoverInputSchemaResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DiscoverInputSchemaError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DiscoverInputSchemaError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3581,14 +3630,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<ListApplicationsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListApplicationsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListApplicationsError::from_response(response))),
+                )
             }
         })
     }
@@ -3616,14 +3667,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<StartApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StartApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -3651,14 +3704,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<StopApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StopApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StopApplicationError::from_response(response))),
+                )
             }
         })
     }
@@ -3689,14 +3744,16 @@ impl KinesisAnalytics for KinesisAnalyticsClient {
 
                     serde_json::from_str::<UpdateApplicationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateApplicationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateApplicationError::from_response(response))),
+                )
             }
         })
     }

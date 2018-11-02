@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>An object representing authorization data for an Amazon ECR registry.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AuthorizationData {
     /// <p>A base64-encoded string that contains authorization data for the specified Amazon ECR registry. When the string is decoded, it is presented in the format <code>user:password</code> for private registry authentication using <code>docker login</code>.</p>
     #[serde(rename = "authorizationToken")]
@@ -60,6 +61,7 @@ pub struct BatchCheckLayerAvailabilityRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchCheckLayerAvailabilityResponse {
     /// <p>Any failures associated with the call.</p>
     #[serde(rename = "failures")]
@@ -87,6 +89,7 @@ pub struct BatchDeleteImageRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchDeleteImageResponse {
     /// <p>Any failures associated with the call.</p>
     #[serde(rename = "failures")]
@@ -117,6 +120,7 @@ pub struct BatchGetImageRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetImageResponse {
     /// <p>Any failures associated with the call.</p>
     #[serde(rename = "failures")]
@@ -146,6 +150,7 @@ pub struct CompleteLayerUploadRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CompleteLayerUploadResponse {
     /// <p>The <code>sha256</code> digest of the image layer.</p>
     #[serde(rename = "layerDigest")]
@@ -173,6 +178,7 @@ pub struct CreateRepositoryRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateRepositoryResponse {
     /// <p>The repository that was created.</p>
     #[serde(rename = "repository")]
@@ -192,6 +198,7 @@ pub struct DeleteLifecyclePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteLifecyclePolicyResponse {
     /// <p>The time stamp of the last time that the lifecycle policy was run.</p>
     #[serde(rename = "lastEvaluatedAt")]
@@ -223,6 +230,7 @@ pub struct DeleteRepositoryPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteRepositoryPolicyResponse {
     /// <p>The JSON repository policy that was deleted from the repository.</p>
     #[serde(rename = "policyText")]
@@ -254,6 +262,7 @@ pub struct DeleteRepositoryRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteRepositoryResponse {
     /// <p>The repository that was deleted.</p>
     #[serde(rename = "repository")]
@@ -298,6 +307,7 @@ pub struct DescribeImagesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeImagesResponse {
     /// <p>A list of <a>ImageDetail</a> objects that contain data about the image.</p>
     #[serde(rename = "imageDetails")]
@@ -330,6 +340,7 @@ pub struct DescribeRepositoriesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeRepositoriesResponse {
     /// <p>The <code>nextToken</code> value to include in a future <code>DescribeRepositories</code> request. When the results of a <code>DescribeRepositories</code> request exceed <code>maxResults</code>, this value can be used to retrieve the next page of results. This value is <code>null</code> when there are no more results to return.</p>
     #[serde(rename = "nextToken")]
@@ -350,6 +361,7 @@ pub struct GetAuthorizationTokenRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetAuthorizationTokenResponse {
     /// <p>A list of authorization token data objects that correspond to the <code>registryIds</code> values in the request.</p>
     #[serde(rename = "authorizationData")]
@@ -372,6 +384,7 @@ pub struct GetDownloadUrlForLayerRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDownloadUrlForLayerResponse {
     /// <p>The pre-signed Amazon S3 download URL for the requested layer.</p>
     #[serde(rename = "downloadUrl")]
@@ -411,6 +424,7 @@ pub struct GetLifecyclePolicyPreviewRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetLifecyclePolicyPreviewResponse {
     /// <p>The JSON lifecycle policy text.</p>
     #[serde(rename = "lifecyclePolicyText")]
@@ -454,6 +468,7 @@ pub struct GetLifecyclePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetLifecyclePolicyResponse {
     /// <p>The time stamp of the last time that the lifecycle policy was run.</p>
     #[serde(rename = "lastEvaluatedAt")]
@@ -485,6 +500,7 @@ pub struct GetRepositoryPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetRepositoryPolicyResponse {
     /// <p>The JSON repository policy text associated with the repository.</p>
     #[serde(rename = "policyText")]
@@ -502,6 +518,7 @@ pub struct GetRepositoryPolicyResponse {
 
 /// <p>An object representing an Amazon ECR image.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Image {
     /// <p>An object containing the image tag and image digest associated with an image.</p>
     #[serde(rename = "imageId")]
@@ -523,6 +540,7 @@ pub struct Image {
 
 /// <p>An object that describes an image returned by a <a>DescribeImages</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ImageDetail {
     /// <p>The <code>sha256</code> digest of the image manifest.</p>
     #[serde(rename = "imageDigest")]
@@ -552,6 +570,7 @@ pub struct ImageDetail {
 
 /// <p>An object representing an Amazon ECR image failure.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ImageFailure {
     /// <p>The code associated with the failure.</p>
     #[serde(rename = "failureCode")]
@@ -592,6 +611,7 @@ pub struct InitiateLayerUploadRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InitiateLayerUploadResponse {
     /// <p>The size, in bytes, that Amazon ECR expects future layer part uploads to be.</p>
     #[serde(rename = "partSize")]
@@ -605,6 +625,7 @@ pub struct InitiateLayerUploadResponse {
 
 /// <p>An object representing an Amazon ECR image layer.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Layer {
     /// <p>The availability status of the image layer.</p>
     #[serde(rename = "layerAvailability")]
@@ -626,6 +647,7 @@ pub struct Layer {
 
 /// <p>An object representing an Amazon ECR image layer failure.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LayerFailure {
     /// <p>The failure code associated with the failure.</p>
     #[serde(rename = "failureCode")]
@@ -652,6 +674,7 @@ pub struct LifecyclePolicyPreviewFilter {
 
 /// <p>The result of the lifecycle policy preview.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LifecyclePolicyPreviewResult {
     /// <p>The type of action to be taken.</p>
     #[serde(rename = "action")]
@@ -677,6 +700,7 @@ pub struct LifecyclePolicyPreviewResult {
 
 /// <p>The summary of the lifecycle policy preview request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LifecyclePolicyPreviewSummary {
     /// <p>The number of expiring images.</p>
     #[serde(rename = "expiringImageTotalCount")]
@@ -686,6 +710,7 @@ pub struct LifecyclePolicyPreviewSummary {
 
 /// <p>The type of action to be taken.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LifecyclePolicyRuleAction {
     /// <p>The type of action to be taken.</p>
     #[serde(rename = "type")]
@@ -726,6 +751,7 @@ pub struct ListImagesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListImagesResponse {
     /// <p>The list of image IDs for the requested repository.</p>
     #[serde(rename = "imageIds")]
@@ -756,6 +782,7 @@ pub struct PutImageRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutImageResponse {
     /// <p>Details of the image uploaded.</p>
     #[serde(rename = "image")]
@@ -778,6 +805,7 @@ pub struct PutLifecyclePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutLifecyclePolicyResponse {
     /// <p>The JSON repository policy text.</p>
     #[serde(rename = "lifecyclePolicyText")]
@@ -795,6 +823,7 @@ pub struct PutLifecyclePolicyResponse {
 
 /// <p>An object representing a repository.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Repository {
     /// <p>The date and time, in JavaScript date format, when the repository was created.</p>
     #[serde(rename = "createdAt")]
@@ -837,6 +866,7 @@ pub struct SetRepositoryPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SetRepositoryPolicyResponse {
     /// <p>The JSON repository policy text applied to the repository.</p>
     #[serde(rename = "policyText")]
@@ -868,6 +898,7 @@ pub struct StartLifecyclePolicyPreviewRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartLifecyclePolicyPreviewResponse {
     /// <p>The JSON repository policy text.</p>
     #[serde(rename = "lifecyclePolicyText")]
@@ -894,7 +925,7 @@ pub struct UploadLayerPartRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub layer_part_blob: Vec<u8>,
     /// <p>The integer value of the first byte of the layer part.</p>
@@ -916,6 +947,7 @@ pub struct UploadLayerPartRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UploadLayerPartResponse {
     /// <p>The integer value of the last byte received in the request.</p>
     #[serde(rename = "lastByteReceived")]
@@ -950,51 +982,51 @@ pub enum BatchCheckLayerAvailabilityError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchCheckLayerAvailabilityError {
-    pub fn from_body(body: &str) -> BatchCheckLayerAvailabilityError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchCheckLayerAvailabilityError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        BatchCheckLayerAvailabilityError::InvalidParameter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNotFoundException" => {
-                        BatchCheckLayerAvailabilityError::RepositoryNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServerException" => {
-                        BatchCheckLayerAvailabilityError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        BatchCheckLayerAvailabilityError::Validation(error_message.to_string())
-                    }
-                    _ => BatchCheckLayerAvailabilityError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return BatchCheckLayerAvailabilityError::InvalidParameter(String::from(
+                        error_message,
+                    ))
                 }
+                "RepositoryNotFoundException" => {
+                    return BatchCheckLayerAvailabilityError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return BatchCheckLayerAvailabilityError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return BatchCheckLayerAvailabilityError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchCheckLayerAvailabilityError::Unknown(String::from(body)),
         }
+        return BatchCheckLayerAvailabilityError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchCheckLayerAvailabilityError {
     fn from(err: serde_json::error::Error) -> BatchCheckLayerAvailabilityError {
-        BatchCheckLayerAvailabilityError::Unknown(err.description().to_string())
+        BatchCheckLayerAvailabilityError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchCheckLayerAvailabilityError {
@@ -1028,7 +1060,8 @@ impl Error for BatchCheckLayerAvailabilityError {
             BatchCheckLayerAvailabilityError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchCheckLayerAvailabilityError::Unknown(ref cause) => cause,
+            BatchCheckLayerAvailabilityError::ParseError(ref cause) => cause,
+            BatchCheckLayerAvailabilityError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1047,45 +1080,47 @@ pub enum BatchDeleteImageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchDeleteImageError {
-    pub fn from_body(body: &str) -> BatchDeleteImageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchDeleteImageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        BatchDeleteImageError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        BatchDeleteImageError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => BatchDeleteImageError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        BatchDeleteImageError::Validation(error_message.to_string())
-                    }
-                    _ => BatchDeleteImageError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return BatchDeleteImageError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return BatchDeleteImageError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return BatchDeleteImageError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return BatchDeleteImageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchDeleteImageError::Unknown(String::from(body)),
         }
+        return BatchDeleteImageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchDeleteImageError {
     fn from(err: serde_json::error::Error) -> BatchDeleteImageError {
-        BatchDeleteImageError::Unknown(err.description().to_string())
+        BatchDeleteImageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchDeleteImageError {
@@ -1117,7 +1152,8 @@ impl Error for BatchDeleteImageError {
             BatchDeleteImageError::Validation(ref cause) => cause,
             BatchDeleteImageError::Credentials(ref err) => err.description(),
             BatchDeleteImageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            BatchDeleteImageError::Unknown(ref cause) => cause,
+            BatchDeleteImageError::ParseError(ref cause) => cause,
+            BatchDeleteImageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1136,45 +1172,45 @@ pub enum BatchGetImageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetImageError {
-    pub fn from_body(body: &str) -> BatchGetImageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetImageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        BatchGetImageError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        BatchGetImageError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => BatchGetImageError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        BatchGetImageError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetImageError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return BatchGetImageError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return BatchGetImageError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => return BatchGetImageError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return BatchGetImageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetImageError::Unknown(String::from(body)),
         }
+        return BatchGetImageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetImageError {
     fn from(err: serde_json::error::Error) -> BatchGetImageError {
-        BatchGetImageError::Unknown(err.description().to_string())
+        BatchGetImageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetImageError {
@@ -1206,7 +1242,8 @@ impl Error for BatchGetImageError {
             BatchGetImageError::Validation(ref cause) => cause,
             BatchGetImageError::Credentials(ref err) => err.description(),
             BatchGetImageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            BatchGetImageError::Unknown(ref cause) => cause,
+            BatchGetImageError::ParseError(ref cause) => cause,
+            BatchGetImageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1235,62 +1272,62 @@ pub enum CompleteLayerUploadError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CompleteLayerUploadError {
-    pub fn from_body(body: &str) -> CompleteLayerUploadError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CompleteLayerUploadError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EmptyUploadException" => {
-                        CompleteLayerUploadError::EmptyUpload(String::from(error_message))
-                    }
-                    "InvalidLayerException" => {
-                        CompleteLayerUploadError::InvalidLayer(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        CompleteLayerUploadError::InvalidParameter(String::from(error_message))
-                    }
-                    "LayerAlreadyExistsException" => {
-                        CompleteLayerUploadError::LayerAlreadyExists(String::from(error_message))
-                    }
-                    "LayerPartTooSmallException" => {
-                        CompleteLayerUploadError::LayerPartTooSmall(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        CompleteLayerUploadError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        CompleteLayerUploadError::Server(String::from(error_message))
-                    }
-                    "UploadNotFoundException" => {
-                        CompleteLayerUploadError::UploadNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CompleteLayerUploadError::Validation(error_message.to_string())
-                    }
-                    _ => CompleteLayerUploadError::Unknown(String::from(body)),
+            match *error_type {
+                "EmptyUploadException" => {
+                    return CompleteLayerUploadError::EmptyUpload(String::from(error_message))
                 }
+                "InvalidLayerException" => {
+                    return CompleteLayerUploadError::InvalidLayer(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return CompleteLayerUploadError::InvalidParameter(String::from(error_message))
+                }
+                "LayerAlreadyExistsException" => {
+                    return CompleteLayerUploadError::LayerAlreadyExists(String::from(error_message))
+                }
+                "LayerPartTooSmallException" => {
+                    return CompleteLayerUploadError::LayerPartTooSmall(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return CompleteLayerUploadError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return CompleteLayerUploadError::Server(String::from(error_message))
+                }
+                "UploadNotFoundException" => {
+                    return CompleteLayerUploadError::UploadNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CompleteLayerUploadError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CompleteLayerUploadError::Unknown(String::from(body)),
         }
+        return CompleteLayerUploadError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CompleteLayerUploadError {
     fn from(err: serde_json::error::Error) -> CompleteLayerUploadError {
-        CompleteLayerUploadError::Unknown(err.description().to_string())
+        CompleteLayerUploadError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CompleteLayerUploadError {
@@ -1329,7 +1366,8 @@ impl Error for CompleteLayerUploadError {
             CompleteLayerUploadError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CompleteLayerUploadError::Unknown(ref cause) => cause,
+            CompleteLayerUploadError::ParseError(ref cause) => cause,
+            CompleteLayerUploadError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1350,48 +1388,52 @@ pub enum CreateRepositoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateRepositoryError {
-    pub fn from_body(body: &str) -> CreateRepositoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateRepositoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        CreateRepositoryError::InvalidParameter(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateRepositoryError::LimitExceeded(String::from(error_message))
-                    }
-                    "RepositoryAlreadyExistsException" => {
-                        CreateRepositoryError::RepositoryAlreadyExists(String::from(error_message))
-                    }
-                    "ServerException" => CreateRepositoryError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        CreateRepositoryError::Validation(error_message.to_string())
-                    }
-                    _ => CreateRepositoryError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return CreateRepositoryError::InvalidParameter(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return CreateRepositoryError::LimitExceeded(String::from(error_message))
+                }
+                "RepositoryAlreadyExistsException" => {
+                    return CreateRepositoryError::RepositoryAlreadyExists(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return CreateRepositoryError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateRepositoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateRepositoryError::Unknown(String::from(body)),
         }
+        return CreateRepositoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateRepositoryError {
     fn from(err: serde_json::error::Error) -> CreateRepositoryError {
-        CreateRepositoryError::Unknown(err.description().to_string())
+        CreateRepositoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateRepositoryError {
@@ -1424,7 +1466,8 @@ impl Error for CreateRepositoryError {
             CreateRepositoryError::Validation(ref cause) => cause,
             CreateRepositoryError::Credentials(ref err) => err.description(),
             CreateRepositoryError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateRepositoryError::Unknown(ref cause) => cause,
+            CreateRepositoryError::ParseError(ref cause) => cause,
+            CreateRepositoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1445,52 +1488,54 @@ pub enum DeleteLifecyclePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteLifecyclePolicyError {
-    pub fn from_body(body: &str) -> DeleteLifecyclePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteLifecyclePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        DeleteLifecyclePolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "LifecyclePolicyNotFoundException" => {
-                        DeleteLifecyclePolicyError::LifecyclePolicyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNotFoundException" => {
-                        DeleteLifecyclePolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DeleteLifecyclePolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteLifecyclePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteLifecyclePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return DeleteLifecyclePolicyError::InvalidParameter(String::from(error_message))
                 }
+                "LifecyclePolicyNotFoundException" => {
+                    return DeleteLifecyclePolicyError::LifecyclePolicyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNotFoundException" => {
+                    return DeleteLifecyclePolicyError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return DeleteLifecyclePolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteLifecyclePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteLifecyclePolicyError::Unknown(String::from(body)),
         }
+        return DeleteLifecyclePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteLifecyclePolicyError {
     fn from(err: serde_json::error::Error) -> DeleteLifecyclePolicyError {
-        DeleteLifecyclePolicyError::Unknown(err.description().to_string())
+        DeleteLifecyclePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteLifecyclePolicyError {
@@ -1525,7 +1570,8 @@ impl Error for DeleteLifecyclePolicyError {
             DeleteLifecyclePolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteLifecyclePolicyError::Unknown(ref cause) => cause,
+            DeleteLifecyclePolicyError::ParseError(ref cause) => cause,
+            DeleteLifecyclePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1546,48 +1592,50 @@ pub enum DeleteRepositoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteRepositoryError {
-    pub fn from_body(body: &str) -> DeleteRepositoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteRepositoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        DeleteRepositoryError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotEmptyException" => {
-                        DeleteRepositoryError::RepositoryNotEmpty(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        DeleteRepositoryError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => DeleteRepositoryError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        DeleteRepositoryError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteRepositoryError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return DeleteRepositoryError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotEmptyException" => {
+                    return DeleteRepositoryError::RepositoryNotEmpty(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return DeleteRepositoryError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return DeleteRepositoryError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteRepositoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteRepositoryError::Unknown(String::from(body)),
         }
+        return DeleteRepositoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteRepositoryError {
     fn from(err: serde_json::error::Error) -> DeleteRepositoryError {
-        DeleteRepositoryError::Unknown(err.description().to_string())
+        DeleteRepositoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteRepositoryError {
@@ -1620,7 +1668,8 @@ impl Error for DeleteRepositoryError {
             DeleteRepositoryError::Validation(ref cause) => cause,
             DeleteRepositoryError::Credentials(ref err) => err.description(),
             DeleteRepositoryError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteRepositoryError::Unknown(ref cause) => cause,
+            DeleteRepositoryError::ParseError(ref cause) => cause,
+            DeleteRepositoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1641,52 +1690,56 @@ pub enum DeleteRepositoryPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteRepositoryPolicyError {
-    pub fn from_body(body: &str) -> DeleteRepositoryPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteRepositoryPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        DeleteRepositoryPolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        DeleteRepositoryPolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "RepositoryPolicyNotFoundException" => {
-                        DeleteRepositoryPolicyError::RepositoryPolicyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServerException" => {
-                        DeleteRepositoryPolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteRepositoryPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteRepositoryPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return DeleteRepositoryPolicyError::InvalidParameter(String::from(
+                        error_message,
+                    ))
                 }
+                "RepositoryNotFoundException" => {
+                    return DeleteRepositoryPolicyError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryPolicyNotFoundException" => {
+                    return DeleteRepositoryPolicyError::RepositoryPolicyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return DeleteRepositoryPolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteRepositoryPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteRepositoryPolicyError::Unknown(String::from(body)),
         }
+        return DeleteRepositoryPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteRepositoryPolicyError {
     fn from(err: serde_json::error::Error) -> DeleteRepositoryPolicyError {
-        DeleteRepositoryPolicyError::Unknown(err.description().to_string())
+        DeleteRepositoryPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteRepositoryPolicyError {
@@ -1721,7 +1774,8 @@ impl Error for DeleteRepositoryPolicyError {
             DeleteRepositoryPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteRepositoryPolicyError::Unknown(ref cause) => cause,
+            DeleteRepositoryPolicyError::ParseError(ref cause) => cause,
+            DeleteRepositoryPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1742,48 +1796,50 @@ pub enum DescribeImagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeImagesError {
-    pub fn from_body(body: &str) -> DescribeImagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeImagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ImageNotFoundException" => {
-                        DescribeImagesError::ImageNotFound(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        DescribeImagesError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        DescribeImagesError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => DescribeImagesError::Server(String::from(error_message)),
-                    "ValidationException" => {
-                        DescribeImagesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeImagesError::Unknown(String::from(body)),
+            match *error_type {
+                "ImageNotFoundException" => {
+                    return DescribeImagesError::ImageNotFound(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return DescribeImagesError::InvalidParameter(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return DescribeImagesError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return DescribeImagesError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeImagesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeImagesError::Unknown(String::from(body)),
         }
+        return DescribeImagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeImagesError {
     fn from(err: serde_json::error::Error) -> DescribeImagesError {
-        DescribeImagesError::Unknown(err.description().to_string())
+        DescribeImagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeImagesError {
@@ -1816,7 +1872,8 @@ impl Error for DescribeImagesError {
             DescribeImagesError::Validation(ref cause) => cause,
             DescribeImagesError::Credentials(ref err) => err.description(),
             DescribeImagesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeImagesError::Unknown(ref cause) => cause,
+            DescribeImagesError::ParseError(ref cause) => cause,
+            DescribeImagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1835,47 +1892,49 @@ pub enum DescribeRepositoriesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeRepositoriesError {
-    pub fn from_body(body: &str) -> DescribeRepositoriesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeRepositoriesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        DescribeRepositoriesError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        DescribeRepositoriesError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        DescribeRepositoriesError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeRepositoriesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeRepositoriesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return DescribeRepositoriesError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return DescribeRepositoriesError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return DescribeRepositoriesError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeRepositoriesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeRepositoriesError::Unknown(String::from(body)),
         }
+        return DescribeRepositoriesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeRepositoriesError {
     fn from(err: serde_json::error::Error) -> DescribeRepositoriesError {
-        DescribeRepositoriesError::Unknown(err.description().to_string())
+        DescribeRepositoriesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeRepositoriesError {
@@ -1909,7 +1968,8 @@ impl Error for DescribeRepositoriesError {
             DescribeRepositoriesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeRepositoriesError::Unknown(ref cause) => cause,
+            DescribeRepositoriesError::ParseError(ref cause) => cause,
+            DescribeRepositoriesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1926,44 +1986,44 @@ pub enum GetAuthorizationTokenError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAuthorizationTokenError {
-    pub fn from_body(body: &str) -> GetAuthorizationTokenError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetAuthorizationTokenError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        GetAuthorizationTokenError::InvalidParameter(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        GetAuthorizationTokenError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAuthorizationTokenError::Validation(error_message.to_string())
-                    }
-                    _ => GetAuthorizationTokenError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return GetAuthorizationTokenError::InvalidParameter(String::from(error_message))
                 }
+                "ServerException" => {
+                    return GetAuthorizationTokenError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAuthorizationTokenError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAuthorizationTokenError::Unknown(String::from(body)),
         }
+        return GetAuthorizationTokenError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAuthorizationTokenError {
     fn from(err: serde_json::error::Error) -> GetAuthorizationTokenError {
-        GetAuthorizationTokenError::Unknown(err.description().to_string())
+        GetAuthorizationTokenError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAuthorizationTokenError {
@@ -1996,7 +2056,8 @@ impl Error for GetAuthorizationTokenError {
             GetAuthorizationTokenError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetAuthorizationTokenError::Unknown(ref cause) => cause,
+            GetAuthorizationTokenError::ParseError(ref cause) => cause,
+            GetAuthorizationTokenError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2019,53 +2080,59 @@ pub enum GetDownloadUrlForLayerError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDownloadUrlForLayerError {
-    pub fn from_body(body: &str) -> GetDownloadUrlForLayerError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDownloadUrlForLayerError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        GetDownloadUrlForLayerError::InvalidParameter(String::from(error_message))
-                    }
-                    "LayerInaccessibleException" => {
-                        GetDownloadUrlForLayerError::LayerInaccessible(String::from(error_message))
-                    }
-                    "LayersNotFoundException" => {
-                        GetDownloadUrlForLayerError::LayersNotFound(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        GetDownloadUrlForLayerError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        GetDownloadUrlForLayerError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDownloadUrlForLayerError::Validation(error_message.to_string())
-                    }
-                    _ => GetDownloadUrlForLayerError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return GetDownloadUrlForLayerError::InvalidParameter(String::from(
+                        error_message,
+                    ))
                 }
+                "LayerInaccessibleException" => {
+                    return GetDownloadUrlForLayerError::LayerInaccessible(String::from(
+                        error_message,
+                    ))
+                }
+                "LayersNotFoundException" => {
+                    return GetDownloadUrlForLayerError::LayersNotFound(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return GetDownloadUrlForLayerError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return GetDownloadUrlForLayerError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDownloadUrlForLayerError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDownloadUrlForLayerError::Unknown(String::from(body)),
         }
+        return GetDownloadUrlForLayerError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDownloadUrlForLayerError {
     fn from(err: serde_json::error::Error) -> GetDownloadUrlForLayerError {
-        GetDownloadUrlForLayerError::Unknown(err.description().to_string())
+        GetDownloadUrlForLayerError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDownloadUrlForLayerError {
@@ -2101,7 +2168,8 @@ impl Error for GetDownloadUrlForLayerError {
             GetDownloadUrlForLayerError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetDownloadUrlForLayerError::Unknown(ref cause) => cause,
+            GetDownloadUrlForLayerError::ParseError(ref cause) => cause,
+            GetDownloadUrlForLayerError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2122,52 +2190,52 @@ pub enum GetLifecyclePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetLifecyclePolicyError {
-    pub fn from_body(body: &str) -> GetLifecyclePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetLifecyclePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        GetLifecyclePolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "LifecyclePolicyNotFoundException" => {
-                        GetLifecyclePolicyError::LifecyclePolicyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNotFoundException" => {
-                        GetLifecyclePolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        GetLifecyclePolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetLifecyclePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => GetLifecyclePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return GetLifecyclePolicyError::InvalidParameter(String::from(error_message))
                 }
+                "LifecyclePolicyNotFoundException" => {
+                    return GetLifecyclePolicyError::LifecyclePolicyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNotFoundException" => {
+                    return GetLifecyclePolicyError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return GetLifecyclePolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetLifecyclePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetLifecyclePolicyError::Unknown(String::from(body)),
         }
+        return GetLifecyclePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetLifecyclePolicyError {
     fn from(err: serde_json::error::Error) -> GetLifecyclePolicyError {
-        GetLifecyclePolicyError::Unknown(err.description().to_string())
+        GetLifecyclePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetLifecyclePolicyError {
@@ -2202,7 +2270,8 @@ impl Error for GetLifecyclePolicyError {
             GetLifecyclePolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetLifecyclePolicyError::Unknown(ref cause) => cause,
+            GetLifecyclePolicyError::ParseError(ref cause) => cause,
+            GetLifecyclePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2223,56 +2292,56 @@ pub enum GetLifecyclePolicyPreviewError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetLifecyclePolicyPreviewError {
-    pub fn from_body(body: &str) -> GetLifecyclePolicyPreviewError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetLifecyclePolicyPreviewError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        GetLifecyclePolicyPreviewError::InvalidParameter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LifecyclePolicyPreviewNotFoundException" => {
-                        GetLifecyclePolicyPreviewError::LifecyclePolicyPreviewNotFound(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryNotFoundException" => {
-                        GetLifecyclePolicyPreviewError::RepositoryNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServerException" => {
-                        GetLifecyclePolicyPreviewError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetLifecyclePolicyPreviewError::Validation(error_message.to_string())
-                    }
-                    _ => GetLifecyclePolicyPreviewError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return GetLifecyclePolicyPreviewError::InvalidParameter(String::from(
+                        error_message,
+                    ))
                 }
+                "LifecyclePolicyPreviewNotFoundException" => {
+                    return GetLifecyclePolicyPreviewError::LifecyclePolicyPreviewNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryNotFoundException" => {
+                    return GetLifecyclePolicyPreviewError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return GetLifecyclePolicyPreviewError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetLifecyclePolicyPreviewError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetLifecyclePolicyPreviewError::Unknown(String::from(body)),
         }
+        return GetLifecyclePolicyPreviewError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetLifecyclePolicyPreviewError {
     fn from(err: serde_json::error::Error) -> GetLifecyclePolicyPreviewError {
-        GetLifecyclePolicyPreviewError::Unknown(err.description().to_string())
+        GetLifecyclePolicyPreviewError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetLifecyclePolicyPreviewError {
@@ -2307,7 +2376,8 @@ impl Error for GetLifecyclePolicyPreviewError {
             GetLifecyclePolicyPreviewError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetLifecyclePolicyPreviewError::Unknown(ref cause) => cause,
+            GetLifecyclePolicyPreviewError::ParseError(ref cause) => cause,
+            GetLifecyclePolicyPreviewError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2328,52 +2398,52 @@ pub enum GetRepositoryPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRepositoryPolicyError {
-    pub fn from_body(body: &str) -> GetRepositoryPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetRepositoryPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        GetRepositoryPolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        GetRepositoryPolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "RepositoryPolicyNotFoundException" => {
-                        GetRepositoryPolicyError::RepositoryPolicyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServerException" => {
-                        GetRepositoryPolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetRepositoryPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => GetRepositoryPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return GetRepositoryPolicyError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return GetRepositoryPolicyError::RepositoryNotFound(String::from(error_message))
+                }
+                "RepositoryPolicyNotFoundException" => {
+                    return GetRepositoryPolicyError::RepositoryPolicyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return GetRepositoryPolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRepositoryPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRepositoryPolicyError::Unknown(String::from(body)),
         }
+        return GetRepositoryPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRepositoryPolicyError {
     fn from(err: serde_json::error::Error) -> GetRepositoryPolicyError {
-        GetRepositoryPolicyError::Unknown(err.description().to_string())
+        GetRepositoryPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRepositoryPolicyError {
@@ -2408,7 +2478,8 @@ impl Error for GetRepositoryPolicyError {
             GetRepositoryPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetRepositoryPolicyError::Unknown(ref cause) => cause,
+            GetRepositoryPolicyError::ParseError(ref cause) => cause,
+            GetRepositoryPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2427,47 +2498,47 @@ pub enum InitiateLayerUploadError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InitiateLayerUploadError {
-    pub fn from_body(body: &str) -> InitiateLayerUploadError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> InitiateLayerUploadError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        InitiateLayerUploadError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        InitiateLayerUploadError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        InitiateLayerUploadError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        InitiateLayerUploadError::Validation(error_message.to_string())
-                    }
-                    _ => InitiateLayerUploadError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return InitiateLayerUploadError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return InitiateLayerUploadError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return InitiateLayerUploadError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return InitiateLayerUploadError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => InitiateLayerUploadError::Unknown(String::from(body)),
         }
+        return InitiateLayerUploadError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InitiateLayerUploadError {
     fn from(err: serde_json::error::Error) -> InitiateLayerUploadError {
-        InitiateLayerUploadError::Unknown(err.description().to_string())
+        InitiateLayerUploadError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InitiateLayerUploadError {
@@ -2501,7 +2572,8 @@ impl Error for InitiateLayerUploadError {
             InitiateLayerUploadError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            InitiateLayerUploadError::Unknown(ref cause) => cause,
+            InitiateLayerUploadError::ParseError(ref cause) => cause,
+            InitiateLayerUploadError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2520,43 +2592,45 @@ pub enum ListImagesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListImagesError {
-    pub fn from_body(body: &str) -> ListImagesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListImagesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        ListImagesError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        ListImagesError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => ListImagesError::Server(String::from(error_message)),
-                    "ValidationException" => ListImagesError::Validation(error_message.to_string()),
-                    _ => ListImagesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return ListImagesError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return ListImagesError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => return ListImagesError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return ListImagesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListImagesError::Unknown(String::from(body)),
         }
+        return ListImagesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListImagesError {
     fn from(err: serde_json::error::Error) -> ListImagesError {
-        ListImagesError::Unknown(err.description().to_string())
+        ListImagesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListImagesError {
@@ -2588,7 +2662,8 @@ impl Error for ListImagesError {
             ListImagesError::Validation(ref cause) => cause,
             ListImagesError::Credentials(ref err) => err.description(),
             ListImagesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListImagesError::Unknown(ref cause) => cause,
+            ListImagesError::ParseError(ref cause) => cause,
+            ListImagesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2613,52 +2688,54 @@ pub enum PutImageError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutImageError {
-    pub fn from_body(body: &str) -> PutImageError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutImageError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ImageAlreadyExistsException" => {
-                        PutImageError::ImageAlreadyExists(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        PutImageError::InvalidParameter(String::from(error_message))
-                    }
-                    "LayersNotFoundException" => {
-                        PutImageError::LayersNotFound(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        PutImageError::LimitExceeded(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        PutImageError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => PutImageError::Server(String::from(error_message)),
-                    "ValidationException" => PutImageError::Validation(error_message.to_string()),
-                    _ => PutImageError::Unknown(String::from(body)),
+            match *error_type {
+                "ImageAlreadyExistsException" => {
+                    return PutImageError::ImageAlreadyExists(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return PutImageError::InvalidParameter(String::from(error_message))
+                }
+                "LayersNotFoundException" => {
+                    return PutImageError::LayersNotFound(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return PutImageError::LimitExceeded(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return PutImageError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => return PutImageError::Server(String::from(error_message)),
+                "ValidationException" => {
+                    return PutImageError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutImageError::Unknown(String::from(body)),
         }
+        return PutImageError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutImageError {
     fn from(err: serde_json::error::Error) -> PutImageError {
-        PutImageError::Unknown(err.description().to_string())
+        PutImageError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutImageError {
@@ -2693,7 +2770,8 @@ impl Error for PutImageError {
             PutImageError::Validation(ref cause) => cause,
             PutImageError::Credentials(ref err) => err.description(),
             PutImageError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutImageError::Unknown(ref cause) => cause,
+            PutImageError::ParseError(ref cause) => cause,
+            PutImageError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2712,47 +2790,47 @@ pub enum PutLifecyclePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutLifecyclePolicyError {
-    pub fn from_body(body: &str) -> PutLifecyclePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutLifecyclePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        PutLifecyclePolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        PutLifecyclePolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        PutLifecyclePolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutLifecyclePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => PutLifecyclePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return PutLifecyclePolicyError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return PutLifecyclePolicyError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return PutLifecyclePolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutLifecyclePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutLifecyclePolicyError::Unknown(String::from(body)),
         }
+        return PutLifecyclePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutLifecyclePolicyError {
     fn from(err: serde_json::error::Error) -> PutLifecyclePolicyError {
-        PutLifecyclePolicyError::Unknown(err.description().to_string())
+        PutLifecyclePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutLifecyclePolicyError {
@@ -2786,7 +2864,8 @@ impl Error for PutLifecyclePolicyError {
             PutLifecyclePolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutLifecyclePolicyError::Unknown(ref cause) => cause,
+            PutLifecyclePolicyError::ParseError(ref cause) => cause,
+            PutLifecyclePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2805,47 +2884,47 @@ pub enum SetRepositoryPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl SetRepositoryPolicyError {
-    pub fn from_body(body: &str) -> SetRepositoryPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> SetRepositoryPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        SetRepositoryPolicyError::InvalidParameter(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        SetRepositoryPolicyError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => {
-                        SetRepositoryPolicyError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        SetRepositoryPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => SetRepositoryPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return SetRepositoryPolicyError::InvalidParameter(String::from(error_message))
                 }
+                "RepositoryNotFoundException" => {
+                    return SetRepositoryPolicyError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return SetRepositoryPolicyError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return SetRepositoryPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => SetRepositoryPolicyError::Unknown(String::from(body)),
         }
+        return SetRepositoryPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for SetRepositoryPolicyError {
     fn from(err: serde_json::error::Error) -> SetRepositoryPolicyError {
-        SetRepositoryPolicyError::Unknown(err.description().to_string())
+        SetRepositoryPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for SetRepositoryPolicyError {
@@ -2879,7 +2958,8 @@ impl Error for SetRepositoryPolicyError {
             SetRepositoryPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            SetRepositoryPolicyError::Unknown(ref cause) => cause,
+            SetRepositoryPolicyError::ParseError(ref cause) => cause,
+            SetRepositoryPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2902,61 +2982,61 @@ pub enum StartLifecyclePolicyPreviewError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartLifecyclePolicyPreviewError {
-    pub fn from_body(body: &str) -> StartLifecyclePolicyPreviewError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartLifecyclePolicyPreviewError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidParameterException" => {
-                        StartLifecyclePolicyPreviewError::InvalidParameter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LifecyclePolicyNotFoundException" => {
-                        StartLifecyclePolicyPreviewError::LifecyclePolicyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LifecyclePolicyPreviewInProgressException" => {
-                        StartLifecyclePolicyPreviewError::LifecyclePolicyPreviewInProgress(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryNotFoundException" => {
-                        StartLifecyclePolicyPreviewError::RepositoryNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServerException" => {
-                        StartLifecyclePolicyPreviewError::Server(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StartLifecyclePolicyPreviewError::Validation(error_message.to_string())
-                    }
-                    _ => StartLifecyclePolicyPreviewError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidParameterException" => {
+                    return StartLifecyclePolicyPreviewError::InvalidParameter(String::from(
+                        error_message,
+                    ))
                 }
+                "LifecyclePolicyNotFoundException" => {
+                    return StartLifecyclePolicyPreviewError::LifecyclePolicyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "LifecyclePolicyPreviewInProgressException" => {
+                    return StartLifecyclePolicyPreviewError::LifecyclePolicyPreviewInProgress(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryNotFoundException" => {
+                    return StartLifecyclePolicyPreviewError::RepositoryNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServerException" => {
+                    return StartLifecyclePolicyPreviewError::Server(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StartLifecyclePolicyPreviewError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartLifecyclePolicyPreviewError::Unknown(String::from(body)),
         }
+        return StartLifecyclePolicyPreviewError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartLifecyclePolicyPreviewError {
     fn from(err: serde_json::error::Error) -> StartLifecyclePolicyPreviewError {
-        StartLifecyclePolicyPreviewError::Unknown(err.description().to_string())
+        StartLifecyclePolicyPreviewError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartLifecyclePolicyPreviewError {
@@ -2992,7 +3072,8 @@ impl Error for StartLifecyclePolicyPreviewError {
             StartLifecyclePolicyPreviewError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            StartLifecyclePolicyPreviewError::Unknown(ref cause) => cause,
+            StartLifecyclePolicyPreviewError::ParseError(ref cause) => cause,
+            StartLifecyclePolicyPreviewError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3017,54 +3098,56 @@ pub enum UploadLayerPartError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UploadLayerPartError {
-    pub fn from_body(body: &str) -> UploadLayerPartError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UploadLayerPartError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidLayerPartException" => {
-                        UploadLayerPartError::InvalidLayerPart(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        UploadLayerPartError::InvalidParameter(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UploadLayerPartError::LimitExceeded(String::from(error_message))
-                    }
-                    "RepositoryNotFoundException" => {
-                        UploadLayerPartError::RepositoryNotFound(String::from(error_message))
-                    }
-                    "ServerException" => UploadLayerPartError::Server(String::from(error_message)),
-                    "UploadNotFoundException" => {
-                        UploadLayerPartError::UploadNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UploadLayerPartError::Validation(error_message.to_string())
-                    }
-                    _ => UploadLayerPartError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidLayerPartException" => {
+                    return UploadLayerPartError::InvalidLayerPart(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return UploadLayerPartError::InvalidParameter(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UploadLayerPartError::LimitExceeded(String::from(error_message))
+                }
+                "RepositoryNotFoundException" => {
+                    return UploadLayerPartError::RepositoryNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return UploadLayerPartError::Server(String::from(error_message))
+                }
+                "UploadNotFoundException" => {
+                    return UploadLayerPartError::UploadNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UploadLayerPartError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UploadLayerPartError::Unknown(String::from(body)),
         }
+        return UploadLayerPartError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UploadLayerPartError {
     fn from(err: serde_json::error::Error) -> UploadLayerPartError {
-        UploadLayerPartError::Unknown(err.description().to_string())
+        UploadLayerPartError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UploadLayerPartError {
@@ -3099,7 +3182,8 @@ impl Error for UploadLayerPartError {
             UploadLayerPartError::Validation(ref cause) => cause,
             UploadLayerPartError::Credentials(ref err) => err.description(),
             UploadLayerPartError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UploadLayerPartError::Unknown(ref cause) => cause,
+            UploadLayerPartError::ParseError(ref cause) => cause,
+            UploadLayerPartError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3296,13 +3380,12 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<BatchCheckLayerAvailabilityResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchCheckLayerAvailabilityError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(BatchCheckLayerAvailabilityError::from_response(response))
                 }))
             }
         })
@@ -3334,14 +3417,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<BatchDeleteImageResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchDeleteImageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(BatchDeleteImageError::from_response(response))),
+                )
             }
         })
     }
@@ -3372,14 +3457,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<BatchGetImageResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetImageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(BatchGetImageError::from_response(response))),
+                )
             }
         })
     }
@@ -3410,14 +3497,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<CompleteLayerUploadResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CompleteLayerUploadError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CompleteLayerUploadError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3448,14 +3536,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<CreateRepositoryResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateRepositoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateRepositoryError::from_response(response))),
+                )
             }
         })
     }
@@ -3486,14 +3576,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<DeleteLifecyclePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteLifecyclePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteLifecyclePolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3524,14 +3615,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<DeleteRepositoryResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteRepositoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteRepositoryError::from_response(response))),
+                )
             }
         })
     }
@@ -3562,14 +3655,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<DeleteRepositoryPolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteRepositoryPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteRepositoryPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3600,14 +3694,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<DescribeImagesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeImagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeImagesError::from_response(response))),
+                )
             }
         })
     }
@@ -3638,14 +3734,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<DescribeRepositoriesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeRepositoriesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeRepositoriesError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3676,14 +3773,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<GetAuthorizationTokenResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAuthorizationTokenError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetAuthorizationTokenError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3714,14 +3812,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<GetDownloadUrlForLayerResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDownloadUrlForLayerError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetDownloadUrlForLayerError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3752,14 +3851,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<GetLifecyclePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetLifecyclePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetLifecyclePolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -3790,13 +3891,12 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<GetLifecyclePolicyPreviewResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetLifecyclePolicyPreviewError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetLifecyclePolicyPreviewError::from_response(response))
                 }))
             }
         })
@@ -3828,14 +3928,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<GetRepositoryPolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRepositoryPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetRepositoryPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3866,14 +3967,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<InitiateLayerUploadResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InitiateLayerUploadError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(InitiateLayerUploadError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -3904,14 +4006,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<ListImagesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListImagesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListImagesError::from_response(response))),
+                )
             }
         })
     }
@@ -3939,14 +4043,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<PutImageResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutImageError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutImageError::from_response(response))),
+                )
             }
         })
     }
@@ -3977,14 +4083,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<PutLifecyclePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutLifecyclePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutLifecyclePolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -4015,14 +4123,15 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<SetRepositoryPolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(SetRepositoryPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(SetRepositoryPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -4053,13 +4162,12 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<StartLifecyclePolicyPreviewResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartLifecyclePolicyPreviewError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(StartLifecyclePolicyPreviewError::from_response(response))
                 }))
             }
         })
@@ -4091,14 +4199,16 @@ impl Ecr for EcrClient {
 
                     serde_json::from_str::<UploadLayerPartResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UploadLayerPartError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UploadLayerPartError::from_response(response))),
+                )
             }
         })
     }

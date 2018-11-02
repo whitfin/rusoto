@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,10 +27,11 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>An object representing the <code>certificate-authority-data</code> for your cluster.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Certificate {
     /// <p>The base64 encoded certificate data required to communicate with your cluster. Add this to the <code>certificate-authority-data</code> section of the <code>kubeconfig</code> file for your cluster.</p>
     #[serde(rename = "data")]
@@ -40,6 +41,7 @@ pub struct Certificate {
 
 /// <p>An object representing an Amazon EKS cluster.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Cluster {
     /// <p>The Amazon Resource Name (ARN) of the cluster.</p>
     #[serde(rename = "arn")]
@@ -105,6 +107,7 @@ pub struct CreateClusterRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateClusterResponse {
     /// <p>The full description of your new cluster.</p>
     #[serde(rename = "cluster")]
@@ -120,6 +123,7 @@ pub struct DeleteClusterRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteClusterResponse {
     /// <p>The full description of the cluster to delete.</p>
     #[serde(rename = "cluster")]
@@ -135,6 +139,7 @@ pub struct DescribeClusterRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeClusterResponse {
     /// <p>The full description of your specified cluster.</p>
     #[serde(rename = "cluster")]
@@ -155,6 +160,7 @@ pub struct ListClustersRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListClustersResponse {
     /// <p>A list of all of the clusters for your account in the specified region.</p>
     #[serde(rename = "clusters")]
@@ -180,6 +186,7 @@ pub struct VpcConfigRequest {
 
 /// <p>An object representing an Amazon EKS cluster VPC configuration response.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VpcConfigResponse {
     /// <p>The security groups associated with the cross-account elastic network interfaces that are used to allow communication between your worker nodes and the Kubernetes control plane.</p>
     #[serde(rename = "securityGroupIds")]
@@ -218,55 +225,71 @@ pub enum CreateClusterError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateClusterError {
-    pub fn from_body(body: &str) -> CreateClusterError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateClusterError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => CreateClusterError::Client(String::from(error_message)),
-                    "InvalidParameterException" => {
-                        CreateClusterError::InvalidParameter(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        CreateClusterError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceLimitExceededException" => {
-                        CreateClusterError::ResourceLimitExceeded(String::from(error_message))
-                    }
-                    "ServerException" => CreateClusterError::Server(String::from(error_message)),
-                    "ServiceUnavailableException" => {
-                        CreateClusterError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnsupportedAvailabilityZoneException" => {
-                        CreateClusterError::UnsupportedAvailabilityZone(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateClusterError::Validation(error_message.to_string())
-                    }
-                    _ => CreateClusterError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return CreateClusterError::Client(String::from(error_message)),
+                "InvalidParameterException" => {
+                    return CreateClusterError::InvalidParameter(String::from(error_message))
                 }
+                "ResourceInUseException" => {
+                    return CreateClusterError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceLimitExceededException" => {
+                    return CreateClusterError::ResourceLimitExceeded(String::from(error_message))
+                }
+                "ServerException" => return CreateClusterError::Server(String::from(error_message)),
+                "ServiceUnavailableException" => {
+                    return CreateClusterError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnsupportedAvailabilityZoneException" => {
+                    return CreateClusterError::UnsupportedAvailabilityZone(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateClusterError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateClusterError::Unknown(String::from(body)),
         }
+        return CreateClusterError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateClusterError {
     fn from(err: serde_json::error::Error) -> CreateClusterError {
-        CreateClusterError::Unknown(err.description().to_string())
+        CreateClusterError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateClusterError {
@@ -302,7 +325,8 @@ impl Error for CreateClusterError {
             CreateClusterError::Validation(ref cause) => cause,
             CreateClusterError::Credentials(ref err) => err.description(),
             CreateClusterError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateClusterError::Unknown(ref cause) => cause,
+            CreateClusterError::ParseError(ref cause) => cause,
+            CreateClusterError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -325,49 +349,63 @@ pub enum DeleteClusterError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteClusterError {
-    pub fn from_body(body: &str) -> DeleteClusterError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteClusterError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => DeleteClusterError::Client(String::from(error_message)),
-                    "ResourceInUseException" => {
-                        DeleteClusterError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteClusterError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServerException" => DeleteClusterError::Server(String::from(error_message)),
-                    "ServiceUnavailableException" => {
-                        DeleteClusterError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteClusterError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteClusterError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return DeleteClusterError::Client(String::from(error_message)),
+                "ResourceInUseException" => {
+                    return DeleteClusterError::ResourceInUse(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DeleteClusterError::ResourceNotFound(String::from(error_message))
+                }
+                "ServerException" => return DeleteClusterError::Server(String::from(error_message)),
+                "ServiceUnavailableException" => {
+                    return DeleteClusterError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteClusterError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteClusterError::Unknown(String::from(body)),
         }
+        return DeleteClusterError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteClusterError {
     fn from(err: serde_json::error::Error) -> DeleteClusterError {
-        DeleteClusterError::Unknown(err.description().to_string())
+        DeleteClusterError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteClusterError {
@@ -401,7 +439,8 @@ impl Error for DeleteClusterError {
             DeleteClusterError::Validation(ref cause) => cause,
             DeleteClusterError::Credentials(ref err) => err.description(),
             DeleteClusterError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteClusterError::Unknown(ref cause) => cause,
+            DeleteClusterError::ParseError(ref cause) => cause,
+            DeleteClusterError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -422,46 +461,64 @@ pub enum DescribeClusterError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeClusterError {
-    pub fn from_body(body: &str) -> DescribeClusterError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeClusterError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => DescribeClusterError::Client(String::from(error_message)),
-                    "ResourceNotFoundException" => {
-                        DescribeClusterError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServerException" => DescribeClusterError::Server(String::from(error_message)),
-                    "ServiceUnavailableException" => {
-                        DescribeClusterError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeClusterError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeClusterError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => {
+                    return DescribeClusterError::Client(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeClusterError::ResourceNotFound(String::from(error_message))
+                }
+                "ServerException" => {
+                    return DescribeClusterError::Server(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeClusterError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeClusterError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeClusterError::Unknown(String::from(body)),
         }
+        return DescribeClusterError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeClusterError {
     fn from(err: serde_json::error::Error) -> DescribeClusterError {
-        DescribeClusterError::Unknown(err.description().to_string())
+        DescribeClusterError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeClusterError {
@@ -494,7 +551,8 @@ impl Error for DescribeClusterError {
             DescribeClusterError::Validation(ref cause) => cause,
             DescribeClusterError::Credentials(ref err) => err.description(),
             DescribeClusterError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeClusterError::Unknown(ref cause) => cause,
+            DescribeClusterError::ParseError(ref cause) => cause,
+            DescribeClusterError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -515,46 +573,60 @@ pub enum ListClustersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListClustersError {
-    pub fn from_body(body: &str) -> ListClustersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListClustersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ClientException" => ListClustersError::Client(String::from(error_message)),
-                    "InvalidParameterException" => {
-                        ListClustersError::InvalidParameter(String::from(error_message))
-                    }
-                    "ServerException" => ListClustersError::Server(String::from(error_message)),
-                    "ServiceUnavailableException" => {
-                        ListClustersError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListClustersError::Validation(error_message.to_string())
-                    }
-                    _ => ListClustersError::Unknown(String::from(body)),
+            match error_type {
+                "ClientException" => return ListClustersError::Client(String::from(error_message)),
+                "InvalidParameterException" => {
+                    return ListClustersError::InvalidParameter(String::from(error_message))
                 }
+                "ServerException" => return ListClustersError::Server(String::from(error_message)),
+                "ServiceUnavailableException" => {
+                    return ListClustersError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListClustersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListClustersError::Unknown(String::from(body)),
         }
+        return ListClustersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListClustersError {
     fn from(err: serde_json::error::Error) -> ListClustersError {
-        ListClustersError::Unknown(err.description().to_string())
+        ListClustersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListClustersError {
@@ -587,7 +659,8 @@ impl Error for ListClustersError {
             ListClustersError::Validation(ref cause) => cause,
             ListClustersError::Credentials(ref err) => err.description(),
             ListClustersError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListClustersError::Unknown(ref cause) => cause,
+            ListClustersError::ParseError(ref cause) => cause,
+            ListClustersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -682,11 +755,12 @@ impl Eks for EksClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateClusterError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateClusterError::from_response(response))),
+                )
             }
         })
     }
@@ -717,11 +791,12 @@ impl Eks for EksClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteClusterError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteClusterError::from_response(response))),
+                )
             }
         })
     }
@@ -752,11 +827,12 @@ impl Eks for EksClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeClusterError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeClusterError::from_response(response))),
+                )
             }
         })
     }
@@ -796,11 +872,12 @@ impl Eks for EksClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListClustersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListClustersError::from_response(response))),
+                )
             }
         })
     }

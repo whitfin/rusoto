@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Details of the common errors that all actions return.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FailureInfo {
     /// <p>The code of the common error. Valid values include <code>InternalServiceException</code>, <code>InvalidParameterException</code>, and any valid error code returned by the AWS service that hosts the resource that you want to tag.</p>
     #[serde(rename = "ErrorCode")]
@@ -70,6 +71,7 @@ pub struct GetResourcesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetResourcesOutput {
     /// <p>A string that indicates that the response contains more data than can be returned in a single response. To receive additional data, specify this string for the <code>PaginationToken</code> value in a subsequent request.</p>
     #[serde(rename = "PaginationToken")]
@@ -90,6 +92,7 @@ pub struct GetTagKeysInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetTagKeysOutput {
     /// <p>A string that indicates that the response contains more data than can be returned in a single response. To receive additional data, specify this string for the <code>PaginationToken</code> value in a subsequent request.</p>
     #[serde(rename = "PaginationToken")]
@@ -113,6 +116,7 @@ pub struct GetTagValuesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetTagValuesOutput {
     /// <p>A string that indicates that the response contains more data than can be returned in a single response. To receive additional data, specify this string for the <code>PaginationToken</code> value in a subsequent request.</p>
     #[serde(rename = "PaginationToken")]
@@ -126,6 +130,7 @@ pub struct GetTagValuesOutput {
 
 /// <p>A list of resource ARNs and the tags (keys and values) that are associated with each.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourceTagMapping {
     /// <p>An array of resource ARN(s).</p>
     #[serde(rename = "ResourceARN")]
@@ -139,6 +144,7 @@ pub struct ResourceTagMapping {
 
 /// <p>The metadata that you apply to AWS resources to help you categorize and organize them. Each tag consists of a key and an optional value, both of which you define. For more information, see <a href="http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-basics">Tag Basics</a> in the <i>Amazon EC2 User Guide for Linux Instances</i>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Tag {
     /// <p>One part of a key-value pair that make up a tag. A key is a general label that acts like a category for more specific tag values.</p>
     #[serde(rename = "Key")]
@@ -172,6 +178,7 @@ pub struct TagResourcesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TagResourcesOutput {
     /// <p>Details of resources that could not be tagged. An error code, status code, and error message are returned for each failed item.</p>
     #[serde(rename = "FailedResourcesMap")]
@@ -190,6 +197,7 @@ pub struct UntagResourcesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UntagResourcesOutput {
     /// <p>Details of resources that could not be untagged. An error code, status code, and error message are returned for each failed item.</p>
     #[serde(rename = "FailedResourcesMap")]
@@ -214,50 +222,50 @@ pub enum GetResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetResourcesError {
-    pub fn from_body(body: &str) -> GetResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceException" => {
-                        GetResourcesError::InternalService(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetResourcesError::InvalidParameter(String::from(error_message))
-                    }
-                    "PaginationTokenExpiredException" => {
-                        GetResourcesError::PaginationTokenExpired(String::from(error_message))
-                    }
-                    "ThrottledException" => {
-                        GetResourcesError::Throttled(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => GetResourcesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceException" => {
+                    return GetResourcesError::InternalService(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return GetResourcesError::InvalidParameter(String::from(error_message))
+                }
+                "PaginationTokenExpiredException" => {
+                    return GetResourcesError::PaginationTokenExpired(String::from(error_message))
+                }
+                "ThrottledException" => {
+                    return GetResourcesError::Throttled(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetResourcesError::Unknown(String::from(body)),
         }
+        return GetResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetResourcesError {
     fn from(err: serde_json::error::Error) -> GetResourcesError {
-        GetResourcesError::Unknown(err.description().to_string())
+        GetResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetResourcesError {
@@ -290,7 +298,8 @@ impl Error for GetResourcesError {
             GetResourcesError::Validation(ref cause) => cause,
             GetResourcesError::Credentials(ref err) => err.description(),
             GetResourcesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetResourcesError::Unknown(ref cause) => cause,
+            GetResourcesError::ParseError(ref cause) => cause,
+            GetResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -311,46 +320,50 @@ pub enum GetTagKeysError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetTagKeysError {
-    pub fn from_body(body: &str) -> GetTagKeysError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetTagKeysError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceException" => {
-                        GetTagKeysError::InternalService(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetTagKeysError::InvalidParameter(String::from(error_message))
-                    }
-                    "PaginationTokenExpiredException" => {
-                        GetTagKeysError::PaginationTokenExpired(String::from(error_message))
-                    }
-                    "ThrottledException" => GetTagKeysError::Throttled(String::from(error_message)),
-                    "ValidationException" => GetTagKeysError::Validation(error_message.to_string()),
-                    _ => GetTagKeysError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceException" => {
+                    return GetTagKeysError::InternalService(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return GetTagKeysError::InvalidParameter(String::from(error_message))
+                }
+                "PaginationTokenExpiredException" => {
+                    return GetTagKeysError::PaginationTokenExpired(String::from(error_message))
+                }
+                "ThrottledException" => {
+                    return GetTagKeysError::Throttled(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetTagKeysError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetTagKeysError::Unknown(String::from(body)),
         }
+        return GetTagKeysError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetTagKeysError {
     fn from(err: serde_json::error::Error) -> GetTagKeysError {
-        GetTagKeysError::Unknown(err.description().to_string())
+        GetTagKeysError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetTagKeysError {
@@ -383,7 +396,8 @@ impl Error for GetTagKeysError {
             GetTagKeysError::Validation(ref cause) => cause,
             GetTagKeysError::Credentials(ref err) => err.description(),
             GetTagKeysError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetTagKeysError::Unknown(ref cause) => cause,
+            GetTagKeysError::ParseError(ref cause) => cause,
+            GetTagKeysError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -404,50 +418,50 @@ pub enum GetTagValuesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetTagValuesError {
-    pub fn from_body(body: &str) -> GetTagValuesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetTagValuesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceException" => {
-                        GetTagValuesError::InternalService(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetTagValuesError::InvalidParameter(String::from(error_message))
-                    }
-                    "PaginationTokenExpiredException" => {
-                        GetTagValuesError::PaginationTokenExpired(String::from(error_message))
-                    }
-                    "ThrottledException" => {
-                        GetTagValuesError::Throttled(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetTagValuesError::Validation(error_message.to_string())
-                    }
-                    _ => GetTagValuesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceException" => {
+                    return GetTagValuesError::InternalService(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return GetTagValuesError::InvalidParameter(String::from(error_message))
+                }
+                "PaginationTokenExpiredException" => {
+                    return GetTagValuesError::PaginationTokenExpired(String::from(error_message))
+                }
+                "ThrottledException" => {
+                    return GetTagValuesError::Throttled(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetTagValuesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetTagValuesError::Unknown(String::from(body)),
         }
+        return GetTagValuesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetTagValuesError {
     fn from(err: serde_json::error::Error) -> GetTagValuesError {
-        GetTagValuesError::Unknown(err.description().to_string())
+        GetTagValuesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetTagValuesError {
@@ -480,7 +494,8 @@ impl Error for GetTagValuesError {
             GetTagValuesError::Validation(ref cause) => cause,
             GetTagValuesError::Credentials(ref err) => err.description(),
             GetTagValuesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetTagValuesError::Unknown(ref cause) => cause,
+            GetTagValuesError::ParseError(ref cause) => cause,
+            GetTagValuesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -499,47 +514,47 @@ pub enum TagResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TagResourcesError {
-    pub fn from_body(body: &str) -> TagResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> TagResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceException" => {
-                        TagResourcesError::InternalService(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        TagResourcesError::InvalidParameter(String::from(error_message))
-                    }
-                    "ThrottledException" => {
-                        TagResourcesError::Throttled(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TagResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => TagResourcesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceException" => {
+                    return TagResourcesError::InternalService(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return TagResourcesError::InvalidParameter(String::from(error_message))
+                }
+                "ThrottledException" => {
+                    return TagResourcesError::Throttled(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TagResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TagResourcesError::Unknown(String::from(body)),
         }
+        return TagResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TagResourcesError {
     fn from(err: serde_json::error::Error) -> TagResourcesError {
-        TagResourcesError::Unknown(err.description().to_string())
+        TagResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TagResourcesError {
@@ -571,7 +586,8 @@ impl Error for TagResourcesError {
             TagResourcesError::Validation(ref cause) => cause,
             TagResourcesError::Credentials(ref err) => err.description(),
             TagResourcesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            TagResourcesError::Unknown(ref cause) => cause,
+            TagResourcesError::ParseError(ref cause) => cause,
+            TagResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -590,47 +606,47 @@ pub enum UntagResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UntagResourcesError {
-    pub fn from_body(body: &str) -> UntagResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UntagResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServiceException" => {
-                        UntagResourcesError::InternalService(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        UntagResourcesError::InvalidParameter(String::from(error_message))
-                    }
-                    "ThrottledException" => {
-                        UntagResourcesError::Throttled(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UntagResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => UntagResourcesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServiceException" => {
+                    return UntagResourcesError::InternalService(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return UntagResourcesError::InvalidParameter(String::from(error_message))
+                }
+                "ThrottledException" => {
+                    return UntagResourcesError::Throttled(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UntagResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UntagResourcesError::Unknown(String::from(body)),
         }
+        return UntagResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UntagResourcesError {
     fn from(err: serde_json::error::Error) -> UntagResourcesError {
-        UntagResourcesError::Unknown(err.description().to_string())
+        UntagResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UntagResourcesError {
@@ -662,7 +678,8 @@ impl Error for UntagResourcesError {
             UntagResourcesError::Validation(ref cause) => cause,
             UntagResourcesError::Credentials(ref err) => err.description(),
             UntagResourcesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UntagResourcesError::Unknown(ref cause) => cause,
+            UntagResourcesError::ParseError(ref cause) => cause,
+            UntagResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -760,14 +777,16 @@ impl ResourceGroupsTaggingApi for ResourceGroupsTaggingApiClient {
 
                     serde_json::from_str::<GetResourcesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetResourcesError::from_response(response))),
+                )
             }
         })
     }
@@ -798,14 +817,16 @@ impl ResourceGroupsTaggingApi for ResourceGroupsTaggingApiClient {
 
                     serde_json::from_str::<GetTagKeysOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetTagKeysError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetTagKeysError::from_response(response))),
+                )
             }
         })
     }
@@ -836,14 +857,16 @@ impl ResourceGroupsTaggingApi for ResourceGroupsTaggingApiClient {
 
                     serde_json::from_str::<GetTagValuesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetTagValuesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetTagValuesError::from_response(response))),
+                )
             }
         })
     }
@@ -874,14 +897,16 @@ impl ResourceGroupsTaggingApi for ResourceGroupsTaggingApiClient {
 
                     serde_json::from_str::<TagResourcesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TagResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TagResourcesError::from_response(response))),
+                )
             }
         })
     }
@@ -912,14 +937,16 @@ impl ResourceGroupsTaggingApi for ResourceGroupsTaggingApiClient {
 
                     serde_json::from_str::<UntagResourcesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UntagResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UntagResourcesError::from_response(response))),
+                )
             }
         })
     }

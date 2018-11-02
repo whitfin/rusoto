@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Describes hints for the buffering to perform before delivering data to the destination. These options are treated as hints, and therefore Kinesis Data Firehose might choose to use different values when it is optimal.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -106,6 +106,7 @@ pub struct CreateDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateDeliveryStreamOutput {
     /// <p>The ARN of the delivery stream.</p>
     #[serde(rename = "DeliveryStreamARN")]
@@ -142,10 +143,12 @@ pub struct DeleteDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteDeliveryStreamOutput {}
 
 /// <p>Contains information about a delivery stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeliveryStreamDescription {
     /// <p>The date and time that the delivery stream was created.</p>
     #[serde(rename = "CreateTimestamp")]
@@ -198,6 +201,7 @@ pub struct DescribeDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeDeliveryStreamOutput {
     /// <p>Information about the delivery stream.</p>
     #[serde(rename = "DeliveryStreamDescription")]
@@ -219,6 +223,7 @@ pub struct Deserializer {
 
 /// <p>Describes the destination for a delivery stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DestinationDescription {
     /// <p>The ID of the destination.</p>
     #[serde(rename = "DestinationId")]
@@ -304,6 +309,7 @@ pub struct ElasticsearchDestinationConfiguration {
 
 /// <p>The destination description in Amazon ES.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ElasticsearchDestinationDescription {
     /// <p>The buffering options.</p>
     #[serde(rename = "BufferingHints")]
@@ -467,6 +473,7 @@ pub struct ExtendedS3DestinationConfiguration {
 
 /// <p>Describes a destination in Amazon S3.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExtendedS3DestinationDescription {
     /// <p>The ARN of the S3 bucket. For more information, see <a href="https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Names (ARNs) and AWS Service Namespaces</a>.</p>
     #[serde(rename = "BucketARN")]
@@ -597,6 +604,7 @@ pub struct KinesisStreamSourceConfiguration {
 
 /// <p>Details about a Kinesis data stream used as the source for a Kinesis Data Firehose delivery stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KinesisStreamSourceDescription {
     /// <p>Kinesis Data Firehose starts retrieving records from the Kinesis data stream starting with this time stamp.</p>
     #[serde(rename = "DeliveryStartTimestamp")]
@@ -629,6 +637,7 @@ pub struct ListDeliveryStreamsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDeliveryStreamsOutput {
     /// <p>The names of the delivery streams.</p>
     #[serde(rename = "DeliveryStreamNames")]
@@ -654,6 +663,7 @@ pub struct ListTagsForDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTagsForDeliveryStreamOutput {
     /// <p>If this is <code>true</code> in the response, more tags are available. To list the remaining tags, set <code>ExclusiveStartTagKey</code> to the key of the last tag returned and call <code>ListTagsForDeliveryStream</code> again.</p>
     #[serde(rename = "HasMoreTags")]
@@ -810,6 +820,7 @@ pub struct PutRecordBatchInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutRecordBatchOutput {
     /// <p>The number of records that might have failed processing.</p>
     #[serde(rename = "FailedPutCount")]
@@ -821,6 +832,7 @@ pub struct PutRecordBatchOutput {
 
 /// <p>Contains the result for an individual record from a <a>PutRecordBatch</a> request. If the record is successfully added to your delivery stream, it receives a record ID. If the record fails to be added to your delivery stream, the result includes an error code and an error message.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutRecordBatchResponseEntry {
     /// <p>The error code for an individual record result.</p>
     #[serde(rename = "ErrorCode")]
@@ -847,6 +859,7 @@ pub struct PutRecordInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutRecordOutput {
     /// <p>The ID of the record.</p>
     #[serde(rename = "RecordId")]
@@ -861,7 +874,7 @@ pub struct Record {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub data: Vec<u8>,
 }
@@ -911,6 +924,7 @@ pub struct RedshiftDestinationConfiguration {
 
 /// <p>Describes a destination in Amazon Redshift.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RedshiftDestinationDescription {
     /// <p>The Amazon CloudWatch logging options for your delivery stream.</p>
     #[serde(rename = "CloudWatchLoggingOptions")]
@@ -1040,6 +1054,7 @@ pub struct S3DestinationConfiguration {
 
 /// <p>Describes a destination in Amazon S3.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct S3DestinationDescription {
     /// <p>The ARN of the S3 bucket. For more information, see <a href="https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Names (ARNs) and AWS Service Namespaces</a>.</p>
     #[serde(rename = "BucketARN")]
@@ -1143,6 +1158,7 @@ pub struct Serializer {
 
 /// <p>Details about a Kinesis data stream used as the source for a Kinesis Data Firehose delivery stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SourceDescription {
     /// <p>The <a>KinesisStreamSourceDescription</a> value for the source Kinesis data stream.</p>
     #[serde(rename = "KinesisStreamSourceDescription")]
@@ -1189,6 +1205,7 @@ pub struct SplunkDestinationConfiguration {
 
 /// <p>Describes a destination in Splunk.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SplunkDestinationDescription {
     /// <p>The Amazon CloudWatch logging options for your delivery stream.</p>
     #[serde(rename = "CloudWatchLoggingOptions")]
@@ -1301,6 +1318,7 @@ pub struct TagDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TagDeliveryStreamOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -1314,6 +1332,7 @@ pub struct UntagDeliveryStreamInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UntagDeliveryStreamOutput {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -1346,6 +1365,7 @@ pub struct UpdateDestinationInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateDestinationOutput {}
 
 /// Errors returned by CreateDeliveryStream
@@ -1363,47 +1383,47 @@ pub enum CreateDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateDeliveryStreamError {
-    pub fn from_body(body: &str) -> CreateDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        CreateDeliveryStreamError::InvalidArgument(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        CreateDeliveryStreamError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        CreateDeliveryStreamError::ResourceInUse(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => CreateDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return CreateDeliveryStreamError::InvalidArgument(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return CreateDeliveryStreamError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return CreateDeliveryStreamError::ResourceInUse(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateDeliveryStreamError::Unknown(String::from(body)),
         }
+        return CreateDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> CreateDeliveryStreamError {
-        CreateDeliveryStreamError::Unknown(err.description().to_string())
+        CreateDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateDeliveryStreamError {
@@ -1437,7 +1457,8 @@ impl Error for CreateDeliveryStreamError {
             CreateDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateDeliveryStreamError::Unknown(ref cause) => cause,
+            CreateDeliveryStreamError::ParseError(ref cause) => cause,
+            CreateDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1454,44 +1475,44 @@ pub enum DeleteDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteDeliveryStreamError {
-    pub fn from_body(body: &str) -> DeleteDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ResourceInUseException" => {
-                        DeleteDeliveryStreamError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteDeliveryStreamError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "ResourceInUseException" => {
+                    return DeleteDeliveryStreamError::ResourceInUse(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DeleteDeliveryStreamError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteDeliveryStreamError::Unknown(String::from(body)),
         }
+        return DeleteDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> DeleteDeliveryStreamError {
-        DeleteDeliveryStreamError::Unknown(err.description().to_string())
+        DeleteDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteDeliveryStreamError {
@@ -1524,7 +1545,8 @@ impl Error for DeleteDeliveryStreamError {
             DeleteDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteDeliveryStreamError::Unknown(ref cause) => cause,
+            DeleteDeliveryStreamError::ParseError(ref cause) => cause,
+            DeleteDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1539,41 +1561,43 @@ pub enum DescribeDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeDeliveryStreamError {
-    pub fn from_body(body: &str) -> DescribeDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ResourceNotFoundException" => {
-                        DescribeDeliveryStreamError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "ResourceNotFoundException" => {
+                    return DescribeDeliveryStreamError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return DescribeDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeDeliveryStreamError::Unknown(String::from(body)),
         }
+        return DescribeDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> DescribeDeliveryStreamError {
-        DescribeDeliveryStreamError::Unknown(err.description().to_string())
+        DescribeDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeDeliveryStreamError {
@@ -1605,7 +1629,8 @@ impl Error for DescribeDeliveryStreamError {
             DescribeDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeDeliveryStreamError::Unknown(ref cause) => cause,
+            DescribeDeliveryStreamError::ParseError(ref cause) => cause,
+            DescribeDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1618,38 +1643,38 @@ pub enum ListDeliveryStreamsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDeliveryStreamsError {
-    pub fn from_body(body: &str) -> ListDeliveryStreamsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDeliveryStreamsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ValidationException" => {
-                        ListDeliveryStreamsError::Validation(error_message.to_string())
-                    }
-                    _ => ListDeliveryStreamsError::Unknown(String::from(body)),
+            match *error_type {
+                "ValidationException" => {
+                    return ListDeliveryStreamsError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => ListDeliveryStreamsError::Unknown(String::from(body)),
         }
+        return ListDeliveryStreamsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDeliveryStreamsError {
     fn from(err: serde_json::error::Error) -> ListDeliveryStreamsError {
-        ListDeliveryStreamsError::Unknown(err.description().to_string())
+        ListDeliveryStreamsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDeliveryStreamsError {
@@ -1680,7 +1705,8 @@ impl Error for ListDeliveryStreamsError {
             ListDeliveryStreamsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListDeliveryStreamsError::Unknown(ref cause) => cause,
+            ListDeliveryStreamsError::ParseError(ref cause) => cause,
+            ListDeliveryStreamsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1699,49 +1725,53 @@ pub enum ListTagsForDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTagsForDeliveryStreamError {
-    pub fn from_body(body: &str) -> ListTagsForDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListTagsForDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        ListTagsForDeliveryStreamError::InvalidArgument(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        ListTagsForDeliveryStreamError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListTagsForDeliveryStreamError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListTagsForDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => ListTagsForDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return ListTagsForDeliveryStreamError::InvalidArgument(String::from(
+                        error_message,
+                    ))
                 }
+                "LimitExceededException" => {
+                    return ListTagsForDeliveryStreamError::LimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return ListTagsForDeliveryStreamError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListTagsForDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTagsForDeliveryStreamError::Unknown(String::from(body)),
         }
+        return ListTagsForDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTagsForDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> ListTagsForDeliveryStreamError {
-        ListTagsForDeliveryStreamError::Unknown(err.description().to_string())
+        ListTagsForDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTagsForDeliveryStreamError {
@@ -1775,7 +1805,8 @@ impl Error for ListTagsForDeliveryStreamError {
             ListTagsForDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListTagsForDeliveryStreamError::Unknown(ref cause) => cause,
+            ListTagsForDeliveryStreamError::ParseError(ref cause) => cause,
+            ListTagsForDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1794,45 +1825,47 @@ pub enum PutRecordError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutRecordError {
-    pub fn from_body(body: &str) -> PutRecordError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutRecordError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        PutRecordError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        PutRecordError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        PutRecordError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => PutRecordError::Validation(error_message.to_string()),
-                    _ => PutRecordError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return PutRecordError::InvalidArgument(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return PutRecordError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return PutRecordError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutRecordError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutRecordError::Unknown(String::from(body)),
         }
+        return PutRecordError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutRecordError {
     fn from(err: serde_json::error::Error) -> PutRecordError {
-        PutRecordError::Unknown(err.description().to_string())
+        PutRecordError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutRecordError {
@@ -1864,7 +1897,8 @@ impl Error for PutRecordError {
             PutRecordError::Validation(ref cause) => cause,
             PutRecordError::Credentials(ref err) => err.description(),
             PutRecordError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutRecordError::Unknown(ref cause) => cause,
+            PutRecordError::ParseError(ref cause) => cause,
+            PutRecordError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1883,47 +1917,47 @@ pub enum PutRecordBatchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutRecordBatchError {
-    pub fn from_body(body: &str) -> PutRecordBatchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutRecordBatchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        PutRecordBatchError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        PutRecordBatchError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        PutRecordBatchError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutRecordBatchError::Validation(error_message.to_string())
-                    }
-                    _ => PutRecordBatchError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return PutRecordBatchError::InvalidArgument(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return PutRecordBatchError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return PutRecordBatchError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutRecordBatchError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutRecordBatchError::Unknown(String::from(body)),
         }
+        return PutRecordBatchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutRecordBatchError {
     fn from(err: serde_json::error::Error) -> PutRecordBatchError {
-        PutRecordBatchError::Unknown(err.description().to_string())
+        PutRecordBatchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutRecordBatchError {
@@ -1955,7 +1989,8 @@ impl Error for PutRecordBatchError {
             PutRecordBatchError::Validation(ref cause) => cause,
             PutRecordBatchError::Credentials(ref err) => err.description(),
             PutRecordBatchError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutRecordBatchError::Unknown(ref cause) => cause,
+            PutRecordBatchError::ParseError(ref cause) => cause,
+            PutRecordBatchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1976,50 +2011,50 @@ pub enum TagDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TagDeliveryStreamError {
-    pub fn from_body(body: &str) -> TagDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> TagDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        TagDeliveryStreamError::InvalidArgument(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        TagDeliveryStreamError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        TagDeliveryStreamError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        TagDeliveryStreamError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TagDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => TagDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return TagDeliveryStreamError::InvalidArgument(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return TagDeliveryStreamError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return TagDeliveryStreamError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return TagDeliveryStreamError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TagDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TagDeliveryStreamError::Unknown(String::from(body)),
         }
+        return TagDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TagDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> TagDeliveryStreamError {
-        TagDeliveryStreamError::Unknown(err.description().to_string())
+        TagDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TagDeliveryStreamError {
@@ -2054,7 +2089,8 @@ impl Error for TagDeliveryStreamError {
             TagDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            TagDeliveryStreamError::Unknown(ref cause) => cause,
+            TagDeliveryStreamError::ParseError(ref cause) => cause,
+            TagDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2075,50 +2111,50 @@ pub enum UntagDeliveryStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UntagDeliveryStreamError {
-    pub fn from_body(body: &str) -> UntagDeliveryStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UntagDeliveryStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArgumentException" => {
-                        UntagDeliveryStreamError::InvalidArgument(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UntagDeliveryStreamError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        UntagDeliveryStreamError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UntagDeliveryStreamError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UntagDeliveryStreamError::Validation(error_message.to_string())
-                    }
-                    _ => UntagDeliveryStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArgumentException" => {
+                    return UntagDeliveryStreamError::InvalidArgument(String::from(error_message))
                 }
+                "LimitExceededException" => {
+                    return UntagDeliveryStreamError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return UntagDeliveryStreamError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UntagDeliveryStreamError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UntagDeliveryStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UntagDeliveryStreamError::Unknown(String::from(body)),
         }
+        return UntagDeliveryStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UntagDeliveryStreamError {
     fn from(err: serde_json::error::Error) -> UntagDeliveryStreamError {
-        UntagDeliveryStreamError::Unknown(err.description().to_string())
+        UntagDeliveryStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UntagDeliveryStreamError {
@@ -2153,7 +2189,8 @@ impl Error for UntagDeliveryStreamError {
             UntagDeliveryStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UntagDeliveryStreamError::Unknown(ref cause) => cause,
+            UntagDeliveryStreamError::ParseError(ref cause) => cause,
+            UntagDeliveryStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2174,50 +2211,52 @@ pub enum UpdateDestinationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDestinationError {
-    pub fn from_body(body: &str) -> UpdateDestinationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDestinationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ConcurrentModificationException" => {
-                        UpdateDestinationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "InvalidArgumentException" => {
-                        UpdateDestinationError::InvalidArgument(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        UpdateDestinationError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateDestinationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateDestinationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDestinationError::Unknown(String::from(body)),
+            match *error_type {
+                "ConcurrentModificationException" => {
+                    return UpdateDestinationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidArgumentException" => {
+                    return UpdateDestinationError::InvalidArgument(String::from(error_message))
+                }
+                "ResourceInUseException" => {
+                    return UpdateDestinationError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateDestinationError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateDestinationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDestinationError::Unknown(String::from(body)),
         }
+        return UpdateDestinationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDestinationError {
     fn from(err: serde_json::error::Error) -> UpdateDestinationError {
-        UpdateDestinationError::Unknown(err.description().to_string())
+        UpdateDestinationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDestinationError {
@@ -2252,7 +2291,8 @@ impl Error for UpdateDestinationError {
             UpdateDestinationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDestinationError::Unknown(ref cause) => cause,
+            UpdateDestinationError::ParseError(ref cause) => cause,
+            UpdateDestinationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2374,14 +2414,15 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<CreateDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(CreateDeliveryStreamError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2409,14 +2450,15 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<DeleteDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteDeliveryStreamError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2444,14 +2486,15 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<DescribeDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeDeliveryStreamError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2479,14 +2522,15 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<ListDeliveryStreamsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDeliveryStreamsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListDeliveryStreamsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2517,13 +2561,12 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<ListTagsForDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTagsForDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListTagsForDeliveryStreamError::from_response(response))
                 }))
             }
         })
@@ -2549,14 +2592,16 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<PutRecordOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutRecordError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutRecordError::from_response(response))),
+                )
             }
         })
     }
@@ -2584,14 +2629,16 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<PutRecordBatchOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutRecordBatchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutRecordBatchError::from_response(response))),
+                )
             }
         })
     }
@@ -2619,14 +2666,16 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<TagDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TagDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TagDeliveryStreamError::from_response(response))),
+                )
             }
         })
     }
@@ -2654,14 +2703,15 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<UntagDeliveryStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UntagDeliveryStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UntagDeliveryStreamError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2689,14 +2739,16 @@ impl KinesisFirehose for KinesisFirehoseClient {
 
                     serde_json::from_str::<UpdateDestinationOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDestinationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateDestinationError::from_response(response))),
+                )
             }
         })
     }

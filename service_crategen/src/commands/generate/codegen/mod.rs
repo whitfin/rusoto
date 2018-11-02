@@ -9,7 +9,7 @@ use self::json::JsonGenerator;
 use self::query::QueryGenerator;
 use self::rest_json::RestJsonGenerator;
 use self::rest_xml::RestXmlGenerator;
-use self::error_types::{GenerateErrorTypes, JsonErrorTypes, XmlErrorTypes};
+use self::error_types::{GenerateErrorTypes, JsonErrorTypes, RestJsonErrorTypes, XmlErrorTypes};
 use self::tests::generate_tests;
 use self::type_filter::filter_types;
 use util;
@@ -81,7 +81,7 @@ pub fn generate_source(service: &Service, writer: &mut FileWriter) -> IoResult {
     match service.protocol() {
         "json" => generate(writer, service, JsonGenerator, JsonErrorTypes),
         "query" | "ec2" => generate(writer, service, QueryGenerator, XmlErrorTypes),
-        "rest-json" => generate(writer, service, RestJsonGenerator, JsonErrorTypes),
+        "rest-json" => generate(writer, service, RestJsonGenerator, RestJsonErrorTypes),
         "rest-xml" => generate(writer, service, RestXmlGenerator, XmlErrorTypes),
         protocol => panic!("Unknown protocol {}", protocol),
     }
@@ -129,7 +129,7 @@ fn generate<P, E>(writer: &mut FileWriter,
         #[allow(warnings)]
         use futures::future;
         use futures::Future;
-        use rusoto_core::request::DispatchSignedRequest;
+        use rusoto_core::request::{{BufferedHttpResponse, DispatchSignedRequest}};
         use rusoto_core::region;
         use rusoto_core::{{Client, RusotoFuture}};
 
@@ -388,25 +388,32 @@ fn generate_struct<P>(service: &Service,
     }
 
     let attributes = format!("#[derive({})]", derived.join(","));
+    let test_attributes = if derived.iter().any(|&x| x == "Deserialize") && !derived.iter().any(|&x| x == "Serialize") {
+        "\n#[cfg_attr(test, derive(Serialize))]"
+    } else {
+        ""
+    };
 
     if shape.members.is_none() || shape.members.as_ref().unwrap().is_empty() {
         format!(
-            "{attributes}
+            "{attributes}{test_attributes}
             pub struct {name} {{}}
             ",
             attributes = attributes,
+            test_attributes = test_attributes,
             name = name,
         )
     } else {
         // Serde attributes are only needed if deriving the Serialize or Deserialize trait
         let need_serde_attrs = derived.iter().any(|&x| x == "Serialize" || x == "Deserialize");
         format!(
-            "{attributes}
+            "{attributes}{test_attributes}
             pub struct {name} {{
                 {struct_fields}
             }}
             ",
             attributes = attributes,
+            test_attributes = test_attributes,
             name = name,
             struct_fields = generate_struct_fields(service, shape, name, need_serde_attrs, protocol_generator),
         )

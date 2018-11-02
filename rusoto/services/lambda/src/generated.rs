@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -27,10 +27,11 @@ use rusoto_core::request::HttpDispatchError;
 use rusoto_core::param::{Params, ServiceParams};
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Provides limits of code size and concurrency associated with the current account and region.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AccountLimit {
     /// <p>Size, in bytes, of code/dependencies that you can zip into a deployment package (uncompressed zip/jar size) for uploading. The default limit is 250 MB.</p>
     #[serde(rename = "CodeSizeUnzipped")]
@@ -56,6 +57,7 @@ pub struct AccountLimit {
 
 /// <p>Provides code size usage and function count associated with the current account and region.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AccountUsage {
     /// <p>The number of your account's existing functions per region.</p>
     #[serde(rename = "FunctionCount")]
@@ -106,6 +108,7 @@ pub struct AddPermissionRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddPermissionResponse {
     /// <p>The permission statement you specified in the request. The response returns the same as a string using a backslash ("\") as an escape character in the JSON.</p>
     #[serde(rename = "Statement")]
@@ -115,6 +118,7 @@ pub struct AddPermissionResponse {
 
 /// <p>Provides configuration information about a Lambda function version alias.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AliasConfiguration {
     /// <p>Lambda function ARN that is qualified using the alias name as the suffix. For example, if you create an alias called <code>BETA</code> that points to a helloworld function version, the ARN is <code>arn:aws:lambda:aws-regions:acct-id:function:helloworld:BETA</code>.</p>
     #[serde(rename = "AliasArn")]
@@ -152,6 +156,7 @@ pub struct AliasRoutingConfiguration {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Concurrency {
     /// <p>The number of concurrent executions reserved for this function. For more information, see <a>concurrent-executions</a>.</p>
     #[serde(rename = "ReservedConcurrentExecutions")]
@@ -322,6 +327,7 @@ pub struct Environment {
 
 /// <p>The parent object that contains error information associated with your configuration settings.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnvironmentError {
     /// <p>The error code returned by the environment error object.</p>
     #[serde(rename = "ErrorCode")]
@@ -335,6 +341,7 @@ pub struct EnvironmentError {
 
 /// <p>The parent object returned that contains your environment's configuration settings or any error information associated with your configuration settings.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnvironmentResponse {
     #[serde(rename = "Error")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -347,6 +354,7 @@ pub struct EnvironmentResponse {
 
 /// <p>Describes mapping between an Amazon Kinesis or DynamoDB stream or an Amazon SQS queue and a Lambda function.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EventSourceMappingConfiguration {
     /// <p>The largest number of records that AWS Lambda will retrieve from your event source at the time of invoking your function. Your function receives an event with all the retrieved records.</p>
     #[serde(rename = "BatchSize")]
@@ -402,13 +410,14 @@ pub struct FunctionCode {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub zip_file: Option<Vec<u8>>,
 }
 
 /// <p>The object for the Lambda function location.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FunctionCodeLocation {
     /// <p>The presigned URL you can use to download the function's .zip file that you previously uploaded. The URL is valid for up to 10 minutes.</p>
     #[serde(rename = "Location")]
@@ -422,6 +431,7 @@ pub struct FunctionCodeLocation {
 
 /// <p>A complex type that describes function metadata.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FunctionConfiguration {
     /// <p>It is the SHA256 hash of your function deployment package.</p>
     #[serde(rename = "CodeSha256")]
@@ -505,6 +515,7 @@ pub struct FunctionConfiguration {
 pub struct GetAccountSettingsRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetAccountSettingsResponse {
     #[serde(rename = "AccountLimit")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -558,6 +569,7 @@ pub struct GetFunctionRequest {
 
 /// <p>This response contains the object for the Lambda function location (see <a>FunctionCodeLocation</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetFunctionResponse {
     #[serde(rename = "Code")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -589,6 +601,7 @@ pub struct GetPolicyRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetPolicyResponse {
     /// <p>The resource policy associated with the specified function. The response returns the same as a string using a backslash ("\") as an escape character in the JSON.</p>
     #[serde(rename = "Policy")]
@@ -623,7 +636,7 @@ pub struct InvocationRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub payload: Option<Vec<u8>>,
     /// <p>You can use this optional parameter to specify a Lambda function version or alias name. If you specify a function version, the API uses the qualified function ARN to invoke a specific Lambda function. If you specify an alias name, the API uses the alias ARN to invoke the Lambda function version to which the alias points.</p> <p>If you don't provide this parameter, then the API uses unqualified function ARN which results in invocation of the <code>$LATEST</code> version.</p>
@@ -658,13 +671,14 @@ pub struct InvokeAsyncRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub invoke_args: Vec<u8>,
 }
 
 /// <p>Upon success, it returns empty response. Otherwise, throws an exception.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InvokeAsyncResponse {
     /// <p>It will be 202 upon success.</p>
     #[serde(rename = "Status")]
@@ -692,6 +706,7 @@ pub struct ListAliasesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAliasesResponse {
     /// <p>A list of aliases.</p>
     #[serde(rename = "Aliases")]
@@ -726,6 +741,7 @@ pub struct ListEventSourceMappingsRequest {
 
 /// <p>Contains a list of event sources (see <a>EventSourceMappingConfiguration</a>)</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListEventSourceMappingsResponse {
     /// <p>An array of <code>EventSourceMappingConfiguration</code> objects.</p>
     #[serde(rename = "EventSourceMappings")]
@@ -760,6 +776,7 @@ pub struct ListFunctionsRequest {
 
 /// <p>Contains a list of AWS Lambda function configurations (see <a>FunctionConfiguration</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListFunctionsResponse {
     /// <p>A list of Lambda functions.</p>
     #[serde(rename = "Functions")]
@@ -779,6 +796,7 @@ pub struct ListTagsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTagsResponse {
     /// <p>The list of tags assigned to the function. For more information, see <a href="http://docs.aws.amazon.com/lambda/latest/dg/tagging.html">Tagging Lambda Functions</a> in the <b>AWS Lambda Developer Guide</b>.</p>
     #[serde(rename = "Tags")]
@@ -804,6 +822,7 @@ pub struct ListVersionsByFunctionRequest {
 
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListVersionsByFunctionResponse {
     /// <p>A string, present if there are more function versions.</p>
     #[serde(rename = "NextMarker")]
@@ -885,6 +904,7 @@ pub struct TracingConfig {
 
 /// <p>Parent object of the tracing information associated with your Lambda function.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TracingConfigResponse {
     /// <p>The tracing mode associated with your Lambda function.</p>
     #[serde(rename = "Mode")]
@@ -983,7 +1003,7 @@ pub struct UpdateFunctionCodeRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub zip_file: Option<Vec<u8>>,
 }
@@ -1058,6 +1078,7 @@ pub struct VpcConfig {
 
 /// <p>VPC configuration associated with your Lambda function.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VpcConfigResponse {
     /// <p>A list of security group IDs associated with the Lambda function.</p>
     #[serde(rename = "SecurityGroupIds")]
@@ -1096,57 +1117,73 @@ pub enum AddPermissionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddPermissionError {
-    pub fn from_body(body: &str) -> AddPermissionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> AddPermissionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        AddPermissionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "PolicyLengthExceededException" => {
-                        AddPermissionError::PolicyLengthExceeded(String::from(error_message))
-                    }
-                    "PreconditionFailedException" => {
-                        AddPermissionError::PreconditionFailed(String::from(error_message))
-                    }
-                    "ResourceConflictException" => {
-                        AddPermissionError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddPermissionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => AddPermissionError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        AddPermissionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddPermissionError::Validation(error_message.to_string())
-                    }
-                    _ => AddPermissionError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return AddPermissionError::InvalidParameterValue(String::from(error_message))
                 }
+                "PolicyLengthExceededException" => {
+                    return AddPermissionError::PolicyLengthExceeded(String::from(error_message))
+                }
+                "PreconditionFailedException" => {
+                    return AddPermissionError::PreconditionFailed(String::from(error_message))
+                }
+                "ResourceConflictException" => {
+                    return AddPermissionError::ResourceConflict(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AddPermissionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return AddPermissionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return AddPermissionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AddPermissionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddPermissionError::Unknown(String::from(body)),
         }
+        return AddPermissionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddPermissionError {
     fn from(err: serde_json::error::Error) -> AddPermissionError {
-        AddPermissionError::Unknown(err.description().to_string())
+        AddPermissionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddPermissionError {
@@ -1182,7 +1219,8 @@ impl Error for AddPermissionError {
             AddPermissionError::Validation(ref cause) => cause,
             AddPermissionError::Credentials(ref err) => err.description(),
             AddPermissionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AddPermissionError::Unknown(ref cause) => cause,
+            AddPermissionError::ParseError(ref cause) => cause,
+            AddPermissionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1205,51 +1243,65 @@ pub enum CreateAliasError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateAliasError {
-    pub fn from_body(body: &str) -> CreateAliasError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateAliasError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        CreateAliasError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceConflictException" => {
-                        CreateAliasError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        CreateAliasError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => CreateAliasError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateAliasError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateAliasError::Validation(error_message.to_string())
-                    }
-                    _ => CreateAliasError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return CreateAliasError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceConflictException" => {
+                    return CreateAliasError::ResourceConflict(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return CreateAliasError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return CreateAliasError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return CreateAliasError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateAliasError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateAliasError::Unknown(String::from(body)),
         }
+        return CreateAliasError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateAliasError {
     fn from(err: serde_json::error::Error) -> CreateAliasError {
-        CreateAliasError::Unknown(err.description().to_string())
+        CreateAliasError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateAliasError {
@@ -1283,7 +1335,8 @@ impl Error for CreateAliasError {
             CreateAliasError::Validation(ref cause) => cause,
             CreateAliasError::Credentials(ref err) => err.description(),
             CreateAliasError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateAliasError::Unknown(ref cause) => cause,
+            CreateAliasError::ParseError(ref cause) => cause,
+            CreateAliasError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1306,55 +1359,75 @@ pub enum CreateEventSourceMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateEventSourceMappingError {
-    pub fn from_body(body: &str) -> CreateEventSourceMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateEventSourceMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        CreateEventSourceMappingError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceConflictException" => {
-                        CreateEventSourceMappingError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        CreateEventSourceMappingError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        CreateEventSourceMappingError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateEventSourceMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateEventSourceMappingError::Validation(error_message.to_string())
-                    }
-                    _ => CreateEventSourceMappingError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return CreateEventSourceMappingError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceConflictException" => {
+                    return CreateEventSourceMappingError::ResourceConflict(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return CreateEventSourceMappingError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return CreateEventSourceMappingError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateEventSourceMappingError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateEventSourceMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateEventSourceMappingError::Unknown(String::from(body)),
         }
+        return CreateEventSourceMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateEventSourceMappingError {
     fn from(err: serde_json::error::Error) -> CreateEventSourceMappingError {
-        CreateEventSourceMappingError::Unknown(err.description().to_string())
+        CreateEventSourceMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateEventSourceMappingError {
@@ -1390,7 +1463,8 @@ impl Error for CreateEventSourceMappingError {
             CreateEventSourceMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateEventSourceMappingError::Unknown(ref cause) => cause,
+            CreateEventSourceMappingError::ParseError(ref cause) => cause,
+            CreateEventSourceMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1415,54 +1489,70 @@ pub enum CreateFunctionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateFunctionError {
-    pub fn from_body(body: &str) -> CreateFunctionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> CreateFunctionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "CodeStorageExceededException" => {
-                        CreateFunctionError::CodeStorageExceeded(String::from(error_message))
-                    }
-                    "InvalidParameterValueException" => {
-                        CreateFunctionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceConflictException" => {
-                        CreateFunctionError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        CreateFunctionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => CreateFunctionError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateFunctionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateFunctionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateFunctionError::Unknown(String::from(body)),
+            match error_type {
+                "CodeStorageExceededException" => {
+                    return CreateFunctionError::CodeStorageExceeded(String::from(error_message))
                 }
+                "InvalidParameterValueException" => {
+                    return CreateFunctionError::InvalidParameterValue(String::from(error_message))
+                }
+                "ResourceConflictException" => {
+                    return CreateFunctionError::ResourceConflict(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return CreateFunctionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return CreateFunctionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateFunctionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateFunctionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateFunctionError::Unknown(String::from(body)),
         }
+        return CreateFunctionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateFunctionError {
     fn from(err: serde_json::error::Error) -> CreateFunctionError {
-        CreateFunctionError::Unknown(err.description().to_string())
+        CreateFunctionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateFunctionError {
@@ -1497,7 +1587,8 @@ impl Error for CreateFunctionError {
             CreateFunctionError::Validation(ref cause) => cause,
             CreateFunctionError::Credentials(ref err) => err.description(),
             CreateFunctionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateFunctionError::Unknown(ref cause) => cause,
+            CreateFunctionError::ParseError(ref cause) => cause,
+            CreateFunctionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1516,45 +1607,59 @@ pub enum DeleteAliasError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteAliasError {
-    pub fn from_body(body: &str) -> DeleteAliasError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteAliasError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        DeleteAliasError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ServiceException" => DeleteAliasError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteAliasError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteAliasError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteAliasError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return DeleteAliasError::InvalidParameterValue(String::from(error_message))
                 }
+                "ServiceException" => return DeleteAliasError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return DeleteAliasError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteAliasError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteAliasError::Unknown(String::from(body)),
         }
+        return DeleteAliasError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteAliasError {
     fn from(err: serde_json::error::Error) -> DeleteAliasError {
-        DeleteAliasError::Unknown(err.description().to_string())
+        DeleteAliasError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteAliasError {
@@ -1586,7 +1691,8 @@ impl Error for DeleteAliasError {
             DeleteAliasError::Validation(ref cause) => cause,
             DeleteAliasError::Credentials(ref err) => err.description(),
             DeleteAliasError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteAliasError::Unknown(ref cause) => cause,
+            DeleteAliasError::ParseError(ref cause) => cause,
+            DeleteAliasError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1609,55 +1715,73 @@ pub enum DeleteEventSourceMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteEventSourceMappingError {
-    pub fn from_body(body: &str) -> DeleteEventSourceMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteEventSourceMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        DeleteEventSourceMappingError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceInUseException" => {
-                        DeleteEventSourceMappingError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteEventSourceMappingError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DeleteEventSourceMappingError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteEventSourceMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteEventSourceMappingError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteEventSourceMappingError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return DeleteEventSourceMappingError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceInUseException" => {
+                    return DeleteEventSourceMappingError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteEventSourceMappingError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DeleteEventSourceMappingError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteEventSourceMappingError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteEventSourceMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteEventSourceMappingError::Unknown(String::from(body)),
         }
+        return DeleteEventSourceMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteEventSourceMappingError {
     fn from(err: serde_json::error::Error) -> DeleteEventSourceMappingError {
-        DeleteEventSourceMappingError::Unknown(err.description().to_string())
+        DeleteEventSourceMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteEventSourceMappingError {
@@ -1693,7 +1817,8 @@ impl Error for DeleteEventSourceMappingError {
             DeleteEventSourceMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteEventSourceMappingError::Unknown(ref cause) => cause,
+            DeleteEventSourceMappingError::ParseError(ref cause) => cause,
+            DeleteEventSourceMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1716,51 +1841,67 @@ pub enum DeleteFunctionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteFunctionError {
-    pub fn from_body(body: &str) -> DeleteFunctionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteFunctionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        DeleteFunctionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceConflictException" => {
-                        DeleteFunctionError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteFunctionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => DeleteFunctionError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeleteFunctionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteFunctionError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteFunctionError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return DeleteFunctionError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceConflictException" => {
+                    return DeleteFunctionError::ResourceConflict(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteFunctionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DeleteFunctionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteFunctionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteFunctionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteFunctionError::Unknown(String::from(body)),
         }
+        return DeleteFunctionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteFunctionError {
     fn from(err: serde_json::error::Error) -> DeleteFunctionError {
-        DeleteFunctionError::Unknown(err.description().to_string())
+        DeleteFunctionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteFunctionError {
@@ -1794,7 +1935,8 @@ impl Error for DeleteFunctionError {
             DeleteFunctionError::Validation(ref cause) => cause,
             DeleteFunctionError::Credentials(ref err) => err.description(),
             DeleteFunctionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteFunctionError::Unknown(ref cause) => cause,
+            DeleteFunctionError::ParseError(ref cause) => cause,
+            DeleteFunctionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1815,54 +1957,70 @@ pub enum DeleteFunctionConcurrencyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteFunctionConcurrencyError {
-    pub fn from_body(body: &str) -> DeleteFunctionConcurrencyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteFunctionConcurrencyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        DeleteFunctionConcurrencyError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteFunctionConcurrencyError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        DeleteFunctionConcurrencyError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteFunctionConcurrencyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteFunctionConcurrencyError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteFunctionConcurrencyError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return DeleteFunctionConcurrencyError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return DeleteFunctionConcurrencyError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DeleteFunctionConcurrencyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteFunctionConcurrencyError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteFunctionConcurrencyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteFunctionConcurrencyError::Unknown(String::from(body)),
         }
+        return DeleteFunctionConcurrencyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteFunctionConcurrencyError {
     fn from(err: serde_json::error::Error) -> DeleteFunctionConcurrencyError {
-        DeleteFunctionConcurrencyError::Unknown(err.description().to_string())
+        DeleteFunctionConcurrencyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteFunctionConcurrencyError {
@@ -1897,7 +2055,8 @@ impl Error for DeleteFunctionConcurrencyError {
             DeleteFunctionConcurrencyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteFunctionConcurrencyError::Unknown(ref cause) => cause,
+            DeleteFunctionConcurrencyError::ParseError(ref cause) => cause,
+            DeleteFunctionConcurrencyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1914,44 +2073,58 @@ pub enum GetAccountSettingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAccountSettingsError {
-    pub fn from_body(body: &str) -> GetAccountSettingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetAccountSettingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "ServiceException" => {
-                        GetAccountSettingsError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetAccountSettingsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAccountSettingsError::Validation(error_message.to_string())
-                    }
-                    _ => GetAccountSettingsError::Unknown(String::from(body)),
+            match error_type {
+                "ServiceException" => {
+                    return GetAccountSettingsError::Service(String::from(error_message))
                 }
+                "TooManyRequestsException" => {
+                    return GetAccountSettingsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAccountSettingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAccountSettingsError::Unknown(String::from(body)),
         }
+        return GetAccountSettingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAccountSettingsError {
     fn from(err: serde_json::error::Error) -> GetAccountSettingsError {
-        GetAccountSettingsError::Unknown(err.description().to_string())
+        GetAccountSettingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAccountSettingsError {
@@ -1984,7 +2157,8 @@ impl Error for GetAccountSettingsError {
             GetAccountSettingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetAccountSettingsError::Unknown(ref cause) => cause,
+            GetAccountSettingsError::ParseError(ref cause) => cause,
+            GetAccountSettingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2005,46 +2179,62 @@ pub enum GetAliasError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAliasError {
-    pub fn from_body(body: &str) -> GetAliasError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetAliasError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        GetAliasError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetAliasError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => GetAliasError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetAliasError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => GetAliasError::Validation(error_message.to_string()),
-                    _ => GetAliasError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return GetAliasError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return GetAliasError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return GetAliasError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetAliasError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAliasError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAliasError::Unknown(String::from(body)),
         }
+        return GetAliasError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAliasError {
     fn from(err: serde_json::error::Error) -> GetAliasError {
-        GetAliasError::Unknown(err.description().to_string())
+        GetAliasError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAliasError {
@@ -2077,7 +2267,8 @@ impl Error for GetAliasError {
             GetAliasError::Validation(ref cause) => cause,
             GetAliasError::Credentials(ref err) => err.description(),
             GetAliasError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetAliasError::Unknown(ref cause) => cause,
+            GetAliasError::ParseError(ref cause) => cause,
+            GetAliasError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2098,52 +2289,66 @@ pub enum GetEventSourceMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetEventSourceMappingError {
-    pub fn from_body(body: &str) -> GetEventSourceMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetEventSourceMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        GetEventSourceMappingError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetEventSourceMappingError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        GetEventSourceMappingError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetEventSourceMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetEventSourceMappingError::Validation(error_message.to_string())
-                    }
-                    _ => GetEventSourceMappingError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return GetEventSourceMappingError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return GetEventSourceMappingError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return GetEventSourceMappingError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetEventSourceMappingError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetEventSourceMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetEventSourceMappingError::Unknown(String::from(body)),
         }
+        return GetEventSourceMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetEventSourceMappingError {
     fn from(err: serde_json::error::Error) -> GetEventSourceMappingError {
-        GetEventSourceMappingError::Unknown(err.description().to_string())
+        GetEventSourceMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetEventSourceMappingError {
@@ -2178,7 +2383,8 @@ impl Error for GetEventSourceMappingError {
             GetEventSourceMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetEventSourceMappingError::Unknown(ref cause) => cause,
+            GetEventSourceMappingError::ParseError(ref cause) => cause,
+            GetEventSourceMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2199,48 +2405,62 @@ pub enum GetFunctionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetFunctionError {
-    pub fn from_body(body: &str) -> GetFunctionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetFunctionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        GetFunctionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetFunctionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => GetFunctionError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetFunctionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetFunctionError::Validation(error_message.to_string())
-                    }
-                    _ => GetFunctionError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return GetFunctionError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return GetFunctionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return GetFunctionError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetFunctionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetFunctionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetFunctionError::Unknown(String::from(body)),
         }
+        return GetFunctionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetFunctionError {
     fn from(err: serde_json::error::Error) -> GetFunctionError {
-        GetFunctionError::Unknown(err.description().to_string())
+        GetFunctionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetFunctionError {
@@ -2273,7 +2493,8 @@ impl Error for GetFunctionError {
             GetFunctionError::Validation(ref cause) => cause,
             GetFunctionError::Credentials(ref err) => err.description(),
             GetFunctionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetFunctionError::Unknown(ref cause) => cause,
+            GetFunctionError::ParseError(ref cause) => cause,
+            GetFunctionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2294,52 +2515,70 @@ pub enum GetFunctionConfigurationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetFunctionConfigurationError {
-    pub fn from_body(body: &str) -> GetFunctionConfigurationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetFunctionConfigurationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        GetFunctionConfigurationError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetFunctionConfigurationError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        GetFunctionConfigurationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        GetFunctionConfigurationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetFunctionConfigurationError::Validation(error_message.to_string())
-                    }
-                    _ => GetFunctionConfigurationError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return GetFunctionConfigurationError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return GetFunctionConfigurationError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return GetFunctionConfigurationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return GetFunctionConfigurationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetFunctionConfigurationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetFunctionConfigurationError::Unknown(String::from(body)),
         }
+        return GetFunctionConfigurationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetFunctionConfigurationError {
     fn from(err: serde_json::error::Error) -> GetFunctionConfigurationError {
-        GetFunctionConfigurationError::Unknown(err.description().to_string())
+        GetFunctionConfigurationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetFunctionConfigurationError {
@@ -2374,7 +2613,8 @@ impl Error for GetFunctionConfigurationError {
             GetFunctionConfigurationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetFunctionConfigurationError::Unknown(ref cause) => cause,
+            GetFunctionConfigurationError::ParseError(ref cause) => cause,
+            GetFunctionConfigurationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2395,46 +2635,62 @@ pub enum GetPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetPolicyError {
-    pub fn from_body(body: &str) -> GetPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> GetPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        GetPolicyError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetPolicyError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => GetPolicyError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        GetPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => GetPolicyError::Validation(error_message.to_string()),
-                    _ => GetPolicyError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return GetPolicyError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return GetPolicyError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return GetPolicyError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return GetPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetPolicyError::Unknown(String::from(body)),
         }
+        return GetPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetPolicyError {
     fn from(err: serde_json::error::Error) -> GetPolicyError {
-        GetPolicyError::Unknown(err.description().to_string())
+        GetPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetPolicyError {
@@ -2467,7 +2723,8 @@ impl Error for GetPolicyError {
             GetPolicyError::Validation(ref cause) => cause,
             GetPolicyError::Credentials(ref err) => err.description(),
             GetPolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetPolicyError::Unknown(ref cause) => cause,
+            GetPolicyError::ParseError(ref cause) => cause,
+            GetPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2520,90 +2777,108 @@ pub enum InvokeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InvokeError {
-    pub fn from_body(body: &str) -> InvokeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> InvokeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "EC2AccessDeniedException" => {
-                        InvokeError::EC2AccessDenied(String::from(error_message))
-                    }
-                    "EC2ThrottledException" => {
-                        InvokeError::EC2Throttled(String::from(error_message))
-                    }
-                    "EC2UnexpectedException" => {
-                        InvokeError::EC2Unexpected(String::from(error_message))
-                    }
-                    "ENILimitReachedException" => {
-                        InvokeError::ENILimitReached(String::from(error_message))
-                    }
-                    "InvalidParameterValueException" => {
-                        InvokeError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "InvalidRequestContentException" => {
-                        InvokeError::InvalidRequestContent(String::from(error_message))
-                    }
-                    "InvalidRuntimeException" => {
-                        InvokeError::InvalidRuntime(String::from(error_message))
-                    }
-                    "InvalidSecurityGroupIDException" => {
-                        InvokeError::InvalidSecurityGroupID(String::from(error_message))
-                    }
-                    "InvalidSubnetIDException" => {
-                        InvokeError::InvalidSubnetID(String::from(error_message))
-                    }
-                    "InvalidZipFileException" => {
-                        InvokeError::InvalidZipFile(String::from(error_message))
-                    }
-                    "KMSAccessDeniedException" => {
-                        InvokeError::KMSAccessDenied(String::from(error_message))
-                    }
-                    "KMSDisabledException" => InvokeError::KMSDisabled(String::from(error_message)),
-                    "KMSInvalidStateException" => {
-                        InvokeError::KMSInvalidState(String::from(error_message))
-                    }
-                    "KMSNotFoundException" => InvokeError::KMSNotFound(String::from(error_message)),
-                    "RequestTooLargeException" => {
-                        InvokeError::RequestTooLarge(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        InvokeError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => InvokeError::Service(String::from(error_message)),
-                    "SubnetIPAddressLimitReachedException" => {
-                        InvokeError::SubnetIPAddressLimitReached(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        InvokeError::TooManyRequests(String::from(error_message))
-                    }
-                    "UnsupportedMediaTypeException" => {
-                        InvokeError::UnsupportedMediaType(String::from(error_message))
-                    }
-                    "ValidationException" => InvokeError::Validation(error_message.to_string()),
-                    _ => InvokeError::Unknown(String::from(body)),
+            match error_type {
+                "EC2AccessDeniedException" => {
+                    return InvokeError::EC2AccessDenied(String::from(error_message))
                 }
+                "EC2ThrottledException" => {
+                    return InvokeError::EC2Throttled(String::from(error_message))
+                }
+                "EC2UnexpectedException" => {
+                    return InvokeError::EC2Unexpected(String::from(error_message))
+                }
+                "ENILimitReachedException" => {
+                    return InvokeError::ENILimitReached(String::from(error_message))
+                }
+                "InvalidParameterValueException" => {
+                    return InvokeError::InvalidParameterValue(String::from(error_message))
+                }
+                "InvalidRequestContentException" => {
+                    return InvokeError::InvalidRequestContent(String::from(error_message))
+                }
+                "InvalidRuntimeException" => {
+                    return InvokeError::InvalidRuntime(String::from(error_message))
+                }
+                "InvalidSecurityGroupIDException" => {
+                    return InvokeError::InvalidSecurityGroupID(String::from(error_message))
+                }
+                "InvalidSubnetIDException" => {
+                    return InvokeError::InvalidSubnetID(String::from(error_message))
+                }
+                "InvalidZipFileException" => {
+                    return InvokeError::InvalidZipFile(String::from(error_message))
+                }
+                "KMSAccessDeniedException" => {
+                    return InvokeError::KMSAccessDenied(String::from(error_message))
+                }
+                "KMSDisabledException" => {
+                    return InvokeError::KMSDisabled(String::from(error_message))
+                }
+                "KMSInvalidStateException" => {
+                    return InvokeError::KMSInvalidState(String::from(error_message))
+                }
+                "KMSNotFoundException" => {
+                    return InvokeError::KMSNotFound(String::from(error_message))
+                }
+                "RequestTooLargeException" => {
+                    return InvokeError::RequestTooLarge(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return InvokeError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return InvokeError::Service(String::from(error_message)),
+                "SubnetIPAddressLimitReachedException" => {
+                    return InvokeError::SubnetIPAddressLimitReached(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return InvokeError::TooManyRequests(String::from(error_message))
+                }
+                "UnsupportedMediaTypeException" => {
+                    return InvokeError::UnsupportedMediaType(String::from(error_message))
+                }
+                "ValidationException" => return InvokeError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => InvokeError::Unknown(String::from(body)),
         }
+        return InvokeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InvokeError {
     fn from(err: serde_json::error::Error) -> InvokeError {
-        InvokeError::Unknown(err.description().to_string())
+        InvokeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InvokeError {
@@ -2652,7 +2927,8 @@ impl Error for InvokeError {
             InvokeError::Validation(ref cause) => cause,
             InvokeError::Credentials(ref err) => err.description(),
             InvokeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            InvokeError::Unknown(ref cause) => cause,
+            InvokeError::ParseError(ref cause) => cause,
+            InvokeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2673,48 +2949,62 @@ pub enum InvokeAsyncError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InvokeAsyncError {
-    pub fn from_body(body: &str) -> InvokeAsyncError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> InvokeAsyncError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidRequestContentException" => {
-                        InvokeAsyncError::InvalidRequestContent(String::from(error_message))
-                    }
-                    "InvalidRuntimeException" => {
-                        InvokeAsyncError::InvalidRuntime(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        InvokeAsyncError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => InvokeAsyncError::Service(String::from(error_message)),
-                    "ValidationException" => {
-                        InvokeAsyncError::Validation(error_message.to_string())
-                    }
-                    _ => InvokeAsyncError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidRequestContentException" => {
+                    return InvokeAsyncError::InvalidRequestContent(String::from(error_message))
                 }
+                "InvalidRuntimeException" => {
+                    return InvokeAsyncError::InvalidRuntime(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return InvokeAsyncError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return InvokeAsyncError::Service(String::from(error_message)),
+                "ValidationException" => {
+                    return InvokeAsyncError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => InvokeAsyncError::Unknown(String::from(body)),
         }
+        return InvokeAsyncError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InvokeAsyncError {
     fn from(err: serde_json::error::Error) -> InvokeAsyncError {
-        InvokeAsyncError::Unknown(err.description().to_string())
+        InvokeAsyncError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InvokeAsyncError {
@@ -2747,7 +3037,8 @@ impl Error for InvokeAsyncError {
             InvokeAsyncError::Validation(ref cause) => cause,
             InvokeAsyncError::Credentials(ref err) => err.description(),
             InvokeAsyncError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            InvokeAsyncError::Unknown(ref cause) => cause,
+            InvokeAsyncError::ParseError(ref cause) => cause,
+            InvokeAsyncError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2768,48 +3059,62 @@ pub enum ListAliasesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAliasesError {
-    pub fn from_body(body: &str) -> ListAliasesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListAliasesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        ListAliasesError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListAliasesError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => ListAliasesError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListAliasesError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAliasesError::Validation(error_message.to_string())
-                    }
-                    _ => ListAliasesError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return ListAliasesError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ListAliasesError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return ListAliasesError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return ListAliasesError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAliasesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAliasesError::Unknown(String::from(body)),
         }
+        return ListAliasesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAliasesError {
     fn from(err: serde_json::error::Error) -> ListAliasesError {
-        ListAliasesError::Unknown(err.description().to_string())
+        ListAliasesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAliasesError {
@@ -2842,7 +3147,8 @@ impl Error for ListAliasesError {
             ListAliasesError::Validation(ref cause) => cause,
             ListAliasesError::Credentials(ref err) => err.description(),
             ListAliasesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListAliasesError::Unknown(ref cause) => cause,
+            ListAliasesError::ParseError(ref cause) => cause,
+            ListAliasesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2863,52 +3169,70 @@ pub enum ListEventSourceMappingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListEventSourceMappingsError {
-    pub fn from_body(body: &str) -> ListEventSourceMappingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListEventSourceMappingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        ListEventSourceMappingsError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListEventSourceMappingsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListEventSourceMappingsError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListEventSourceMappingsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListEventSourceMappingsError::Validation(error_message.to_string())
-                    }
-                    _ => ListEventSourceMappingsError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return ListEventSourceMappingsError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return ListEventSourceMappingsError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return ListEventSourceMappingsError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListEventSourceMappingsError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListEventSourceMappingsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListEventSourceMappingsError::Unknown(String::from(body)),
         }
+        return ListEventSourceMappingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListEventSourceMappingsError {
     fn from(err: serde_json::error::Error) -> ListEventSourceMappingsError {
-        ListEventSourceMappingsError::Unknown(err.description().to_string())
+        ListEventSourceMappingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListEventSourceMappingsError {
@@ -2943,7 +3267,8 @@ impl Error for ListEventSourceMappingsError {
             ListEventSourceMappingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListEventSourceMappingsError::Unknown(ref cause) => cause,
+            ListEventSourceMappingsError::ParseError(ref cause) => cause,
+            ListEventSourceMappingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2962,45 +3287,61 @@ pub enum ListFunctionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListFunctionsError {
-    pub fn from_body(body: &str) -> ListFunctionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListFunctionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        ListFunctionsError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ServiceException" => ListFunctionsError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListFunctionsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListFunctionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListFunctionsError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return ListFunctionsError::InvalidParameterValue(String::from(error_message))
                 }
+                "ServiceException" => {
+                    return ListFunctionsError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListFunctionsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListFunctionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListFunctionsError::Unknown(String::from(body)),
         }
+        return ListFunctionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListFunctionsError {
     fn from(err: serde_json::error::Error) -> ListFunctionsError {
-        ListFunctionsError::Unknown(err.description().to_string())
+        ListFunctionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListFunctionsError {
@@ -3032,7 +3373,8 @@ impl Error for ListFunctionsError {
             ListFunctionsError::Validation(ref cause) => cause,
             ListFunctionsError::Credentials(ref err) => err.description(),
             ListFunctionsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListFunctionsError::Unknown(ref cause) => cause,
+            ListFunctionsError::ParseError(ref cause) => cause,
+            ListFunctionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3053,46 +3395,62 @@ pub enum ListTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTagsError {
-    pub fn from_body(body: &str) -> ListTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        ListTagsError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListTagsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => ListTagsError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListTagsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => ListTagsError::Validation(error_message.to_string()),
-                    _ => ListTagsError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return ListTagsError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ListTagsError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return ListTagsError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return ListTagsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListTagsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTagsError::Unknown(String::from(body)),
         }
+        return ListTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTagsError {
     fn from(err: serde_json::error::Error) -> ListTagsError {
-        ListTagsError::Unknown(err.description().to_string())
+        ListTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTagsError {
@@ -3125,7 +3483,8 @@ impl Error for ListTagsError {
             ListTagsError::Validation(ref cause) => cause,
             ListTagsError::Credentials(ref err) => err.description(),
             ListTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListTagsError::Unknown(ref cause) => cause,
+            ListTagsError::ParseError(ref cause) => cause,
+            ListTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3146,52 +3505,68 @@ pub enum ListVersionsByFunctionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListVersionsByFunctionError {
-    pub fn from_body(body: &str) -> ListVersionsByFunctionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> ListVersionsByFunctionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        ListVersionsByFunctionError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListVersionsByFunctionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListVersionsByFunctionError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListVersionsByFunctionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListVersionsByFunctionError::Validation(error_message.to_string())
-                    }
-                    _ => ListVersionsByFunctionError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return ListVersionsByFunctionError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return ListVersionsByFunctionError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return ListVersionsByFunctionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListVersionsByFunctionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListVersionsByFunctionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListVersionsByFunctionError::Unknown(String::from(body)),
         }
+        return ListVersionsByFunctionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListVersionsByFunctionError {
     fn from(err: serde_json::error::Error) -> ListVersionsByFunctionError {
-        ListVersionsByFunctionError::Unknown(err.description().to_string())
+        ListVersionsByFunctionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListVersionsByFunctionError {
@@ -3226,7 +3601,8 @@ impl Error for ListVersionsByFunctionError {
             ListVersionsByFunctionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListVersionsByFunctionError::Unknown(ref cause) => cause,
+            ListVersionsByFunctionError::ParseError(ref cause) => cause,
+            ListVersionsByFunctionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3251,54 +3627,70 @@ pub enum PublishVersionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PublishVersionError {
-    pub fn from_body(body: &str) -> PublishVersionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PublishVersionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "CodeStorageExceededException" => {
-                        PublishVersionError::CodeStorageExceeded(String::from(error_message))
-                    }
-                    "InvalidParameterValueException" => {
-                        PublishVersionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "PreconditionFailedException" => {
-                        PublishVersionError::PreconditionFailed(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        PublishVersionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => PublishVersionError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        PublishVersionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PublishVersionError::Validation(error_message.to_string())
-                    }
-                    _ => PublishVersionError::Unknown(String::from(body)),
+            match error_type {
+                "CodeStorageExceededException" => {
+                    return PublishVersionError::CodeStorageExceeded(String::from(error_message))
                 }
+                "InvalidParameterValueException" => {
+                    return PublishVersionError::InvalidParameterValue(String::from(error_message))
+                }
+                "PreconditionFailedException" => {
+                    return PublishVersionError::PreconditionFailed(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return PublishVersionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return PublishVersionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PublishVersionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PublishVersionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PublishVersionError::Unknown(String::from(body)),
         }
+        return PublishVersionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PublishVersionError {
     fn from(err: serde_json::error::Error) -> PublishVersionError {
-        PublishVersionError::Unknown(err.description().to_string())
+        PublishVersionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PublishVersionError {
@@ -3333,7 +3725,8 @@ impl Error for PublishVersionError {
             PublishVersionError::Validation(ref cause) => cause,
             PublishVersionError::Credentials(ref err) => err.description(),
             PublishVersionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PublishVersionError::Unknown(ref cause) => cause,
+            PublishVersionError::ParseError(ref cause) => cause,
+            PublishVersionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3354,52 +3747,68 @@ pub enum PutFunctionConcurrencyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutFunctionConcurrencyError {
-    pub fn from_body(body: &str) -> PutFunctionConcurrencyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> PutFunctionConcurrencyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        PutFunctionConcurrencyError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        PutFunctionConcurrencyError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        PutFunctionConcurrencyError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        PutFunctionConcurrencyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutFunctionConcurrencyError::Validation(error_message.to_string())
-                    }
-                    _ => PutFunctionConcurrencyError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return PutFunctionConcurrencyError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return PutFunctionConcurrencyError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return PutFunctionConcurrencyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return PutFunctionConcurrencyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutFunctionConcurrencyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutFunctionConcurrencyError::Unknown(String::from(body)),
         }
+        return PutFunctionConcurrencyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutFunctionConcurrencyError {
     fn from(err: serde_json::error::Error) -> PutFunctionConcurrencyError {
-        PutFunctionConcurrencyError::Unknown(err.description().to_string())
+        PutFunctionConcurrencyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutFunctionConcurrencyError {
@@ -3434,7 +3843,8 @@ impl Error for PutFunctionConcurrencyError {
             PutFunctionConcurrencyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutFunctionConcurrencyError::Unknown(ref cause) => cause,
+            PutFunctionConcurrencyError::ParseError(ref cause) => cause,
+            PutFunctionConcurrencyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3457,53 +3867,67 @@ pub enum RemovePermissionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemovePermissionError {
-    pub fn from_body(body: &str) -> RemovePermissionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> RemovePermissionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        RemovePermissionError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "PreconditionFailedException" => {
-                        RemovePermissionError::PreconditionFailed(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        RemovePermissionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        RemovePermissionError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        RemovePermissionError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RemovePermissionError::Validation(error_message.to_string())
-                    }
-                    _ => RemovePermissionError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return RemovePermissionError::InvalidParameterValue(String::from(error_message))
                 }
+                "PreconditionFailedException" => {
+                    return RemovePermissionError::PreconditionFailed(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return RemovePermissionError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return RemovePermissionError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return RemovePermissionError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return RemovePermissionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemovePermissionError::Unknown(String::from(body)),
         }
+        return RemovePermissionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemovePermissionError {
     fn from(err: serde_json::error::Error) -> RemovePermissionError {
-        RemovePermissionError::Unknown(err.description().to_string())
+        RemovePermissionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemovePermissionError {
@@ -3537,7 +3961,8 @@ impl Error for RemovePermissionError {
             RemovePermissionError::Validation(ref cause) => cause,
             RemovePermissionError::Credentials(ref err) => err.description(),
             RemovePermissionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            RemovePermissionError::Unknown(ref cause) => cause,
+            RemovePermissionError::ParseError(ref cause) => cause,
+            RemovePermissionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3558,48 +3983,62 @@ pub enum TagResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TagResourceError {
-    pub fn from_body(body: &str) -> TagResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> TagResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        TagResourceError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        TagResourceError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => TagResourceError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        TagResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        TagResourceError::Validation(error_message.to_string())
-                    }
-                    _ => TagResourceError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return TagResourceError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return TagResourceError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return TagResourceError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return TagResourceError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return TagResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TagResourceError::Unknown(String::from(body)),
         }
+        return TagResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TagResourceError {
     fn from(err: serde_json::error::Error) -> TagResourceError {
-        TagResourceError::Unknown(err.description().to_string())
+        TagResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TagResourceError {
@@ -3632,7 +4071,8 @@ impl Error for TagResourceError {
             TagResourceError::Validation(ref cause) => cause,
             TagResourceError::Credentials(ref err) => err.description(),
             TagResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            TagResourceError::Unknown(ref cause) => cause,
+            TagResourceError::ParseError(ref cause) => cause,
+            TagResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3653,48 +4093,64 @@ pub enum UntagResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UntagResourceError {
-    pub fn from_body(body: &str) -> UntagResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UntagResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        UntagResourceError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UntagResourceError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => UntagResourceError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UntagResourceError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UntagResourceError::Validation(error_message.to_string())
-                    }
-                    _ => UntagResourceError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return UntagResourceError::InvalidParameterValue(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return UntagResourceError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return UntagResourceError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UntagResourceError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UntagResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UntagResourceError::Unknown(String::from(body)),
         }
+        return UntagResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UntagResourceError {
     fn from(err: serde_json::error::Error) -> UntagResourceError {
-        UntagResourceError::Unknown(err.description().to_string())
+        UntagResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UntagResourceError {
@@ -3727,7 +4183,8 @@ impl Error for UntagResourceError {
             UntagResourceError::Validation(ref cause) => cause,
             UntagResourceError::Credentials(ref err) => err.description(),
             UntagResourceError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UntagResourceError::Unknown(ref cause) => cause,
+            UntagResourceError::ParseError(ref cause) => cause,
+            UntagResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3750,51 +4207,65 @@ pub enum UpdateAliasError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateAliasError {
-    pub fn from_body(body: &str) -> UpdateAliasError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateAliasError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        UpdateAliasError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "PreconditionFailedException" => {
-                        UpdateAliasError::PreconditionFailed(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateAliasError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => UpdateAliasError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdateAliasError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateAliasError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateAliasError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return UpdateAliasError::InvalidParameterValue(String::from(error_message))
                 }
+                "PreconditionFailedException" => {
+                    return UpdateAliasError::PreconditionFailed(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateAliasError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => return UpdateAliasError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return UpdateAliasError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateAliasError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateAliasError::Unknown(String::from(body)),
         }
+        return UpdateAliasError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateAliasError {
     fn from(err: serde_json::error::Error) -> UpdateAliasError {
-        UpdateAliasError::Unknown(err.description().to_string())
+        UpdateAliasError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateAliasError {
@@ -3828,7 +4299,8 @@ impl Error for UpdateAliasError {
             UpdateAliasError::Validation(ref cause) => cause,
             UpdateAliasError::Credentials(ref err) => err.description(),
             UpdateAliasError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateAliasError::Unknown(ref cause) => cause,
+            UpdateAliasError::ParseError(ref cause) => cause,
+            UpdateAliasError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3853,58 +4325,78 @@ pub enum UpdateEventSourceMappingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateEventSourceMappingError {
-    pub fn from_body(body: &str) -> UpdateEventSourceMappingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateEventSourceMappingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        UpdateEventSourceMappingError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceConflictException" => {
-                        UpdateEventSourceMappingError::ResourceConflict(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        UpdateEventSourceMappingError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateEventSourceMappingError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        UpdateEventSourceMappingError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateEventSourceMappingError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateEventSourceMappingError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateEventSourceMappingError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return UpdateEventSourceMappingError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceConflictException" => {
+                    return UpdateEventSourceMappingError::ResourceConflict(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceInUseException" => {
+                    return UpdateEventSourceMappingError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateEventSourceMappingError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return UpdateEventSourceMappingError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateEventSourceMappingError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateEventSourceMappingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateEventSourceMappingError::Unknown(String::from(body)),
         }
+        return UpdateEventSourceMappingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateEventSourceMappingError {
     fn from(err: serde_json::error::Error) -> UpdateEventSourceMappingError {
-        UpdateEventSourceMappingError::Unknown(err.description().to_string())
+        UpdateEventSourceMappingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateEventSourceMappingError {
@@ -3941,7 +4433,8 @@ impl Error for UpdateEventSourceMappingError {
             UpdateEventSourceMappingError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateEventSourceMappingError::Unknown(ref cause) => cause,
+            UpdateEventSourceMappingError::ParseError(ref cause) => cause,
+            UpdateEventSourceMappingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3966,56 +4459,72 @@ pub enum UpdateFunctionCodeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateFunctionCodeError {
-    pub fn from_body(body: &str) -> UpdateFunctionCodeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateFunctionCodeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "CodeStorageExceededException" => {
-                        UpdateFunctionCodeError::CodeStorageExceeded(String::from(error_message))
-                    }
-                    "InvalidParameterValueException" => {
-                        UpdateFunctionCodeError::InvalidParameterValue(String::from(error_message))
-                    }
-                    "PreconditionFailedException" => {
-                        UpdateFunctionCodeError::PreconditionFailed(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateFunctionCodeError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        UpdateFunctionCodeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateFunctionCodeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateFunctionCodeError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateFunctionCodeError::Unknown(String::from(body)),
+            match error_type {
+                "CodeStorageExceededException" => {
+                    return UpdateFunctionCodeError::CodeStorageExceeded(String::from(error_message))
                 }
+                "InvalidParameterValueException" => {
+                    return UpdateFunctionCodeError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
+                }
+                "PreconditionFailedException" => {
+                    return UpdateFunctionCodeError::PreconditionFailed(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateFunctionCodeError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return UpdateFunctionCodeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateFunctionCodeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateFunctionCodeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateFunctionCodeError::Unknown(String::from(body)),
         }
+        return UpdateFunctionCodeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateFunctionCodeError {
     fn from(err: serde_json::error::Error) -> UpdateFunctionCodeError {
-        UpdateFunctionCodeError::Unknown(err.description().to_string())
+        UpdateFunctionCodeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateFunctionCodeError {
@@ -4052,7 +4561,8 @@ impl Error for UpdateFunctionCodeError {
             UpdateFunctionCodeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateFunctionCodeError::Unknown(ref cause) => cause,
+            UpdateFunctionCodeError::ParseError(ref cause) => cause,
+            UpdateFunctionCodeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4077,66 +4587,80 @@ pub enum UpdateFunctionConfigurationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateFunctionConfigurationError {
-    pub fn from_body(body: &str) -> UpdateFunctionConfigurationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    // see boto RestJSONParser impl for parsing errors
+    // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L838-L850
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateFunctionConfigurationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let error_type = match res.headers.get("x-amzn-errortype") {
+                Some(raw_error_type) => raw_error_type
+                    .split(':')
+                    .next()
+                    .unwrap_or_else(|| "Unknown"),
+                _ => json
+                    .get("code")
+                    .or_else(|| json.get("Code"))
+                    .and_then(|c| c.as_str())
+                    .unwrap_or_else(|| "Unknown"),
+            };
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            // message can come in either "message" or "Message"
+            // see boto BaseJSONParser impl for parsing message
+            // https://github.com/boto/botocore/blob/4dff78c840403d1d17db9b3f800b20d3bd9fbf9f/botocore/parsers.py#L595-L598
+            let error_message = json
+                .get("message")
+                .or_else(|| json.get("Message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
 
-                match *error_type {
-                    "InvalidParameterValueException" => {
-                        UpdateFunctionConfigurationError::InvalidParameterValue(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PreconditionFailedException" => {
-                        UpdateFunctionConfigurationError::PreconditionFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceConflictException" => {
-                        UpdateFunctionConfigurationError::ResourceConflict(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateFunctionConfigurationError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        UpdateFunctionConfigurationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateFunctionConfigurationError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateFunctionConfigurationError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateFunctionConfigurationError::Unknown(String::from(body)),
+            match error_type {
+                "InvalidParameterValueException" => {
+                    return UpdateFunctionConfigurationError::InvalidParameterValue(String::from(
+                        error_message,
+                    ))
                 }
+                "PreconditionFailedException" => {
+                    return UpdateFunctionConfigurationError::PreconditionFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceConflictException" => {
+                    return UpdateFunctionConfigurationError::ResourceConflict(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateFunctionConfigurationError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return UpdateFunctionConfigurationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateFunctionConfigurationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateFunctionConfigurationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateFunctionConfigurationError::Unknown(String::from(body)),
         }
+        return UpdateFunctionConfigurationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateFunctionConfigurationError {
     fn from(err: serde_json::error::Error) -> UpdateFunctionConfigurationError {
-        UpdateFunctionConfigurationError::Unknown(err.description().to_string())
+        UpdateFunctionConfigurationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateFunctionConfigurationError {
@@ -4173,7 +4697,8 @@ impl Error for UpdateFunctionConfigurationError {
             UpdateFunctionConfigurationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateFunctionConfigurationError::Unknown(ref cause) => cause,
+            UpdateFunctionConfigurationError::ParseError(ref cause) => cause,
+            UpdateFunctionConfigurationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4414,11 +4939,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddPermissionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AddPermissionError::from_response(response))),
+                )
             }
         })
     }
@@ -4455,11 +4981,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateAliasError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateAliasError::from_response(response))),
+                )
             }
         })
     }
@@ -4495,9 +5022,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateEventSourceMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateEventSourceMappingError::from_response(response))
                 }))
             }
         })
@@ -4532,11 +5057,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateFunctionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateFunctionError::from_response(response))),
+                )
             }
         })
     }
@@ -4560,11 +5086,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteAliasError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteAliasError::from_response(response))),
+                )
             }
         })
     }
@@ -4600,9 +5127,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteEventSourceMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteEventSourceMappingError::from_response(response))
                 }))
             }
         })
@@ -4635,11 +5160,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteFunctionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteFunctionError::from_response(response))),
+                )
             }
         })
     }
@@ -4666,9 +5192,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteFunctionConcurrencyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteFunctionConcurrencyError::from_response(response))
                 }))
             }
         })
@@ -4700,11 +5224,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAccountSettingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAccountSettingsError::from_response(response))),
+                )
             }
         })
     }
@@ -4736,11 +5261,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAliasError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAliasError::from_response(response))),
+                )
             }
         })
     }
@@ -4775,11 +5301,11 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetEventSourceMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetEventSourceMappingError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -4819,11 +5345,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetFunctionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetFunctionError::from_response(response))),
+                )
             }
         })
     }
@@ -4864,9 +5391,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetFunctionConfigurationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetFunctionConfigurationError::from_response(response))
                 }))
             }
         })
@@ -4907,11 +5432,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetPolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -4972,11 +5498,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InvokeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(InvokeError::from_response(response))),
+                )
             }
         })
     }
@@ -5014,11 +5541,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InvokeAsyncError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(InvokeAsyncError::from_response(response))),
+                )
             }
         })
     }
@@ -5064,11 +5592,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAliasesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListAliasesError::from_response(response))),
+                )
             }
         })
     }
@@ -5116,9 +5645,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListEventSourceMappingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListEventSourceMappingsError::from_response(response))
                 }))
             }
         })
@@ -5165,11 +5692,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListFunctionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListFunctionsError::from_response(response))),
+                )
             }
         })
     }
@@ -5197,11 +5725,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -5245,11 +5774,11 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListVersionsByFunctionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListVersionsByFunctionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5286,11 +5815,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PublishVersionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PublishVersionError::from_response(response))),
+                )
             }
         })
     }
@@ -5327,11 +5857,11 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutFunctionConcurrencyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutFunctionConcurrencyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -5367,11 +5897,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemovePermissionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(RemovePermissionError::from_response(response))),
+                )
             }
         })
     }
@@ -5394,11 +5925,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TagResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(TagResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -5424,11 +5956,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UntagResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UntagResourceError::from_response(response))),
+                )
             }
         })
     }
@@ -5466,11 +5999,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateAliasError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateAliasError::from_response(response))),
+                )
             }
         })
     }
@@ -5509,9 +6043,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateEventSourceMappingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateEventSourceMappingError::from_response(response))
                 }))
             }
         })
@@ -5549,11 +6081,12 @@ impl Lambda for LambdaClient {
                     result
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateFunctionCodeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateFunctionCodeError::from_response(response))),
+                )
             }
         })
     }
@@ -5591,9 +6124,7 @@ impl Lambda for LambdaClient {
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateFunctionConfigurationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateFunctionConfigurationError::from_response(response))
                 }))
             }
         })

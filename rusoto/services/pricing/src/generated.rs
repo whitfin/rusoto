@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>The values of a given attribute, such as <code>Throughput Optimized HDD</code> or <code>Provisioned IOPS</code> for the <code>Amazon EC2</code> <code>volumeType</code> attribute.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttributeValue {
     /// <p>The specific value of an <code>attributeName</code>.</p>
     #[serde(rename = "Value")]
@@ -58,6 +59,7 @@ pub struct DescribeServicesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeServicesResponse {
     /// <p>The format version of the response. For example, <code>aws_v1</code>.</p>
     #[serde(rename = "FormatVersion")]
@@ -106,6 +108,7 @@ pub struct GetAttributeValuesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetAttributeValuesResponse {
     /// <p>The list of values for an attribute. For example, <code>Throughput Optimized HDD</code> and <code>Provisioned IOPS</code> are two available values for the <code>AmazonEC2</code> <code>volumeType</code>.</p>
     #[serde(rename = "AttributeValues")]
@@ -142,6 +145,7 @@ pub struct GetProductsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetProductsResponse {
     /// <p>The format version of the response. For example, aws_v1.</p>
     #[serde(rename = "FormatVersion")]
@@ -159,6 +163,7 @@ pub struct GetProductsResponse {
 
 /// <p>The metadata for a service, such as the service code and available attribute names.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Service {
     /// <p>The attributes that are available for this service.</p>
     #[serde(rename = "AttributeNames")]
@@ -189,53 +194,53 @@ pub enum DescribeServicesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeServicesError {
-    pub fn from_body(body: &str) -> DescribeServicesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeServicesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ExpiredNextTokenException" => {
-                        DescribeServicesError::ExpiredNextToken(String::from(error_message))
-                    }
-                    "InternalErrorException" => {
-                        DescribeServicesError::InternalError(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        DescribeServicesError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        DescribeServicesError::InvalidParameter(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        DescribeServicesError::NotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeServicesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeServicesError::Unknown(String::from(body)),
+            match *error_type {
+                "ExpiredNextTokenException" => {
+                    return DescribeServicesError::ExpiredNextToken(String::from(error_message))
                 }
+                "InternalErrorException" => {
+                    return DescribeServicesError::InternalError(String::from(error_message))
+                }
+                "InvalidNextTokenException" => {
+                    return DescribeServicesError::InvalidNextToken(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return DescribeServicesError::InvalidParameter(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return DescribeServicesError::NotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeServicesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeServicesError::Unknown(String::from(body)),
         }
+        return DescribeServicesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeServicesError {
     fn from(err: serde_json::error::Error) -> DescribeServicesError {
-        DescribeServicesError::Unknown(err.description().to_string())
+        DescribeServicesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeServicesError {
@@ -269,7 +274,8 @@ impl Error for DescribeServicesError {
             DescribeServicesError::Validation(ref cause) => cause,
             DescribeServicesError::Credentials(ref err) => err.description(),
             DescribeServicesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeServicesError::Unknown(ref cause) => cause,
+            DescribeServicesError::ParseError(ref cause) => cause,
+            DescribeServicesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -292,53 +298,53 @@ pub enum GetAttributeValuesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetAttributeValuesError {
-    pub fn from_body(body: &str) -> GetAttributeValuesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetAttributeValuesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ExpiredNextTokenException" => {
-                        GetAttributeValuesError::ExpiredNextToken(String::from(error_message))
-                    }
-                    "InternalErrorException" => {
-                        GetAttributeValuesError::InternalError(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        GetAttributeValuesError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetAttributeValuesError::InvalidParameter(String::from(error_message))
-                    }
-                    "NotFoundException" => {
-                        GetAttributeValuesError::NotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetAttributeValuesError::Validation(error_message.to_string())
-                    }
-                    _ => GetAttributeValuesError::Unknown(String::from(body)),
+            match *error_type {
+                "ExpiredNextTokenException" => {
+                    return GetAttributeValuesError::ExpiredNextToken(String::from(error_message))
                 }
+                "InternalErrorException" => {
+                    return GetAttributeValuesError::InternalError(String::from(error_message))
+                }
+                "InvalidNextTokenException" => {
+                    return GetAttributeValuesError::InvalidNextToken(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return GetAttributeValuesError::InvalidParameter(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return GetAttributeValuesError::NotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetAttributeValuesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetAttributeValuesError::Unknown(String::from(body)),
         }
+        return GetAttributeValuesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetAttributeValuesError {
     fn from(err: serde_json::error::Error) -> GetAttributeValuesError {
-        GetAttributeValuesError::Unknown(err.description().to_string())
+        GetAttributeValuesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetAttributeValuesError {
@@ -374,7 +380,8 @@ impl Error for GetAttributeValuesError {
             GetAttributeValuesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetAttributeValuesError::Unknown(ref cause) => cause,
+            GetAttributeValuesError::ParseError(ref cause) => cause,
+            GetAttributeValuesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -397,51 +404,53 @@ pub enum GetProductsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetProductsError {
-    pub fn from_body(body: &str) -> GetProductsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetProductsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ExpiredNextTokenException" => {
-                        GetProductsError::ExpiredNextToken(String::from(error_message))
-                    }
-                    "InternalErrorException" => {
-                        GetProductsError::InternalError(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        GetProductsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        GetProductsError::InvalidParameter(String::from(error_message))
-                    }
-                    "NotFoundException" => GetProductsError::NotFound(String::from(error_message)),
-                    "ValidationException" => {
-                        GetProductsError::Validation(error_message.to_string())
-                    }
-                    _ => GetProductsError::Unknown(String::from(body)),
+            match *error_type {
+                "ExpiredNextTokenException" => {
+                    return GetProductsError::ExpiredNextToken(String::from(error_message))
                 }
+                "InternalErrorException" => {
+                    return GetProductsError::InternalError(String::from(error_message))
+                }
+                "InvalidNextTokenException" => {
+                    return GetProductsError::InvalidNextToken(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return GetProductsError::InvalidParameter(String::from(error_message))
+                }
+                "NotFoundException" => {
+                    return GetProductsError::NotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetProductsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetProductsError::Unknown(String::from(body)),
         }
+        return GetProductsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetProductsError {
     fn from(err: serde_json::error::Error) -> GetProductsError {
-        GetProductsError::Unknown(err.description().to_string())
+        GetProductsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetProductsError {
@@ -475,7 +484,8 @@ impl Error for GetProductsError {
             GetProductsError::Validation(ref cause) => cause,
             GetProductsError::Credentials(ref err) => err.description(),
             GetProductsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetProductsError::Unknown(ref cause) => cause,
+            GetProductsError::ParseError(ref cause) => cause,
+            GetProductsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -558,14 +568,16 @@ impl Pricing for PricingClient {
 
                     serde_json::from_str::<DescribeServicesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeServicesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeServicesError::from_response(response))),
+                )
             }
         })
     }
@@ -593,14 +605,16 @@ impl Pricing for PricingClient {
 
                     serde_json::from_str::<GetAttributeValuesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetAttributeValuesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetAttributeValuesError::from_response(response))),
+                )
             }
         })
     }
@@ -628,14 +642,16 @@ impl Pricing for PricingClient {
 
                     serde_json::from_str::<GetProductsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetProductsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetProductsError::from_response(response))),
+                )
             }
         })
     }

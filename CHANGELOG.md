@@ -1,6 +1,9 @@
 # Rusoto changes
 
 ## [Unreleased]
+- Add ByteStream struct to core
+
+## [0.35.0] - 2018-10-31
 
 - Add Cost Explorer
 - Add Performance Insights support
@@ -22,7 +25,15 @@
 - Add ACM PCA support
 - rusoto_credential uses Serde derives for credentials instead of hand written code
 - Add MediaStore support
-- Add ByteStream struct to core
+- Expose raw BufferedHttpResponse on ::Unknown error variants
+- Removed Ceph test for `Luminous`
+- Honor profile region in `Default` implementation of `Region`
+- Fix bug that could not authenticate ARN with colon
+- Fix error parsing for services using boto's `rest-json` protocol published prior to this release . The following service crates were affected.
+  * `apigateway`, `batch`, `clouddirectory`, `cloudsearchdomain`, `cognito-sync`,
+  `efs`, `eks`, `elastictranscoder`, `glacier`, `greengrass`, `guardduty`, `iot`,
+  `lambda`, `lex-models`, `lex-runtime`, `mq`, `polly`, `serverlessrepo`,
+  `workdocs`, `xray`
 
 ## [0.34.0] - 2018-09-05
 

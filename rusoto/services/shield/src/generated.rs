@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AssociateDRTLogBucketRequest {
@@ -36,6 +36,7 @@ pub struct AssociateDRTLogBucketRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssociateDRTLogBucketResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -46,10 +47,12 @@ pub struct AssociateDRTRoleRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssociateDRTRoleResponse {}
 
 /// <p>The details of a DDoS attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttackDetail {
     /// <p>List of counters that describe the attack for the specified time period.</p>
     #[serde(rename = "AttackCounters")]
@@ -87,6 +90,7 @@ pub struct AttackDetail {
 
 /// <p>Details of the described attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttackProperty {
     /// <p>The type of DDoS event that was observed. <code>NETWORK</code> indicates layer 3 and layer 4 events and <code>APPLICATION</code> indicates layer 7 events.</p>
     #[serde(rename = "AttackLayer")]
@@ -112,6 +116,7 @@ pub struct AttackProperty {
 
 /// <p>Summarizes all DDoS attacks for a specified time period.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttackSummary {
     /// <p>The unique identifier (ID) of the attack.</p>
     #[serde(rename = "AttackId")]
@@ -137,6 +142,7 @@ pub struct AttackSummary {
 
 /// <p>Describes the attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttackVectorDescription {
     /// <p><p>The attack type. Valid values:</p> <ul> <li> <p>UDP<em>TRAFFIC</p> </li> <li> <p>UDP</em>FRAGMENT</p> </li> <li> <p>GENERIC<em>UDP</em>REFLECTION</p> </li> <li> <p>DNS<em>REFLECTION</p> </li> <li> <p>NTP</em>REFLECTION</p> </li> <li> <p>CHARGEN<em>REFLECTION</p> </li> <li> <p>SSDP</em>REFLECTION</p> </li> <li> <p>PORT<em>MAPPER</p> </li> <li> <p>RIP</em>REFLECTION</p> </li> <li> <p>SNMP<em>REFLECTION</p> </li> <li> <p>MSSQL</em>REFLECTION</p> </li> <li> <p>NET<em>BIOS</em>REFLECTION</p> </li> <li> <p>SYN<em>FLOOD</p> </li> <li> <p>ACK</em>FLOOD</p> </li> <li> <p>REQUEST_FLOOD</p> </li> </ul></p>
     #[serde(rename = "VectorType")]
@@ -145,6 +151,7 @@ pub struct AttackVectorDescription {
 
 /// <p>A contributor to the attack and their contribution.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Contributor {
     /// <p>The name of the contributor. This is dependent on the <code>AttackPropertyIdentifier</code>. For example, if the <code>AttackPropertyIdentifier</code> is <code>SOURCE_COUNTRY</code>, the <code>Name</code> could be <code>United States</code>.</p>
     #[serde(rename = "Name")]
@@ -167,6 +174,7 @@ pub struct CreateProtectionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateProtectionResponse {
     /// <p>The unique identifier (ID) for the <a>Protection</a> object that is created.</p>
     #[serde(rename = "ProtectionId")]
@@ -178,6 +186,7 @@ pub struct CreateProtectionResponse {
 pub struct CreateSubscriptionRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateSubscriptionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -188,12 +197,14 @@ pub struct DeleteProtectionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteProtectionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct DeleteSubscriptionRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteSubscriptionResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -204,6 +215,7 @@ pub struct DescribeAttackRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAttackResponse {
     /// <p>The attack that is described.</p>
     #[serde(rename = "Attack")]
@@ -215,6 +227,7 @@ pub struct DescribeAttackResponse {
 pub struct DescribeDRTAccessRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeDRTAccessResponse {
     /// <p>The list of Amazon S3 buckets accessed by the DRT.</p>
     #[serde(rename = "LogBucketList")]
@@ -230,6 +243,7 @@ pub struct DescribeDRTAccessResponse {
 pub struct DescribeEmergencyContactSettingsRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEmergencyContactSettingsResponse {
     /// <p>A list of email addresses that the DRT can use to contact you during a suspected attack.</p>
     #[serde(rename = "EmergencyContactList")]
@@ -245,6 +259,7 @@ pub struct DescribeProtectionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeProtectionResponse {
     /// <p>The <a>Protection</a> object that is described.</p>
     #[serde(rename = "Protection")]
@@ -256,6 +271,7 @@ pub struct DescribeProtectionResponse {
 pub struct DescribeSubscriptionRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeSubscriptionResponse {
     /// <p>The AWS Shield Advanced subscription details for an account.</p>
     #[serde(rename = "Subscription")]
@@ -271,12 +287,14 @@ pub struct DisassociateDRTLogBucketRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DisassociateDRTLogBucketResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct DisassociateDRTRoleRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DisassociateDRTRoleResponse {}
 
 /// <p>Contact information that the DRT can use to contact you during a suspected attack.</p>
@@ -291,6 +309,7 @@ pub struct EmergencyContact {
 pub struct GetSubscriptionStateRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetSubscriptionStateResponse {
     /// <p>The status of the subscription.</p>
     #[serde(rename = "SubscriptionState")]
@@ -299,6 +318,7 @@ pub struct GetSubscriptionStateResponse {
 
 /// <p>Specifies how many protections of a given type you can create.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Limit {
     /// <p>The maximum number of protections that can be created for the specified <code>Type</code>.</p>
     #[serde(rename = "Max")]
@@ -335,6 +355,7 @@ pub struct ListAttacksRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAttacksResponse {
     /// <p>The attack information for the specified time range.</p>
     #[serde(rename = "AttackSummaries")]
@@ -359,6 +380,7 @@ pub struct ListProtectionsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListProtectionsResponse {
     /// <p>If you specify a value for <code>MaxResults</code> and you have more Protections than the value of MaxResults, AWS Shield Advanced returns a NextToken value in the response that allows you to list another group of Protections. For the second and subsequent ListProtections requests, specify the value of NextToken from the previous response to get information about another batch of Protections.</p>
     #[serde(rename = "NextToken")]
@@ -372,6 +394,7 @@ pub struct ListProtectionsResponse {
 
 /// <p>The mitigation applied to a DDoS attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Mitigation {
     /// <p>The name of the mitigation taken for this attack.</p>
     #[serde(rename = "MitigationName")]
@@ -381,6 +404,7 @@ pub struct Mitigation {
 
 /// <p>An object that represents a resource that is under DDoS protection.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Protection {
     /// <p>The unique identifier (ID) of the protection.</p>
     #[serde(rename = "Id")]
@@ -398,6 +422,7 @@ pub struct Protection {
 
 /// <p>The attack information for the specified SubResource.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SubResourceSummary {
     /// <p>The list of attack types and associated counters.</p>
     #[serde(rename = "AttackVectors")]
@@ -419,6 +444,7 @@ pub struct SubResourceSummary {
 
 /// <p>Information about the AWS Shield Advanced subscription for an account.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Subscription {
     /// <p>If <code>ENABLED</code>, the subscription will be automatically renewed at the end of the existing subscription period.</p> <p>When you initally create a subscription, <code>AutoRenew</code> is set to <code>ENABLED</code>. You can change this by submitting an <code>UpdateSubscription</code> request. If the <code>UpdateSubscription</code> request does not included a value for <code>AutoRenew</code>, the existing value for <code>AutoRenew</code> remains unchanged.</p>
     #[serde(rename = "AutoRenew")]
@@ -444,6 +470,7 @@ pub struct Subscription {
 
 /// <p>A summary of information about the attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SummarizedAttackVector {
     /// <p>The list of counters that describe the details of the attack.</p>
     #[serde(rename = "VectorCounters")]
@@ -456,6 +483,7 @@ pub struct SummarizedAttackVector {
 
 /// <p>The counter that describes a DDoS attack.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SummarizedCounter {
     /// <p>The average value of the counter for a specified time period.</p>
     #[serde(rename = "Average")]
@@ -505,6 +533,7 @@ pub struct UpdateEmergencyContactSettingsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateEmergencyContactSettingsResponse {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -516,6 +545,7 @@ pub struct UpdateSubscriptionRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateSubscriptionResponse {}
 
 /// Errors returned by AssociateDRTLogBucket
@@ -543,64 +573,64 @@ pub enum AssociateDRTLogBucketError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AssociateDRTLogBucketError {
-    pub fn from_body(body: &str) -> AssociateDRTLogBucketError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AssociateDRTLogBucketError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedForDependencyException" => {
-                        AssociateDRTLogBucketError::AccessDeniedForDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalErrorException" => {
-                        AssociateDRTLogBucketError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        AssociateDRTLogBucketError::InvalidOperation(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        AssociateDRTLogBucketError::InvalidParameter(String::from(error_message))
-                    }
-                    "LimitsExceededException" => {
-                        AssociateDRTLogBucketError::LimitsExceeded(String::from(error_message))
-                    }
-                    "NoAssociatedRoleException" => {
-                        AssociateDRTLogBucketError::NoAssociatedRole(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        AssociateDRTLogBucketError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AssociateDRTLogBucketError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AssociateDRTLogBucketError::Validation(error_message.to_string())
-                    }
-                    _ => AssociateDRTLogBucketError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedForDependencyException" => {
+                    return AssociateDRTLogBucketError::AccessDeniedForDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalErrorException" => {
+                    return AssociateDRTLogBucketError::InternalError(String::from(error_message))
+                }
+                "InvalidOperationException" => {
+                    return AssociateDRTLogBucketError::InvalidOperation(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return AssociateDRTLogBucketError::InvalidParameter(String::from(error_message))
+                }
+                "LimitsExceededException" => {
+                    return AssociateDRTLogBucketError::LimitsExceeded(String::from(error_message))
+                }
+                "NoAssociatedRoleException" => {
+                    return AssociateDRTLogBucketError::NoAssociatedRole(String::from(error_message))
+                }
+                "OptimisticLockException" => {
+                    return AssociateDRTLogBucketError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AssociateDRTLogBucketError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AssociateDRTLogBucketError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AssociateDRTLogBucketError::Unknown(String::from(body)),
         }
+        return AssociateDRTLogBucketError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AssociateDRTLogBucketError {
     fn from(err: serde_json::error::Error) -> AssociateDRTLogBucketError {
-        AssociateDRTLogBucketError::Unknown(err.description().to_string())
+        AssociateDRTLogBucketError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AssociateDRTLogBucketError {
@@ -639,7 +669,8 @@ impl Error for AssociateDRTLogBucketError {
             AssociateDRTLogBucketError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AssociateDRTLogBucketError::Unknown(ref cause) => cause,
+            AssociateDRTLogBucketError::ParseError(ref cause) => cause,
+            AssociateDRTLogBucketError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -664,58 +695,58 @@ pub enum AssociateDRTRoleError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AssociateDRTRoleError {
-    pub fn from_body(body: &str) -> AssociateDRTRoleError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AssociateDRTRoleError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedForDependencyException" => {
-                        AssociateDRTRoleError::AccessDeniedForDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalErrorException" => {
-                        AssociateDRTRoleError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        AssociateDRTRoleError::InvalidOperation(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        AssociateDRTRoleError::InvalidParameter(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        AssociateDRTRoleError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AssociateDRTRoleError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AssociateDRTRoleError::Validation(error_message.to_string())
-                    }
-                    _ => AssociateDRTRoleError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedForDependencyException" => {
+                    return AssociateDRTRoleError::AccessDeniedForDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalErrorException" => {
+                    return AssociateDRTRoleError::InternalError(String::from(error_message))
+                }
+                "InvalidOperationException" => {
+                    return AssociateDRTRoleError::InvalidOperation(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return AssociateDRTRoleError::InvalidParameter(String::from(error_message))
+                }
+                "OptimisticLockException" => {
+                    return AssociateDRTRoleError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AssociateDRTRoleError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AssociateDRTRoleError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AssociateDRTRoleError::Unknown(String::from(body)),
         }
+        return AssociateDRTRoleError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AssociateDRTRoleError {
     fn from(err: serde_json::error::Error) -> AssociateDRTRoleError {
-        AssociateDRTRoleError::Unknown(err.description().to_string())
+        AssociateDRTRoleError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AssociateDRTRoleError {
@@ -750,7 +781,8 @@ impl Error for AssociateDRTRoleError {
             AssociateDRTRoleError::Validation(ref cause) => cause,
             AssociateDRTRoleError::Credentials(ref err) => err.description(),
             AssociateDRTRoleError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AssociateDRTRoleError::Unknown(ref cause) => cause,
+            AssociateDRTRoleError::ParseError(ref cause) => cause,
+            AssociateDRTRoleError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -777,59 +809,59 @@ pub enum CreateProtectionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateProtectionError {
-    pub fn from_body(body: &str) -> CreateProtectionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateProtectionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        CreateProtectionError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        CreateProtectionError::InvalidOperation(String::from(error_message))
-                    }
-                    "InvalidResourceException" => {
-                        CreateProtectionError::InvalidResource(String::from(error_message))
-                    }
-                    "LimitsExceededException" => {
-                        CreateProtectionError::LimitsExceeded(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        CreateProtectionError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceAlreadyExistsException" => {
-                        CreateProtectionError::ResourceAlreadyExists(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        CreateProtectionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateProtectionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateProtectionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return CreateProtectionError::InternalError(String::from(error_message))
                 }
+                "InvalidOperationException" => {
+                    return CreateProtectionError::InvalidOperation(String::from(error_message))
+                }
+                "InvalidResourceException" => {
+                    return CreateProtectionError::InvalidResource(String::from(error_message))
+                }
+                "LimitsExceededException" => {
+                    return CreateProtectionError::LimitsExceeded(String::from(error_message))
+                }
+                "OptimisticLockException" => {
+                    return CreateProtectionError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceAlreadyExistsException" => {
+                    return CreateProtectionError::ResourceAlreadyExists(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return CreateProtectionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateProtectionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateProtectionError::Unknown(String::from(body)),
         }
+        return CreateProtectionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateProtectionError {
     fn from(err: serde_json::error::Error) -> CreateProtectionError {
-        CreateProtectionError::Unknown(err.description().to_string())
+        CreateProtectionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateProtectionError {
@@ -865,7 +897,8 @@ impl Error for CreateProtectionError {
             CreateProtectionError::Validation(ref cause) => cause,
             CreateProtectionError::Credentials(ref err) => err.description(),
             CreateProtectionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateProtectionError::Unknown(ref cause) => cause,
+            CreateProtectionError::ParseError(ref cause) => cause,
+            CreateProtectionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -882,44 +915,46 @@ pub enum CreateSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateSubscriptionError {
-    pub fn from_body(body: &str) -> CreateSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        CreateSubscriptionError::InternalError(String::from(error_message))
-                    }
-                    "ResourceAlreadyExistsException" => {
-                        CreateSubscriptionError::ResourceAlreadyExists(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => CreateSubscriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return CreateSubscriptionError::InternalError(String::from(error_message))
                 }
+                "ResourceAlreadyExistsException" => {
+                    return CreateSubscriptionError::ResourceAlreadyExists(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateSubscriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateSubscriptionError::Unknown(String::from(body)),
         }
+        return CreateSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateSubscriptionError {
     fn from(err: serde_json::error::Error) -> CreateSubscriptionError {
-        CreateSubscriptionError::Unknown(err.description().to_string())
+        CreateSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateSubscriptionError {
@@ -952,7 +987,8 @@ impl Error for CreateSubscriptionError {
             CreateSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateSubscriptionError::Unknown(ref cause) => cause,
+            CreateSubscriptionError::ParseError(ref cause) => cause,
+            CreateSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -971,47 +1007,47 @@ pub enum DeleteProtectionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteProtectionError {
-    pub fn from_body(body: &str) -> DeleteProtectionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteProtectionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DeleteProtectionError::InternalError(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        DeleteProtectionError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteProtectionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteProtectionError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteProtectionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DeleteProtectionError::InternalError(String::from(error_message))
                 }
+                "OptimisticLockException" => {
+                    return DeleteProtectionError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteProtectionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteProtectionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteProtectionError::Unknown(String::from(body)),
         }
+        return DeleteProtectionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteProtectionError {
     fn from(err: serde_json::error::Error) -> DeleteProtectionError {
-        DeleteProtectionError::Unknown(err.description().to_string())
+        DeleteProtectionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteProtectionError {
@@ -1043,7 +1079,8 @@ impl Error for DeleteProtectionError {
             DeleteProtectionError::Validation(ref cause) => cause,
             DeleteProtectionError::Credentials(ref err) => err.description(),
             DeleteProtectionError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteProtectionError::Unknown(ref cause) => cause,
+            DeleteProtectionError::ParseError(ref cause) => cause,
+            DeleteProtectionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1062,47 +1099,47 @@ pub enum DeleteSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteSubscriptionError {
-    pub fn from_body(body: &str) -> DeleteSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DeleteSubscriptionError::InternalError(String::from(error_message))
-                    }
-                    "LockedSubscriptionException" => {
-                        DeleteSubscriptionError::LockedSubscription(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteSubscriptionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteSubscriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DeleteSubscriptionError::InternalError(String::from(error_message))
                 }
+                "LockedSubscriptionException" => {
+                    return DeleteSubscriptionError::LockedSubscription(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteSubscriptionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteSubscriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteSubscriptionError::Unknown(String::from(body)),
         }
+        return DeleteSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteSubscriptionError {
     fn from(err: serde_json::error::Error) -> DeleteSubscriptionError {
-        DeleteSubscriptionError::Unknown(err.description().to_string())
+        DeleteSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteSubscriptionError {
@@ -1136,7 +1173,8 @@ impl Error for DeleteSubscriptionError {
             DeleteSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteSubscriptionError::Unknown(ref cause) => cause,
+            DeleteSubscriptionError::ParseError(ref cause) => cause,
+            DeleteSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1153,44 +1191,44 @@ pub enum DescribeAttackError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAttackError {
-    pub fn from_body(body: &str) -> DescribeAttackError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAttackError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DescribeAttackError::InternalError(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        DescribeAttackError::InvalidParameter(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAttackError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAttackError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DescribeAttackError::InternalError(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return DescribeAttackError::InvalidParameter(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeAttackError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAttackError::Unknown(String::from(body)),
         }
+        return DescribeAttackError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAttackError {
     fn from(err: serde_json::error::Error) -> DescribeAttackError {
-        DescribeAttackError::Unknown(err.description().to_string())
+        DescribeAttackError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAttackError {
@@ -1221,7 +1259,8 @@ impl Error for DescribeAttackError {
             DescribeAttackError::Validation(ref cause) => cause,
             DescribeAttackError::Credentials(ref err) => err.description(),
             DescribeAttackError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeAttackError::Unknown(ref cause) => cause,
+            DescribeAttackError::ParseError(ref cause) => cause,
+            DescribeAttackError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1238,44 +1277,44 @@ pub enum DescribeDRTAccessError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeDRTAccessError {
-    pub fn from_body(body: &str) -> DescribeDRTAccessError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeDRTAccessError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DescribeDRTAccessError::InternalError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeDRTAccessError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeDRTAccessError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeDRTAccessError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DescribeDRTAccessError::InternalError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeDRTAccessError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeDRTAccessError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeDRTAccessError::Unknown(String::from(body)),
         }
+        return DescribeDRTAccessError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeDRTAccessError {
     fn from(err: serde_json::error::Error) -> DescribeDRTAccessError {
-        DescribeDRTAccessError::Unknown(err.description().to_string())
+        DescribeDRTAccessError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeDRTAccessError {
@@ -1308,7 +1347,8 @@ impl Error for DescribeDRTAccessError {
             DescribeDRTAccessError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeDRTAccessError::Unknown(ref cause) => cause,
+            DescribeDRTAccessError::ParseError(ref cause) => cause,
+            DescribeDRTAccessError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1325,48 +1365,50 @@ pub enum DescribeEmergencyContactSettingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEmergencyContactSettingsError {
-    pub fn from_body(body: &str) -> DescribeEmergencyContactSettingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEmergencyContactSettingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DescribeEmergencyContactSettingsError::InternalError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeEmergencyContactSettingsError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeEmergencyContactSettingsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEmergencyContactSettingsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DescribeEmergencyContactSettingsError::InternalError(String::from(
+                        error_message,
+                    ))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeEmergencyContactSettingsError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeEmergencyContactSettingsError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeEmergencyContactSettingsError::Unknown(String::from(body)),
         }
+        return DescribeEmergencyContactSettingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEmergencyContactSettingsError {
     fn from(err: serde_json::error::Error) -> DescribeEmergencyContactSettingsError {
-        DescribeEmergencyContactSettingsError::Unknown(err.description().to_string())
+        DescribeEmergencyContactSettingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEmergencyContactSettingsError {
@@ -1399,7 +1441,8 @@ impl Error for DescribeEmergencyContactSettingsError {
             DescribeEmergencyContactSettingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeEmergencyContactSettingsError::Unknown(ref cause) => cause,
+            DescribeEmergencyContactSettingsError::ParseError(ref cause) => cause,
+            DescribeEmergencyContactSettingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1416,44 +1459,44 @@ pub enum DescribeProtectionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeProtectionError {
-    pub fn from_body(body: &str) -> DescribeProtectionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeProtectionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DescribeProtectionError::InternalError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeProtectionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeProtectionError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeProtectionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DescribeProtectionError::InternalError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeProtectionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeProtectionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeProtectionError::Unknown(String::from(body)),
         }
+        return DescribeProtectionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeProtectionError {
     fn from(err: serde_json::error::Error) -> DescribeProtectionError {
-        DescribeProtectionError::Unknown(err.description().to_string())
+        DescribeProtectionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeProtectionError {
@@ -1486,7 +1529,8 @@ impl Error for DescribeProtectionError {
             DescribeProtectionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeProtectionError::Unknown(ref cause) => cause,
+            DescribeProtectionError::ParseError(ref cause) => cause,
+            DescribeProtectionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1503,44 +1547,44 @@ pub enum DescribeSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeSubscriptionError {
-    pub fn from_body(body: &str) -> DescribeSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DescribeSubscriptionError::InternalError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeSubscriptionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeSubscriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DescribeSubscriptionError::InternalError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeSubscriptionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeSubscriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeSubscriptionError::Unknown(String::from(body)),
         }
+        return DescribeSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeSubscriptionError {
     fn from(err: serde_json::error::Error) -> DescribeSubscriptionError {
-        DescribeSubscriptionError::Unknown(err.description().to_string())
+        DescribeSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeSubscriptionError {
@@ -1573,7 +1617,8 @@ impl Error for DescribeSubscriptionError {
             DescribeSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeSubscriptionError::Unknown(ref cause) => cause,
+            DescribeSubscriptionError::ParseError(ref cause) => cause,
+            DescribeSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1598,58 +1643,66 @@ pub enum DisassociateDRTLogBucketError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisassociateDRTLogBucketError {
-    pub fn from_body(body: &str) -> DisassociateDRTLogBucketError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisassociateDRTLogBucketError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedForDependencyException" => {
-                        DisassociateDRTLogBucketError::AccessDeniedForDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalErrorException" => {
-                        DisassociateDRTLogBucketError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        DisassociateDRTLogBucketError::InvalidOperation(String::from(error_message))
-                    }
-                    "NoAssociatedRoleException" => {
-                        DisassociateDRTLogBucketError::NoAssociatedRole(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        DisassociateDRTLogBucketError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DisassociateDRTLogBucketError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DisassociateDRTLogBucketError::Validation(error_message.to_string())
-                    }
-                    _ => DisassociateDRTLogBucketError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedForDependencyException" => {
+                    return DisassociateDRTLogBucketError::AccessDeniedForDependency(String::from(
+                        error_message,
+                    ))
                 }
+                "InternalErrorException" => {
+                    return DisassociateDRTLogBucketError::InternalError(String::from(error_message))
+                }
+                "InvalidOperationException" => {
+                    return DisassociateDRTLogBucketError::InvalidOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "NoAssociatedRoleException" => {
+                    return DisassociateDRTLogBucketError::NoAssociatedRole(String::from(
+                        error_message,
+                    ))
+                }
+                "OptimisticLockException" => {
+                    return DisassociateDRTLogBucketError::OptimisticLock(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return DisassociateDRTLogBucketError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DisassociateDRTLogBucketError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DisassociateDRTLogBucketError::Unknown(String::from(body)),
         }
+        return DisassociateDRTLogBucketError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisassociateDRTLogBucketError {
     fn from(err: serde_json::error::Error) -> DisassociateDRTLogBucketError {
-        DisassociateDRTLogBucketError::Unknown(err.description().to_string())
+        DisassociateDRTLogBucketError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisassociateDRTLogBucketError {
@@ -1686,7 +1739,8 @@ impl Error for DisassociateDRTLogBucketError {
             DisassociateDRTLogBucketError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisassociateDRTLogBucketError::Unknown(ref cause) => cause,
+            DisassociateDRTLogBucketError::ParseError(ref cause) => cause,
+            DisassociateDRTLogBucketError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1707,50 +1761,50 @@ pub enum DisassociateDRTRoleError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisassociateDRTRoleError {
-    pub fn from_body(body: &str) -> DisassociateDRTRoleError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisassociateDRTRoleError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        DisassociateDRTRoleError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        DisassociateDRTRoleError::InvalidOperation(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        DisassociateDRTRoleError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DisassociateDRTRoleError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DisassociateDRTRoleError::Validation(error_message.to_string())
-                    }
-                    _ => DisassociateDRTRoleError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return DisassociateDRTRoleError::InternalError(String::from(error_message))
                 }
+                "InvalidOperationException" => {
+                    return DisassociateDRTRoleError::InvalidOperation(String::from(error_message))
+                }
+                "OptimisticLockException" => {
+                    return DisassociateDRTRoleError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DisassociateDRTRoleError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DisassociateDRTRoleError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DisassociateDRTRoleError::Unknown(String::from(body)),
         }
+        return DisassociateDRTRoleError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisassociateDRTRoleError {
     fn from(err: serde_json::error::Error) -> DisassociateDRTRoleError {
-        DisassociateDRTRoleError::Unknown(err.description().to_string())
+        DisassociateDRTRoleError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisassociateDRTRoleError {
@@ -1785,7 +1839,8 @@ impl Error for DisassociateDRTRoleError {
             DisassociateDRTRoleError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisassociateDRTRoleError::Unknown(ref cause) => cause,
+            DisassociateDRTRoleError::ParseError(ref cause) => cause,
+            DisassociateDRTRoleError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1800,41 +1855,41 @@ pub enum GetSubscriptionStateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetSubscriptionStateError {
-    pub fn from_body(body: &str) -> GetSubscriptionStateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetSubscriptionStateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        GetSubscriptionStateError::InternalError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetSubscriptionStateError::Validation(error_message.to_string())
-                    }
-                    _ => GetSubscriptionStateError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return GetSubscriptionStateError::InternalError(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return GetSubscriptionStateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetSubscriptionStateError::Unknown(String::from(body)),
         }
+        return GetSubscriptionStateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetSubscriptionStateError {
     fn from(err: serde_json::error::Error) -> GetSubscriptionStateError {
-        GetSubscriptionStateError::Unknown(err.description().to_string())
+        GetSubscriptionStateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetSubscriptionStateError {
@@ -1866,7 +1921,8 @@ impl Error for GetSubscriptionStateError {
             GetSubscriptionStateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetSubscriptionStateError::Unknown(ref cause) => cause,
+            GetSubscriptionStateError::ParseError(ref cause) => cause,
+            GetSubscriptionStateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1885,47 +1941,47 @@ pub enum ListAttacksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAttacksError {
-    pub fn from_body(body: &str) -> ListAttacksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAttacksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        ListAttacksError::InternalError(String::from(error_message))
-                    }
-                    "InvalidOperationException" => {
-                        ListAttacksError::InvalidOperation(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        ListAttacksError::InvalidParameter(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAttacksError::Validation(error_message.to_string())
-                    }
-                    _ => ListAttacksError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return ListAttacksError::InternalError(String::from(error_message))
                 }
+                "InvalidOperationException" => {
+                    return ListAttacksError::InvalidOperation(String::from(error_message))
+                }
+                "InvalidParameterException" => {
+                    return ListAttacksError::InvalidParameter(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAttacksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAttacksError::Unknown(String::from(body)),
         }
+        return ListAttacksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAttacksError {
     fn from(err: serde_json::error::Error) -> ListAttacksError {
-        ListAttacksError::Unknown(err.description().to_string())
+        ListAttacksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAttacksError {
@@ -1957,7 +2013,8 @@ impl Error for ListAttacksError {
             ListAttacksError::Validation(ref cause) => cause,
             ListAttacksError::Credentials(ref err) => err.description(),
             ListAttacksError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListAttacksError::Unknown(ref cause) => cause,
+            ListAttacksError::ParseError(ref cause) => cause,
+            ListAttacksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1976,47 +2033,47 @@ pub enum ListProtectionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListProtectionsError {
-    pub fn from_body(body: &str) -> ListProtectionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListProtectionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        ListProtectionsError::InternalError(String::from(error_message))
-                    }
-                    "InvalidPaginationTokenException" => {
-                        ListProtectionsError::InvalidPaginationToken(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListProtectionsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListProtectionsError::Validation(error_message.to_string())
-                    }
-                    _ => ListProtectionsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return ListProtectionsError::InternalError(String::from(error_message))
                 }
+                "InvalidPaginationTokenException" => {
+                    return ListProtectionsError::InvalidPaginationToken(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ListProtectionsError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListProtectionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListProtectionsError::Unknown(String::from(body)),
         }
+        return ListProtectionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListProtectionsError {
     fn from(err: serde_json::error::Error) -> ListProtectionsError {
-        ListProtectionsError::Unknown(err.description().to_string())
+        ListProtectionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListProtectionsError {
@@ -2048,7 +2105,8 @@ impl Error for ListProtectionsError {
             ListProtectionsError::Validation(ref cause) => cause,
             ListProtectionsError::Credentials(ref err) => err.description(),
             ListProtectionsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListProtectionsError::Unknown(ref cause) => cause,
+            ListProtectionsError::ParseError(ref cause) => cause,
+            ListProtectionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2069,56 +2127,60 @@ pub enum UpdateEmergencyContactSettingsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateEmergencyContactSettingsError {
-    pub fn from_body(body: &str) -> UpdateEmergencyContactSettingsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateEmergencyContactSettingsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => UpdateEmergencyContactSettingsError::InternalError(
-                        String::from(error_message),
-                    ),
-                    "InvalidParameterException" => {
-                        UpdateEmergencyContactSettingsError::InvalidParameter(String::from(
-                            error_message,
-                        ))
-                    }
-                    "OptimisticLockException" => {
-                        UpdateEmergencyContactSettingsError::OptimisticLock(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateEmergencyContactSettingsError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateEmergencyContactSettingsError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateEmergencyContactSettingsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return UpdateEmergencyContactSettingsError::InternalError(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidParameterException" => {
+                    return UpdateEmergencyContactSettingsError::InvalidParameter(String::from(
+                        error_message,
+                    ))
+                }
+                "OptimisticLockException" => {
+                    return UpdateEmergencyContactSettingsError::OptimisticLock(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateEmergencyContactSettingsError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateEmergencyContactSettingsError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => UpdateEmergencyContactSettingsError::Unknown(String::from(body)),
         }
+        return UpdateEmergencyContactSettingsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateEmergencyContactSettingsError {
     fn from(err: serde_json::error::Error) -> UpdateEmergencyContactSettingsError {
-        UpdateEmergencyContactSettingsError::Unknown(err.description().to_string())
+        UpdateEmergencyContactSettingsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateEmergencyContactSettingsError {
@@ -2153,7 +2215,8 @@ impl Error for UpdateEmergencyContactSettingsError {
             UpdateEmergencyContactSettingsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateEmergencyContactSettingsError::Unknown(ref cause) => cause,
+            UpdateEmergencyContactSettingsError::ParseError(ref cause) => cause,
+            UpdateEmergencyContactSettingsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2176,53 +2239,53 @@ pub enum UpdateSubscriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateSubscriptionError {
-    pub fn from_body(body: &str) -> UpdateSubscriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateSubscriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalErrorException" => {
-                        UpdateSubscriptionError::InternalError(String::from(error_message))
-                    }
-                    "InvalidParameterException" => {
-                        UpdateSubscriptionError::InvalidParameter(String::from(error_message))
-                    }
-                    "LockedSubscriptionException" => {
-                        UpdateSubscriptionError::LockedSubscription(String::from(error_message))
-                    }
-                    "OptimisticLockException" => {
-                        UpdateSubscriptionError::OptimisticLock(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateSubscriptionError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateSubscriptionError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateSubscriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalErrorException" => {
+                    return UpdateSubscriptionError::InternalError(String::from(error_message))
                 }
+                "InvalidParameterException" => {
+                    return UpdateSubscriptionError::InvalidParameter(String::from(error_message))
+                }
+                "LockedSubscriptionException" => {
+                    return UpdateSubscriptionError::LockedSubscription(String::from(error_message))
+                }
+                "OptimisticLockException" => {
+                    return UpdateSubscriptionError::OptimisticLock(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateSubscriptionError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateSubscriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateSubscriptionError::Unknown(String::from(body)),
         }
+        return UpdateSubscriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateSubscriptionError {
     fn from(err: serde_json::error::Error) -> UpdateSubscriptionError {
-        UpdateSubscriptionError::Unknown(err.description().to_string())
+        UpdateSubscriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateSubscriptionError {
@@ -2258,7 +2321,8 @@ impl Error for UpdateSubscriptionError {
             UpdateSubscriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateSubscriptionError::Unknown(ref cause) => cause,
+            UpdateSubscriptionError::ParseError(ref cause) => cause,
+            UpdateSubscriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2424,14 +2488,15 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<AssociateDRTLogBucketResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AssociateDRTLogBucketError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AssociateDRTLogBucketError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2459,14 +2524,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<AssociateDRTRoleResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AssociateDRTRoleError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AssociateDRTRoleError::from_response(response))),
+                )
             }
         })
     }
@@ -2494,14 +2561,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<CreateProtectionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateProtectionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateProtectionError::from_response(response))),
+                )
             }
         })
     }
@@ -2527,14 +2596,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<CreateSubscriptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateSubscriptionError::from_response(response))),
+                )
             }
         })
     }
@@ -2562,14 +2633,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DeleteProtectionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteProtectionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteProtectionError::from_response(response))),
+                )
             }
         })
     }
@@ -2595,14 +2668,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DeleteSubscriptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteSubscriptionError::from_response(response))),
+                )
             }
         })
     }
@@ -2630,14 +2705,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DescribeAttackResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAttackError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeAttackError::from_response(response))),
+                )
             }
         })
     }
@@ -2663,14 +2740,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DescribeDRTAccessResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeDRTAccessError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeDRTAccessError::from_response(response))),
+                )
             }
         })
     }
@@ -2700,12 +2779,13 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DescribeEmergencyContactSettingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEmergencyContactSettingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(DescribeEmergencyContactSettingsError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -2735,14 +2815,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DescribeProtectionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeProtectionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeProtectionError::from_response(response))),
+                )
             }
         })
     }
@@ -2768,14 +2850,15 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DescribeSubscriptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeSubscriptionError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2806,13 +2889,12 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DisassociateDRTLogBucketResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisassociateDRTLogBucketError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DisassociateDRTLogBucketError::from_response(response))
                 }))
             }
         })
@@ -2839,14 +2921,15 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<DisassociateDRTRoleResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisassociateDRTRoleError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DisassociateDRTRoleError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2872,14 +2955,15 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<GetSubscriptionStateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetSubscriptionStateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetSubscriptionStateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2907,14 +2991,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<ListAttacksResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAttacksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListAttacksError::from_response(response))),
+                )
             }
         })
     }
@@ -2942,14 +3028,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<ListProtectionsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListProtectionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListProtectionsError::from_response(response))),
+                )
             }
         })
     }
@@ -2981,13 +3069,12 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<UpdateEmergencyContactSettingsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateEmergencyContactSettingsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateEmergencyContactSettingsError::from_response(response))
                 }))
             }
         })
@@ -3016,14 +3103,16 @@ impl Shield for ShieldClient {
 
                     serde_json::from_str::<UpdateSubscriptionResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateSubscriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateSubscriptionError::from_response(response))),
+                )
             }
         })
     }

@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Represents the input of a batch get repositories operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -38,6 +38,7 @@ pub struct BatchGetRepositoriesInput {
 
 /// <p>Represents the output of a batch get repositories operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BatchGetRepositoriesOutput {
     /// <p>A list of repositories returned by the batch get repositories operation.</p>
     #[serde(rename = "repositories")]
@@ -51,6 +52,7 @@ pub struct BatchGetRepositoriesOutput {
 
 /// <p>Returns information about a specific Git blob object.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BlobMetadata {
     /// <p>The full ID of the blob.</p>
     #[serde(rename = "blobId")]
@@ -68,6 +70,7 @@ pub struct BlobMetadata {
 
 /// <p>Returns information about a branch.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BranchInfo {
     /// <p>The name of the branch.</p>
     #[serde(rename = "branchName")]
@@ -81,6 +84,7 @@ pub struct BranchInfo {
 
 /// <p>Returns information about a specific comment.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Comment {
     /// <p>The Amazon Resource Name (ARN) of the person who posted the comment.</p>
     #[serde(rename = "authorArn")]
@@ -118,6 +122,7 @@ pub struct Comment {
 
 /// <p>Returns information about comments on the comparison between two commits.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CommentsForComparedCommit {
     /// <p>The full blob ID of the commit used to establish the 'after' of the comparison.</p>
     #[serde(rename = "afterBlobId")]
@@ -151,6 +156,7 @@ pub struct CommentsForComparedCommit {
 
 /// <p>Returns information about comments on a pull request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CommentsForPullRequest {
     /// <p>The full blob ID of the file on which you want to comment on the source commit.</p>
     #[serde(rename = "afterBlobId")]
@@ -188,6 +194,7 @@ pub struct CommentsForPullRequest {
 
 /// <p>Returns information about a specific commit.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Commit {
     /// <p>Any additional data associated with the specified commit.</p>
     #[serde(rename = "additionalData")]
@@ -252,6 +259,7 @@ pub struct CreatePullRequestInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreatePullRequestOutput {
     /// <p>Information about the newly created pull request.</p>
     #[serde(rename = "pullRequest")]
@@ -272,6 +280,7 @@ pub struct CreateRepositoryInput {
 
 /// <p>Represents the output of a create repository operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateRepositoryOutput {
     /// <p>Information about the newly created repository.</p>
     #[serde(rename = "repositoryMetadata")]
@@ -292,6 +301,7 @@ pub struct DeleteBranchInput {
 
 /// <p>Represents the output of a delete branch operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteBranchOutput {
     /// <p>Information about the branch deleted by the operation, including the branch name and the commit ID that was the tip of the branch.</p>
     #[serde(rename = "deletedBranch")]
@@ -307,6 +317,7 @@ pub struct DeleteCommentContentInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteCommentContentOutput {
     /// <p>Information about the comment you just deleted.</p>
     #[serde(rename = "comment")]
@@ -324,6 +335,7 @@ pub struct DeleteRepositoryInput {
 
 /// <p>Represents the output of a delete repository operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteRepositoryOutput {
     /// <p>The ID of the repository that was deleted.</p>
     #[serde(rename = "repositoryId")]
@@ -355,6 +367,7 @@ pub struct DescribePullRequestEventsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribePullRequestEventsOutput {
     /// <p>An enumeration token that can be used in a request to return the next batch of the results.</p>
     #[serde(rename = "nextToken")]
@@ -367,6 +380,7 @@ pub struct DescribePullRequestEventsOutput {
 
 /// <p>Returns information about a set of differences for a commit specifier.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Difference {
     /// <p>Information about an <code>afterBlob</code> data type object, including the ID, the file mode permission code, and the path.</p>
     #[serde(rename = "afterBlob")]
@@ -395,13 +409,14 @@ pub struct GetBlobInput {
 
 /// <p>Represents the output of a get blob operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetBlobOutput {
     /// <p>The content of the blob, usually a file.</p>
     #[serde(rename = "content")]
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub content: Vec<u8>,
 }
@@ -421,6 +436,7 @@ pub struct GetBranchInput {
 
 /// <p>Represents the output of a get branch operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetBranchOutput {
     /// <p>The name of the branch.</p>
     #[serde(rename = "branch")]
@@ -436,6 +452,7 @@ pub struct GetCommentInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCommentOutput {
     /// <p>The contents of the comment.</p>
     #[serde(rename = "comment")]
@@ -466,6 +483,7 @@ pub struct GetCommentsForComparedCommitInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCommentsForComparedCommitOutput {
     /// <p>A list of comment objects on the compared commit.</p>
     #[serde(rename = "commentsForComparedCommitData")]
@@ -505,6 +523,7 @@ pub struct GetCommentsForPullRequestInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCommentsForPullRequestOutput {
     /// <p>An array of comment objects on the pull request.</p>
     #[serde(rename = "commentsForPullRequestData")]
@@ -529,6 +548,7 @@ pub struct GetCommitInput {
 
 /// <p>Represents the output of a get commit operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCommitOutput {
     /// <p>A commit data type object that contains information about the specified commit.</p>
     #[serde(rename = "commit")]
@@ -566,6 +586,7 @@ pub struct GetDifferencesInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetDifferencesOutput {
     /// <p>An enumeration token that can be used in a request to return the next batch of the results.</p>
     #[serde(rename = "NextToken")]
@@ -594,6 +615,7 @@ pub struct GetMergeConflictsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetMergeConflictsOutput {
     /// <p>The commit ID of the destination commit specifier that was used in the merge evaluation.</p>
     #[serde(rename = "destinationCommitId")]
@@ -614,6 +636,7 @@ pub struct GetPullRequestInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetPullRequestOutput {
     /// <p>Information about the specified pull request.</p>
     #[serde(rename = "pullRequest")]
@@ -630,6 +653,7 @@ pub struct GetRepositoryInput {
 
 /// <p>Represents the output of a get repository operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetRepositoryOutput {
     /// <p>Information about the repository.</p>
     #[serde(rename = "repositoryMetadata")]
@@ -647,6 +671,7 @@ pub struct GetRepositoryTriggersInput {
 
 /// <p>Represents the output of a get repository triggers operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetRepositoryTriggersOutput {
     /// <p>The system-generated unique ID for the trigger.</p>
     #[serde(rename = "configurationId")]
@@ -672,6 +697,7 @@ pub struct ListBranchesInput {
 
 /// <p>Represents the output of a list branches operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListBranchesOutput {
     /// <p>The list of branch names.</p>
     #[serde(rename = "branches")]
@@ -707,6 +733,7 @@ pub struct ListPullRequestsInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListPullRequestsOutput {
     /// <p>An enumeration token that when provided in a request, returns the next batch of the results.</p>
     #[serde(rename = "nextToken")]
@@ -736,6 +763,7 @@ pub struct ListRepositoriesInput {
 
 /// <p>Represents the output of a list repositories operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListRepositoriesOutput {
     /// <p>An enumeration token that allows the operation to batch the results of the operation. Batch sizes are 1,000 for list repository operations. When the client sends the token back to AWS CodeCommit, another page of 1,000 records is retrieved.</p>
     #[serde(rename = "nextToken")]
@@ -766,6 +794,7 @@ pub struct Location {
 
 /// <p>Returns information about a merge or potential merge between a source reference and a destination reference in a pull request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MergeMetadata {
     /// <p>A Boolean value indicating whether the merge has been made.</p>
     #[serde(rename = "isMerged")]
@@ -792,6 +821,7 @@ pub struct MergePullRequestByFastForwardInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MergePullRequestByFastForwardOutput {
     /// <p>Information about the specified pull request, including information about the merge.</p>
     #[serde(rename = "pullRequest")]
@@ -825,6 +855,7 @@ pub struct PostCommentForComparedCommitInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PostCommentForComparedCommitOutput {
     /// <p>In the directionality you established, the blob ID of the 'after' blob.</p>
     #[serde(rename = "afterBlobId")]
@@ -884,6 +915,7 @@ pub struct PostCommentForPullRequestInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PostCommentForPullRequestOutput {
     /// <p>In the directionality of the pull request, the blob ID of the 'after' blob.</p>
     #[serde(rename = "afterBlobId")]
@@ -934,6 +966,7 @@ pub struct PostCommentReplyInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PostCommentReplyOutput {
     /// <p>Information about the reply to a comment.</p>
     #[serde(rename = "comment")]
@@ -943,6 +976,7 @@ pub struct PostCommentReplyOutput {
 
 /// <p>Returns information about a pull request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequest {
     /// <p>The Amazon Resource Name (ARN) of the user who created the pull request.</p>
     #[serde(rename = "authorArn")]
@@ -984,6 +1018,7 @@ pub struct PullRequest {
 
 /// <p>Returns information about a pull request event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequestEvent {
     /// <p>The Amazon Resource Name (ARN) of the user whose actions resulted in the event. Examples include updating the pull request with additional commits or changing the status of a pull request.</p>
     #[serde(rename = "actorArn")]
@@ -1019,6 +1054,7 @@ pub struct PullRequestEvent {
 
 /// <p>Returns information about the change in the merge state for a pull request event. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequestMergedStateChangedEventMetadata {
     /// <p>The name of the branch that the pull request will be merged into.</p>
     #[serde(rename = "destinationReference")]
@@ -1036,6 +1072,7 @@ pub struct PullRequestMergedStateChangedEventMetadata {
 
 /// <p>Information about an update to the source branch of a pull request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequestSourceReferenceUpdatedEventMetadata {
     /// <p>The full commit ID of the commit in the source branch that was the tip of the branch at the time the pull request was updated.</p>
     #[serde(rename = "afterCommitId")]
@@ -1053,6 +1090,7 @@ pub struct PullRequestSourceReferenceUpdatedEventMetadata {
 
 /// <p>Information about a change to the status of a pull request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequestStatusChangedEventMetadata {
     /// <p>The changed status of the pull request.</p>
     #[serde(rename = "pullRequestStatus")]
@@ -1062,6 +1100,7 @@ pub struct PullRequestStatusChangedEventMetadata {
 
 /// <p>Returns information about a pull request target.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PullRequestTarget {
     /// <p>The full commit ID that is the tip of the destination branch. This is the commit where the pull request was or will be merged.</p>
     #[serde(rename = "destinationCommit")]
@@ -1107,7 +1146,7 @@ pub struct PutFileInput {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub file_content: Vec<u8>,
     /// <p>The file mode permissions of the blob. Valid file mode permissions are listed below.</p>
@@ -1131,6 +1170,7 @@ pub struct PutFileInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutFileOutput {
     /// <p>The ID of the blob, which is its SHA-1 pointer.</p>
     #[serde(rename = "blobId")]
@@ -1156,6 +1196,7 @@ pub struct PutRepositoryTriggersInput {
 
 /// <p>Represents the output of a put repository triggers operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutRepositoryTriggersOutput {
     /// <p>The system-generated unique ID for the create or update operation.</p>
     #[serde(rename = "configurationId")]
@@ -1165,6 +1206,7 @@ pub struct PutRepositoryTriggersOutput {
 
 /// <p>Information about a repository.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RepositoryMetadata {
     /// <p>The Amazon Resource Name (ARN) of the repository.</p>
     #[serde(rename = "Arn")]
@@ -1210,6 +1252,7 @@ pub struct RepositoryMetadata {
 
 /// <p>Information about a repository name and ID.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RepositoryNameIdPair {
     /// <p>The ID associated with the repository.</p>
     #[serde(rename = "repositoryId")]
@@ -1245,6 +1288,7 @@ pub struct RepositoryTrigger {
 
 /// <p>A trigger failed to run.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RepositoryTriggerExecutionFailure {
     /// <p>Additional message information about the trigger that did not run.</p>
     #[serde(rename = "failureMessage")]
@@ -1284,6 +1328,7 @@ pub struct TestRepositoryTriggersInput {
 
 /// <p>Represents the output of a test repository triggers operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TestRepositoryTriggersOutput {
     /// <p>The list of triggers that were not able to be tested. This list provides the names of the triggers that could not be tested, separated by commas.</p>
     #[serde(rename = "failedExecutions")]
@@ -1306,6 +1351,7 @@ pub struct UpdateCommentInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateCommentOutput {
     /// <p>Information about the updated comment.</p>
     #[serde(rename = "comment")]
@@ -1335,6 +1381,7 @@ pub struct UpdatePullRequestDescriptionInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdatePullRequestDescriptionOutput {
     /// <p>Information about the updated pull request.</p>
     #[serde(rename = "pullRequest")]
@@ -1352,6 +1399,7 @@ pub struct UpdatePullRequestStatusInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdatePullRequestStatusOutput {
     /// <p>Information about the pull request.</p>
     #[serde(rename = "pullRequest")]
@@ -1369,6 +1417,7 @@ pub struct UpdatePullRequestTitleInput {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdatePullRequestTitleOutput {
     /// <p>Information about the updated pull request.</p>
     #[serde(rename = "pullRequest")]
@@ -1400,6 +1449,7 @@ pub struct UpdateRepositoryNameInput {
 
 /// <p>Information about the user who made a specified commit.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UserInfo {
     /// <p>The date when the specified commit was commited, in timestamp format with GMT offset.</p>
     #[serde(rename = "date")]
@@ -1440,78 +1490,78 @@ pub enum BatchGetRepositoriesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl BatchGetRepositoriesError {
-    pub fn from_body(body: &str) -> BatchGetRepositoriesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> BatchGetRepositoriesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        BatchGetRepositoriesError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        BatchGetRepositoriesError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        BatchGetRepositoriesError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        BatchGetRepositoriesError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        BatchGetRepositoriesError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        BatchGetRepositoriesError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MaximumRepositoryNamesExceededException" => {
-                        BatchGetRepositoriesError::MaximumRepositoryNamesExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNamesRequiredException" => {
-                        BatchGetRepositoriesError::RepositoryNamesRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        BatchGetRepositoriesError::Validation(error_message.to_string())
-                    }
-                    _ => BatchGetRepositoriesError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return BatchGetRepositoriesError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return BatchGetRepositoriesError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return BatchGetRepositoriesError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return BatchGetRepositoriesError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return BatchGetRepositoriesError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return BatchGetRepositoriesError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "MaximumRepositoryNamesExceededException" => {
+                    return BatchGetRepositoriesError::MaximumRepositoryNamesExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNamesRequiredException" => {
+                    return BatchGetRepositoriesError::RepositoryNamesRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return BatchGetRepositoriesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => BatchGetRepositoriesError::Unknown(String::from(body)),
         }
+        return BatchGetRepositoriesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for BatchGetRepositoriesError {
     fn from(err: serde_json::error::Error) -> BatchGetRepositoriesError {
-        BatchGetRepositoriesError::Unknown(err.description().to_string())
+        BatchGetRepositoriesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for BatchGetRepositoriesError {
@@ -1550,7 +1600,8 @@ impl Error for BatchGetRepositoriesError {
             BatchGetRepositoriesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            BatchGetRepositoriesError::Unknown(ref cause) => cause,
+            BatchGetRepositoriesError::ParseError(ref cause) => cause,
+            BatchGetRepositoriesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1591,82 +1642,82 @@ pub enum CreateBranchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateBranchError {
-    pub fn from_body(body: &str) -> CreateBranchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateBranchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BranchNameExistsException" => {
-                        CreateBranchError::BranchNameExists(String::from(error_message))
-                    }
-                    "BranchNameRequiredException" => {
-                        CreateBranchError::BranchNameRequired(String::from(error_message))
-                    }
-                    "CommitDoesNotExistException" => {
-                        CreateBranchError::CommitDoesNotExist(String::from(error_message))
-                    }
-                    "CommitIdRequiredException" => {
-                        CreateBranchError::CommitIdRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        CreateBranchError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        CreateBranchError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        CreateBranchError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        CreateBranchError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        CreateBranchError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidBranchNameException" => {
-                        CreateBranchError::InvalidBranchName(String::from(error_message))
-                    }
-                    "InvalidCommitIdException" => {
-                        CreateBranchError::InvalidCommitId(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        CreateBranchError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        CreateBranchError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        CreateBranchError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateBranchError::Validation(error_message.to_string())
-                    }
-                    _ => CreateBranchError::Unknown(String::from(body)),
+            match *error_type {
+                "BranchNameExistsException" => {
+                    return CreateBranchError::BranchNameExists(String::from(error_message))
                 }
+                "BranchNameRequiredException" => {
+                    return CreateBranchError::BranchNameRequired(String::from(error_message))
+                }
+                "CommitDoesNotExistException" => {
+                    return CreateBranchError::CommitDoesNotExist(String::from(error_message))
+                }
+                "CommitIdRequiredException" => {
+                    return CreateBranchError::CommitIdRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return CreateBranchError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return CreateBranchError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return CreateBranchError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return CreateBranchError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return CreateBranchError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidBranchNameException" => {
+                    return CreateBranchError::InvalidBranchName(String::from(error_message))
+                }
+                "InvalidCommitIdException" => {
+                    return CreateBranchError::InvalidCommitId(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return CreateBranchError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return CreateBranchError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return CreateBranchError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateBranchError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateBranchError::Unknown(String::from(body)),
         }
+        return CreateBranchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateBranchError {
     fn from(err: serde_json::error::Error) -> CreateBranchError {
-        CreateBranchError::Unknown(err.description().to_string())
+        CreateBranchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateBranchError {
@@ -1709,7 +1760,8 @@ impl Error for CreateBranchError {
             CreateBranchError::Validation(ref cause) => cause,
             CreateBranchError::Credentials(ref err) => err.description(),
             CreateBranchError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateBranchError::Unknown(ref cause) => cause,
+            CreateBranchError::ParseError(ref cause) => cause,
+            CreateBranchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1772,133 +1824,147 @@ pub enum CreatePullRequestError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreatePullRequestError {
-    pub fn from_body(body: &str) -> CreatePullRequestError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreatePullRequestError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ClientRequestTokenRequiredException" => {
-                        CreatePullRequestError::ClientRequestTokenRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        CreatePullRequestError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        CreatePullRequestError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        CreatePullRequestError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        CreatePullRequestError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        CreatePullRequestError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "IdempotencyParameterMismatchException" => {
-                        CreatePullRequestError::IdempotencyParameterMismatch(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidClientRequestTokenException" => {
-                        CreatePullRequestError::InvalidClientRequestToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidDescriptionException" => {
-                        CreatePullRequestError::InvalidDescription(String::from(error_message))
-                    }
-                    "InvalidReferenceNameException" => {
-                        CreatePullRequestError::InvalidReferenceName(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        CreatePullRequestError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "InvalidTargetException" => {
-                        CreatePullRequestError::InvalidTarget(String::from(error_message))
-                    }
-                    "InvalidTargetsException" => {
-                        CreatePullRequestError::InvalidTargets(String::from(error_message))
-                    }
-                    "InvalidTitleException" => {
-                        CreatePullRequestError::InvalidTitle(String::from(error_message))
-                    }
-                    "MaximumOpenPullRequestsExceededException" => {
-                        CreatePullRequestError::MaximumOpenPullRequestsExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MultipleRepositoriesInPullRequestException" => {
-                        CreatePullRequestError::MultipleRepositoriesInPullRequest(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ReferenceDoesNotExistException" => {
-                        CreatePullRequestError::ReferenceDoesNotExist(String::from(error_message))
-                    }
-                    "ReferenceNameRequiredException" => {
-                        CreatePullRequestError::ReferenceNameRequired(String::from(error_message))
-                    }
-                    "ReferenceTypeNotSupportedException" => {
-                        CreatePullRequestError::ReferenceTypeNotSupported(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        CreatePullRequestError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        CreatePullRequestError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "SourceAndDestinationAreSameException" => {
-                        CreatePullRequestError::SourceAndDestinationAreSame(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TargetRequiredException" => {
-                        CreatePullRequestError::TargetRequired(String::from(error_message))
-                    }
-                    "TargetsRequiredException" => {
-                        CreatePullRequestError::TargetsRequired(String::from(error_message))
-                    }
-                    "TitleRequiredException" => {
-                        CreatePullRequestError::TitleRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreatePullRequestError::Validation(error_message.to_string())
-                    }
-                    _ => CreatePullRequestError::Unknown(String::from(body)),
+            match *error_type {
+                "ClientRequestTokenRequiredException" => {
+                    return CreatePullRequestError::ClientRequestTokenRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return CreatePullRequestError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return CreatePullRequestError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return CreatePullRequestError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return CreatePullRequestError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return CreatePullRequestError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "IdempotencyParameterMismatchException" => {
+                    return CreatePullRequestError::IdempotencyParameterMismatch(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidClientRequestTokenException" => {
+                    return CreatePullRequestError::InvalidClientRequestToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidDescriptionException" => {
+                    return CreatePullRequestError::InvalidDescription(String::from(error_message))
+                }
+                "InvalidReferenceNameException" => {
+                    return CreatePullRequestError::InvalidReferenceName(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return CreatePullRequestError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidTargetException" => {
+                    return CreatePullRequestError::InvalidTarget(String::from(error_message))
+                }
+                "InvalidTargetsException" => {
+                    return CreatePullRequestError::InvalidTargets(String::from(error_message))
+                }
+                "InvalidTitleException" => {
+                    return CreatePullRequestError::InvalidTitle(String::from(error_message))
+                }
+                "MaximumOpenPullRequestsExceededException" => {
+                    return CreatePullRequestError::MaximumOpenPullRequestsExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "MultipleRepositoriesInPullRequestException" => {
+                    return CreatePullRequestError::MultipleRepositoriesInPullRequest(String::from(
+                        error_message,
+                    ))
+                }
+                "ReferenceDoesNotExistException" => {
+                    return CreatePullRequestError::ReferenceDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "ReferenceNameRequiredException" => {
+                    return CreatePullRequestError::ReferenceNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ReferenceTypeNotSupportedException" => {
+                    return CreatePullRequestError::ReferenceTypeNotSupported(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return CreatePullRequestError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return CreatePullRequestError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "SourceAndDestinationAreSameException" => {
+                    return CreatePullRequestError::SourceAndDestinationAreSame(String::from(
+                        error_message,
+                    ))
+                }
+                "TargetRequiredException" => {
+                    return CreatePullRequestError::TargetRequired(String::from(error_message))
+                }
+                "TargetsRequiredException" => {
+                    return CreatePullRequestError::TargetsRequired(String::from(error_message))
+                }
+                "TitleRequiredException" => {
+                    return CreatePullRequestError::TitleRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreatePullRequestError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreatePullRequestError::Unknown(String::from(body)),
         }
+        return CreatePullRequestError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreatePullRequestError {
     fn from(err: serde_json::error::Error) -> CreatePullRequestError {
-        CreatePullRequestError::Unknown(err.description().to_string())
+        CreatePullRequestError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreatePullRequestError {
@@ -1954,7 +2020,8 @@ impl Error for CreatePullRequestError {
             CreatePullRequestError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreatePullRequestError::Unknown(ref cause) => cause,
+            CreatePullRequestError::ParseError(ref cause) => cause,
+            CreatePullRequestError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1987,74 +2054,80 @@ pub enum CreateRepositoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateRepositoryError {
-    pub fn from_body(body: &str) -> CreateRepositoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateRepositoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        CreateRepositoryError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        CreateRepositoryError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        CreateRepositoryError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        CreateRepositoryError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        CreateRepositoryError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidRepositoryDescriptionException" => {
-                        CreateRepositoryError::InvalidRepositoryDescription(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        CreateRepositoryError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryLimitExceededException" => {
-                        CreateRepositoryError::RepositoryLimitExceeded(String::from(error_message))
-                    }
-                    "RepositoryNameExistsException" => {
-                        CreateRepositoryError::RepositoryNameExists(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        CreateRepositoryError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateRepositoryError::Validation(error_message.to_string())
-                    }
-                    _ => CreateRepositoryError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return CreateRepositoryError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return CreateRepositoryError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return CreateRepositoryError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return CreateRepositoryError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return CreateRepositoryError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryDescriptionException" => {
+                    return CreateRepositoryError::InvalidRepositoryDescription(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return CreateRepositoryError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryLimitExceededException" => {
+                    return CreateRepositoryError::RepositoryLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameExistsException" => {
+                    return CreateRepositoryError::RepositoryNameExists(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return CreateRepositoryError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateRepositoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateRepositoryError::Unknown(String::from(body)),
         }
+        return CreateRepositoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateRepositoryError {
     fn from(err: serde_json::error::Error) -> CreateRepositoryError {
-        CreateRepositoryError::Unknown(err.description().to_string())
+        CreateRepositoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateRepositoryError {
@@ -2093,7 +2166,8 @@ impl Error for CreateRepositoryError {
             CreateRepositoryError::Validation(ref cause) => cause,
             CreateRepositoryError::Credentials(ref err) => err.description(),
             CreateRepositoryError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateRepositoryError::Unknown(ref cause) => cause,
+            CreateRepositoryError::ParseError(ref cause) => cause,
+            CreateRepositoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2128,73 +2202,75 @@ pub enum DeleteBranchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteBranchError {
-    pub fn from_body(body: &str) -> DeleteBranchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteBranchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BranchNameRequiredException" => {
-                        DeleteBranchError::BranchNameRequired(String::from(error_message))
-                    }
-                    "DefaultBranchCannotBeDeletedException" => {
-                        DeleteBranchError::DefaultBranchCannotBeDeleted(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        DeleteBranchError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        DeleteBranchError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        DeleteBranchError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        DeleteBranchError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        DeleteBranchError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidBranchNameException" => {
-                        DeleteBranchError::InvalidBranchName(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        DeleteBranchError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        DeleteBranchError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        DeleteBranchError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteBranchError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteBranchError::Unknown(String::from(body)),
+            match *error_type {
+                "BranchNameRequiredException" => {
+                    return DeleteBranchError::BranchNameRequired(String::from(error_message))
                 }
+                "DefaultBranchCannotBeDeletedException" => {
+                    return DeleteBranchError::DefaultBranchCannotBeDeleted(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return DeleteBranchError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return DeleteBranchError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return DeleteBranchError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return DeleteBranchError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return DeleteBranchError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidBranchNameException" => {
+                    return DeleteBranchError::InvalidBranchName(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return DeleteBranchError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return DeleteBranchError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return DeleteBranchError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteBranchError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteBranchError::Unknown(String::from(body)),
         }
+        return DeleteBranchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteBranchError {
     fn from(err: serde_json::error::Error) -> DeleteBranchError {
-        DeleteBranchError::Unknown(err.description().to_string())
+        DeleteBranchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteBranchError {
@@ -2234,7 +2310,8 @@ impl Error for DeleteBranchError {
             DeleteBranchError::Validation(ref cause) => cause,
             DeleteBranchError::Credentials(ref err) => err.description(),
             DeleteBranchError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteBranchError::Unknown(ref cause) => cause,
+            DeleteBranchError::ParseError(ref cause) => cause,
+            DeleteBranchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2255,50 +2332,52 @@ pub enum DeleteCommentContentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteCommentContentError {
-    pub fn from_body(body: &str) -> DeleteCommentContentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteCommentContentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommentDeletedException" => {
-                        DeleteCommentContentError::CommentDeleted(String::from(error_message))
-                    }
-                    "CommentDoesNotExistException" => {
-                        DeleteCommentContentError::CommentDoesNotExist(String::from(error_message))
-                    }
-                    "CommentIdRequiredException" => {
-                        DeleteCommentContentError::CommentIdRequired(String::from(error_message))
-                    }
-                    "InvalidCommentIdException" => {
-                        DeleteCommentContentError::InvalidCommentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteCommentContentError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteCommentContentError::Unknown(String::from(body)),
+            match *error_type {
+                "CommentDeletedException" => {
+                    return DeleteCommentContentError::CommentDeleted(String::from(error_message))
                 }
+                "CommentDoesNotExistException" => {
+                    return DeleteCommentContentError::CommentDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentIdRequiredException" => {
+                    return DeleteCommentContentError::CommentIdRequired(String::from(error_message))
+                }
+                "InvalidCommentIdException" => {
+                    return DeleteCommentContentError::InvalidCommentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteCommentContentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteCommentContentError::Unknown(String::from(body)),
         }
+        return DeleteCommentContentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteCommentContentError {
     fn from(err: serde_json::error::Error) -> DeleteCommentContentError {
-        DeleteCommentContentError::Unknown(err.description().to_string())
+        DeleteCommentContentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteCommentContentError {
@@ -2333,7 +2412,8 @@ impl Error for DeleteCommentContentError {
             DeleteCommentContentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteCommentContentError::Unknown(ref cause) => cause,
+            DeleteCommentContentError::ParseError(ref cause) => cause,
+            DeleteCommentContentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2360,63 +2440,67 @@ pub enum DeleteRepositoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteRepositoryError {
-    pub fn from_body(body: &str) -> DeleteRepositoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteRepositoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        DeleteRepositoryError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        DeleteRepositoryError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        DeleteRepositoryError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        DeleteRepositoryError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        DeleteRepositoryError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        DeleteRepositoryError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        DeleteRepositoryError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteRepositoryError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteRepositoryError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return DeleteRepositoryError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return DeleteRepositoryError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return DeleteRepositoryError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return DeleteRepositoryError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return DeleteRepositoryError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return DeleteRepositoryError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return DeleteRepositoryError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteRepositoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteRepositoryError::Unknown(String::from(body)),
         }
+        return DeleteRepositoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteRepositoryError {
     fn from(err: serde_json::error::Error) -> DeleteRepositoryError {
-        DeleteRepositoryError::Unknown(err.description().to_string())
+        DeleteRepositoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteRepositoryError {
@@ -2452,7 +2536,8 @@ impl Error for DeleteRepositoryError {
             DeleteRepositoryError::Validation(ref cause) => cause,
             DeleteRepositoryError::Credentials(ref err) => err.description(),
             DeleteRepositoryError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteRepositoryError::Unknown(ref cause) => cause,
+            DeleteRepositoryError::ParseError(ref cause) => cause,
+            DeleteRepositoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2491,101 +2576,103 @@ pub enum DescribePullRequestEventsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribePullRequestEventsError {
-    pub fn from_body(body: &str) -> DescribePullRequestEventsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribePullRequestEventsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ActorDoesNotExistException" => {
-                        DescribePullRequestEventsError::ActorDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        DescribePullRequestEventsError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        DescribePullRequestEventsError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        DescribePullRequestEventsError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        DescribePullRequestEventsError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        DescribePullRequestEventsError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidActorArnException" => {
-                        DescribePullRequestEventsError::InvalidActorArn(String::from(error_message))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        DescribePullRequestEventsError::InvalidContinuationToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidMaxResultsException" => {
-                        DescribePullRequestEventsError::InvalidMaxResults(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestEventTypeException" => {
-                        DescribePullRequestEventsError::InvalidPullRequestEventType(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        DescribePullRequestEventsError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        DescribePullRequestEventsError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        DescribePullRequestEventsError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribePullRequestEventsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribePullRequestEventsError::Unknown(String::from(body)),
+            match *error_type {
+                "ActorDoesNotExistException" => {
+                    return DescribePullRequestEventsError::ActorDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return DescribePullRequestEventsError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return DescribePullRequestEventsError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return DescribePullRequestEventsError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return DescribePullRequestEventsError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return DescribePullRequestEventsError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidActorArnException" => {
+                    return DescribePullRequestEventsError::InvalidActorArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidContinuationTokenException" => {
+                    return DescribePullRequestEventsError::InvalidContinuationToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMaxResultsException" => {
+                    return DescribePullRequestEventsError::InvalidMaxResults(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestEventTypeException" => {
+                    return DescribePullRequestEventsError::InvalidPullRequestEventType(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidPullRequestIdException" => {
+                    return DescribePullRequestEventsError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestDoesNotExistException" => {
+                    return DescribePullRequestEventsError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return DescribePullRequestEventsError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribePullRequestEventsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribePullRequestEventsError::Unknown(String::from(body)),
         }
+        return DescribePullRequestEventsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribePullRequestEventsError {
     fn from(err: serde_json::error::Error) -> DescribePullRequestEventsError {
-        DescribePullRequestEventsError::Unknown(err.description().to_string())
+        DescribePullRequestEventsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribePullRequestEventsError {
@@ -2629,7 +2716,8 @@ impl Error for DescribePullRequestEventsError {
             DescribePullRequestEventsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribePullRequestEventsError::Unknown(ref cause) => cause,
+            DescribePullRequestEventsError::ParseError(ref cause) => cause,
+            DescribePullRequestEventsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2666,72 +2754,74 @@ pub enum GetBlobError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetBlobError {
-    pub fn from_body(body: &str) -> GetBlobError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetBlobError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BlobIdDoesNotExistException" => {
-                        GetBlobError::BlobIdDoesNotExist(String::from(error_message))
-                    }
-                    "BlobIdRequiredException" => {
-                        GetBlobError::BlobIdRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetBlobError::EncryptionIntegrityChecksFailed(String::from(error_message))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetBlobError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetBlobError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetBlobError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetBlobError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "FileTooLargeException" => {
-                        GetBlobError::FileTooLarge(String::from(error_message))
-                    }
-                    "InvalidBlobIdException" => {
-                        GetBlobError::InvalidBlobId(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetBlobError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetBlobError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetBlobError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => GetBlobError::Validation(error_message.to_string()),
-                    _ => GetBlobError::Unknown(String::from(body)),
+            match *error_type {
+                "BlobIdDoesNotExistException" => {
+                    return GetBlobError::BlobIdDoesNotExist(String::from(error_message))
                 }
+                "BlobIdRequiredException" => {
+                    return GetBlobError::BlobIdRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetBlobError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetBlobError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetBlobError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetBlobError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetBlobError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "FileTooLargeException" => {
+                    return GetBlobError::FileTooLarge(String::from(error_message))
+                }
+                "InvalidBlobIdException" => {
+                    return GetBlobError::InvalidBlobId(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetBlobError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetBlobError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetBlobError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => return GetBlobError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => GetBlobError::Unknown(String::from(body)),
         }
+        return GetBlobError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetBlobError {
     fn from(err: serde_json::error::Error) -> GetBlobError {
-        GetBlobError::Unknown(err.description().to_string())
+        GetBlobError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetBlobError {
@@ -2772,7 +2862,8 @@ impl Error for GetBlobError {
             GetBlobError::Validation(ref cause) => cause,
             GetBlobError::Credentials(ref err) => err.description(),
             GetBlobError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetBlobError::Unknown(ref cause) => cause,
+            GetBlobError::ParseError(ref cause) => cause,
+            GetBlobError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2807,69 +2898,73 @@ pub enum GetBranchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetBranchError {
-    pub fn from_body(body: &str) -> GetBranchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetBranchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BranchDoesNotExistException" => {
-                        GetBranchError::BranchDoesNotExist(String::from(error_message))
-                    }
-                    "BranchNameRequiredException" => {
-                        GetBranchError::BranchNameRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetBranchError::EncryptionIntegrityChecksFailed(String::from(error_message))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetBranchError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetBranchError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetBranchError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetBranchError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidBranchNameException" => {
-                        GetBranchError::InvalidBranchName(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetBranchError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetBranchError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetBranchError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => GetBranchError::Validation(error_message.to_string()),
-                    _ => GetBranchError::Unknown(String::from(body)),
+            match *error_type {
+                "BranchDoesNotExistException" => {
+                    return GetBranchError::BranchDoesNotExist(String::from(error_message))
                 }
+                "BranchNameRequiredException" => {
+                    return GetBranchError::BranchNameRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetBranchError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetBranchError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetBranchError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetBranchError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetBranchError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidBranchNameException" => {
+                    return GetBranchError::InvalidBranchName(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetBranchError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetBranchError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetBranchError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetBranchError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetBranchError::Unknown(String::from(body)),
         }
+        return GetBranchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetBranchError {
     fn from(err: serde_json::error::Error) -> GetBranchError {
-        GetBranchError::Unknown(err.description().to_string())
+        GetBranchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetBranchError {
@@ -2909,7 +3004,8 @@ impl Error for GetBranchError {
             GetBranchError::Validation(ref cause) => cause,
             GetBranchError::Credentials(ref err) => err.description(),
             GetBranchError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetBranchError::Unknown(ref cause) => cause,
+            GetBranchError::ParseError(ref cause) => cause,
+            GetBranchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2930,48 +3026,50 @@ pub enum GetCommentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCommentError {
-    pub fn from_body(body: &str) -> GetCommentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetCommentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommentDeletedException" => {
-                        GetCommentError::CommentDeleted(String::from(error_message))
-                    }
-                    "CommentDoesNotExistException" => {
-                        GetCommentError::CommentDoesNotExist(String::from(error_message))
-                    }
-                    "CommentIdRequiredException" => {
-                        GetCommentError::CommentIdRequired(String::from(error_message))
-                    }
-                    "InvalidCommentIdException" => {
-                        GetCommentError::InvalidCommentId(String::from(error_message))
-                    }
-                    "ValidationException" => GetCommentError::Validation(error_message.to_string()),
-                    _ => GetCommentError::Unknown(String::from(body)),
+            match *error_type {
+                "CommentDeletedException" => {
+                    return GetCommentError::CommentDeleted(String::from(error_message))
                 }
+                "CommentDoesNotExistException" => {
+                    return GetCommentError::CommentDoesNotExist(String::from(error_message))
+                }
+                "CommentIdRequiredException" => {
+                    return GetCommentError::CommentIdRequired(String::from(error_message))
+                }
+                "InvalidCommentIdException" => {
+                    return GetCommentError::InvalidCommentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetCommentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCommentError::Unknown(String::from(body)),
         }
+        return GetCommentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCommentError {
     fn from(err: serde_json::error::Error) -> GetCommentError {
-        GetCommentError::Unknown(err.description().to_string())
+        GetCommentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCommentError {
@@ -3004,7 +3102,8 @@ impl Error for GetCommentError {
             GetCommentError::Validation(ref cause) => cause,
             GetCommentError::Credentials(ref err) => err.description(),
             GetCommentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetCommentError::Unknown(ref cause) => cause,
+            GetCommentError::ParseError(ref cause) => cause,
+            GetCommentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3043,103 +3142,103 @@ pub enum GetCommentsForComparedCommitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCommentsForComparedCommitError {
-    pub fn from_body(body: &str) -> GetCommentsForComparedCommitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetCommentsForComparedCommitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommitDoesNotExistException" => {
-                        GetCommentsForComparedCommitError::CommitDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommitIdRequiredException" => {
-                        GetCommentsForComparedCommitError::CommitIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetCommentsForComparedCommitError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetCommentsForComparedCommitError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetCommentsForComparedCommitError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetCommentsForComparedCommitError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetCommentsForComparedCommitError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitIdException" => {
-                        GetCommentsForComparedCommitError::InvalidCommitId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        GetCommentsForComparedCommitError::InvalidContinuationToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidMaxResultsException" => {
-                        GetCommentsForComparedCommitError::InvalidMaxResults(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetCommentsForComparedCommitError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetCommentsForComparedCommitError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetCommentsForComparedCommitError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetCommentsForComparedCommitError::Validation(error_message.to_string())
-                    }
-                    _ => GetCommentsForComparedCommitError::Unknown(String::from(body)),
+            match *error_type {
+                "CommitDoesNotExistException" => {
+                    return GetCommentsForComparedCommitError::CommitDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "CommitIdRequiredException" => {
+                    return GetCommentsForComparedCommitError::CommitIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetCommentsForComparedCommitError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetCommentsForComparedCommitError::EncryptionKeyAccessDenied(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetCommentsForComparedCommitError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetCommentsForComparedCommitError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetCommentsForComparedCommitError::EncryptionKeyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidCommitIdException" => {
+                    return GetCommentsForComparedCommitError::InvalidCommitId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidContinuationTokenException" => {
+                    return GetCommentsForComparedCommitError::InvalidContinuationToken(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidMaxResultsException" => {
+                    return GetCommentsForComparedCommitError::InvalidMaxResults(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetCommentsForComparedCommitError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetCommentsForComparedCommitError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetCommentsForComparedCommitError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetCommentsForComparedCommitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCommentsForComparedCommitError::Unknown(String::from(body)),
         }
+        return GetCommentsForComparedCommitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCommentsForComparedCommitError {
     fn from(err: serde_json::error::Error) -> GetCommentsForComparedCommitError {
-        GetCommentsForComparedCommitError::Unknown(err.description().to_string())
+        GetCommentsForComparedCommitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCommentsForComparedCommitError {
@@ -3183,7 +3282,8 @@ impl Error for GetCommentsForComparedCommitError {
             GetCommentsForComparedCommitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetCommentsForComparedCommitError::Unknown(ref cause) => cause,
+            GetCommentsForComparedCommitError::ParseError(ref cause) => cause,
+            GetCommentsForComparedCommitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3230,121 +3330,123 @@ pub enum GetCommentsForPullRequestError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCommentsForPullRequestError {
-    pub fn from_body(body: &str) -> GetCommentsForPullRequestError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetCommentsForPullRequestError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommitDoesNotExistException" => {
-                        GetCommentsForPullRequestError::CommitDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommitIdRequiredException" => {
-                        GetCommentsForPullRequestError::CommitIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetCommentsForPullRequestError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetCommentsForPullRequestError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetCommentsForPullRequestError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetCommentsForPullRequestError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetCommentsForPullRequestError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitIdException" => {
-                        GetCommentsForPullRequestError::InvalidCommitId(String::from(error_message))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        GetCommentsForPullRequestError::InvalidContinuationToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidMaxResultsException" => {
-                        GetCommentsForPullRequestError::InvalidMaxResults(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        GetCommentsForPullRequestError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetCommentsForPullRequestError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        GetCommentsForPullRequestError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        GetCommentsForPullRequestError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetCommentsForPullRequestError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetCommentsForPullRequestError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNotAssociatedWithPullRequestException" => {
-                        GetCommentsForPullRequestError::RepositoryNotAssociatedWithPullRequest(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        GetCommentsForPullRequestError::Validation(error_message.to_string())
-                    }
-                    _ => GetCommentsForPullRequestError::Unknown(String::from(body)),
+            match *error_type {
+                "CommitDoesNotExistException" => {
+                    return GetCommentsForPullRequestError::CommitDoesNotExist(String::from(
+                        error_message,
+                    ))
                 }
+                "CommitIdRequiredException" => {
+                    return GetCommentsForPullRequestError::CommitIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetCommentsForPullRequestError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetCommentsForPullRequestError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetCommentsForPullRequestError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetCommentsForPullRequestError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetCommentsForPullRequestError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommitIdException" => {
+                    return GetCommentsForPullRequestError::InvalidCommitId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidContinuationTokenException" => {
+                    return GetCommentsForPullRequestError::InvalidContinuationToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMaxResultsException" => {
+                    return GetCommentsForPullRequestError::InvalidMaxResults(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestIdException" => {
+                    return GetCommentsForPullRequestError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetCommentsForPullRequestError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestDoesNotExistException" => {
+                    return GetCommentsForPullRequestError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return GetCommentsForPullRequestError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetCommentsForPullRequestError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetCommentsForPullRequestError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNotAssociatedWithPullRequestException" => {
+                    return GetCommentsForPullRequestError::RepositoryNotAssociatedWithPullRequest(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return GetCommentsForPullRequestError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCommentsForPullRequestError::Unknown(String::from(body)),
         }
+        return GetCommentsForPullRequestError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCommentsForPullRequestError {
     fn from(err: serde_json::error::Error) -> GetCommentsForPullRequestError {
-        GetCommentsForPullRequestError::Unknown(err.description().to_string())
+        GetCommentsForPullRequestError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCommentsForPullRequestError {
@@ -3394,7 +3496,8 @@ impl Error for GetCommentsForPullRequestError {
             GetCommentsForPullRequestError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetCommentsForPullRequestError::Unknown(ref cause) => cause,
+            GetCommentsForPullRequestError::ParseError(ref cause) => cause,
+            GetCommentsForPullRequestError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3429,69 +3532,73 @@ pub enum GetCommitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCommitError {
-    pub fn from_body(body: &str) -> GetCommitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetCommitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommitIdDoesNotExistException" => {
-                        GetCommitError::CommitIdDoesNotExist(String::from(error_message))
-                    }
-                    "CommitIdRequiredException" => {
-                        GetCommitError::CommitIdRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetCommitError::EncryptionIntegrityChecksFailed(String::from(error_message))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetCommitError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetCommitError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetCommitError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetCommitError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidCommitIdException" => {
-                        GetCommitError::InvalidCommitId(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetCommitError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetCommitError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetCommitError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => GetCommitError::Validation(error_message.to_string()),
-                    _ => GetCommitError::Unknown(String::from(body)),
+            match *error_type {
+                "CommitIdDoesNotExistException" => {
+                    return GetCommitError::CommitIdDoesNotExist(String::from(error_message))
                 }
+                "CommitIdRequiredException" => {
+                    return GetCommitError::CommitIdRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetCommitError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetCommitError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetCommitError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetCommitError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetCommitError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidCommitIdException" => {
+                    return GetCommitError::InvalidCommitId(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetCommitError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetCommitError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetCommitError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetCommitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCommitError::Unknown(String::from(body)),
         }
+        return GetCommitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCommitError {
     fn from(err: serde_json::error::Error) -> GetCommitError {
-        GetCommitError::Unknown(err.description().to_string())
+        GetCommitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCommitError {
@@ -3531,7 +3638,8 @@ impl Error for GetCommitError {
             GetCommitError::Validation(ref cause) => cause,
             GetCommitError::Credentials(ref err) => err.description(),
             GetCommitError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetCommitError::Unknown(ref cause) => cause,
+            GetCommitError::ParseError(ref cause) => cause,
+            GetCommitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3576,88 +3684,94 @@ pub enum GetDifferencesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetDifferencesError {
-    pub fn from_body(body: &str) -> GetDifferencesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetDifferencesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommitDoesNotExistException" => {
-                        GetDifferencesError::CommitDoesNotExist(String::from(error_message))
-                    }
-                    "CommitRequiredException" => {
-                        GetDifferencesError::CommitRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetDifferencesError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetDifferencesError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetDifferencesError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetDifferencesError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetDifferencesError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidCommitException" => {
-                        GetDifferencesError::InvalidCommit(String::from(error_message))
-                    }
-                    "InvalidCommitIdException" => {
-                        GetDifferencesError::InvalidCommitId(String::from(error_message))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        GetDifferencesError::InvalidContinuationToken(String::from(error_message))
-                    }
-                    "InvalidMaxResultsException" => {
-                        GetDifferencesError::InvalidMaxResults(String::from(error_message))
-                    }
-                    "InvalidPathException" => {
-                        GetDifferencesError::InvalidPath(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetDifferencesError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "PathDoesNotExistException" => {
-                        GetDifferencesError::PathDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetDifferencesError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetDifferencesError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetDifferencesError::Validation(error_message.to_string())
-                    }
-                    _ => GetDifferencesError::Unknown(String::from(body)),
+            match *error_type {
+                "CommitDoesNotExistException" => {
+                    return GetDifferencesError::CommitDoesNotExist(String::from(error_message))
                 }
+                "CommitRequiredException" => {
+                    return GetDifferencesError::CommitRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetDifferencesError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetDifferencesError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetDifferencesError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetDifferencesError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetDifferencesError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommitException" => {
+                    return GetDifferencesError::InvalidCommit(String::from(error_message))
+                }
+                "InvalidCommitIdException" => {
+                    return GetDifferencesError::InvalidCommitId(String::from(error_message))
+                }
+                "InvalidContinuationTokenException" => {
+                    return GetDifferencesError::InvalidContinuationToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMaxResultsException" => {
+                    return GetDifferencesError::InvalidMaxResults(String::from(error_message))
+                }
+                "InvalidPathException" => {
+                    return GetDifferencesError::InvalidPath(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetDifferencesError::InvalidRepositoryName(String::from(error_message))
+                }
+                "PathDoesNotExistException" => {
+                    return GetDifferencesError::PathDoesNotExist(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetDifferencesError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetDifferencesError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetDifferencesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetDifferencesError::Unknown(String::from(body)),
         }
+        return GetDifferencesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetDifferencesError {
     fn from(err: serde_json::error::Error) -> GetDifferencesError {
-        GetDifferencesError::Unknown(err.description().to_string())
+        GetDifferencesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetDifferencesError {
@@ -3702,7 +3816,8 @@ impl Error for GetDifferencesError {
             GetDifferencesError::Validation(ref cause) => cause,
             GetDifferencesError::Credentials(ref err) => err.description(),
             GetDifferencesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetDifferencesError::Unknown(ref cause) => cause,
+            GetDifferencesError::ParseError(ref cause) => cause,
+            GetDifferencesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3747,96 +3862,108 @@ pub enum GetMergeConflictsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetMergeConflictsError {
-    pub fn from_body(body: &str) -> GetMergeConflictsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetMergeConflictsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommitDoesNotExistException" => {
-                        GetMergeConflictsError::CommitDoesNotExist(String::from(error_message))
-                    }
-                    "CommitRequiredException" => {
-                        GetMergeConflictsError::CommitRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetMergeConflictsError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetMergeConflictsError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetMergeConflictsError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetMergeConflictsError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetMergeConflictsError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitException" => {
-                        GetMergeConflictsError::InvalidCommit(String::from(error_message))
-                    }
-                    "InvalidDestinationCommitSpecifierException" => {
-                        GetMergeConflictsError::InvalidDestinationCommitSpecifier(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidMergeOptionException" => {
-                        GetMergeConflictsError::InvalidMergeOption(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetMergeConflictsError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "InvalidSourceCommitSpecifierException" => {
-                        GetMergeConflictsError::InvalidSourceCommitSpecifier(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MergeOptionRequiredException" => {
-                        GetMergeConflictsError::MergeOptionRequired(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetMergeConflictsError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetMergeConflictsError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "TipsDivergenceExceededException" => {
-                        GetMergeConflictsError::TipsDivergenceExceeded(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetMergeConflictsError::Validation(error_message.to_string())
-                    }
-                    _ => GetMergeConflictsError::Unknown(String::from(body)),
+            match *error_type {
+                "CommitDoesNotExistException" => {
+                    return GetMergeConflictsError::CommitDoesNotExist(String::from(error_message))
                 }
+                "CommitRequiredException" => {
+                    return GetMergeConflictsError::CommitRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetMergeConflictsError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetMergeConflictsError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetMergeConflictsError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetMergeConflictsError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetMergeConflictsError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommitException" => {
+                    return GetMergeConflictsError::InvalidCommit(String::from(error_message))
+                }
+                "InvalidDestinationCommitSpecifierException" => {
+                    return GetMergeConflictsError::InvalidDestinationCommitSpecifier(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMergeOptionException" => {
+                    return GetMergeConflictsError::InvalidMergeOption(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetMergeConflictsError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidSourceCommitSpecifierException" => {
+                    return GetMergeConflictsError::InvalidSourceCommitSpecifier(String::from(
+                        error_message,
+                    ))
+                }
+                "MergeOptionRequiredException" => {
+                    return GetMergeConflictsError::MergeOptionRequired(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetMergeConflictsError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetMergeConflictsError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "TipsDivergenceExceededException" => {
+                    return GetMergeConflictsError::TipsDivergenceExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetMergeConflictsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetMergeConflictsError::Unknown(String::from(body)),
         }
+        return GetMergeConflictsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetMergeConflictsError {
     fn from(err: serde_json::error::Error) -> GetMergeConflictsError {
-        GetMergeConflictsError::Unknown(err.description().to_string())
+        GetMergeConflictsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetMergeConflictsError {
@@ -3883,7 +4010,8 @@ impl Error for GetMergeConflictsError {
             GetMergeConflictsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetMergeConflictsError::Unknown(ref cause) => cause,
+            GetMergeConflictsError::ParseError(ref cause) => cause,
+            GetMergeConflictsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3912,64 +4040,68 @@ pub enum GetPullRequestError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetPullRequestError {
-    pub fn from_body(body: &str) -> GetPullRequestError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetPullRequestError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetPullRequestError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetPullRequestError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetPullRequestError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetPullRequestError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetPullRequestError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        GetPullRequestError::InvalidPullRequestId(String::from(error_message))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        GetPullRequestError::PullRequestDoesNotExist(String::from(error_message))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        GetPullRequestError::PullRequestIdRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetPullRequestError::Validation(error_message.to_string())
-                    }
-                    _ => GetPullRequestError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetPullRequestError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetPullRequestError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetPullRequestError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetPullRequestError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetPullRequestError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestIdException" => {
+                    return GetPullRequestError::InvalidPullRequestId(String::from(error_message))
+                }
+                "PullRequestDoesNotExistException" => {
+                    return GetPullRequestError::PullRequestDoesNotExist(String::from(error_message))
+                }
+                "PullRequestIdRequiredException" => {
+                    return GetPullRequestError::PullRequestIdRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetPullRequestError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetPullRequestError::Unknown(String::from(body)),
         }
+        return GetPullRequestError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetPullRequestError {
     fn from(err: serde_json::error::Error) -> GetPullRequestError {
-        GetPullRequestError::Unknown(err.description().to_string())
+        GetPullRequestError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetPullRequestError {
@@ -4006,7 +4138,8 @@ impl Error for GetPullRequestError {
             GetPullRequestError::Validation(ref cause) => cause,
             GetPullRequestError::Credentials(ref err) => err.description(),
             GetPullRequestError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetPullRequestError::Unknown(ref cause) => cause,
+            GetPullRequestError::ParseError(ref cause) => cause,
+            GetPullRequestError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4035,64 +4168,66 @@ pub enum GetRepositoryError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRepositoryError {
-    pub fn from_body(body: &str) -> GetRepositoryError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetRepositoryError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetRepositoryError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetRepositoryError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetRepositoryError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetRepositoryError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetRepositoryError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetRepositoryError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetRepositoryError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetRepositoryError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetRepositoryError::Validation(error_message.to_string())
-                    }
-                    _ => GetRepositoryError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetRepositoryError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetRepositoryError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetRepositoryError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetRepositoryError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetRepositoryError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetRepositoryError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetRepositoryError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetRepositoryError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRepositoryError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRepositoryError::Unknown(String::from(body)),
         }
+        return GetRepositoryError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRepositoryError {
     fn from(err: serde_json::error::Error) -> GetRepositoryError {
-        GetRepositoryError::Unknown(err.description().to_string())
+        GetRepositoryError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRepositoryError {
@@ -4129,7 +4264,8 @@ impl Error for GetRepositoryError {
             GetRepositoryError::Validation(ref cause) => cause,
             GetRepositoryError::Credentials(ref err) => err.description(),
             GetRepositoryError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetRepositoryError::Unknown(ref cause) => cause,
+            GetRepositoryError::ParseError(ref cause) => cause,
+            GetRepositoryError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4158,78 +4294,78 @@ pub enum GetRepositoryTriggersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRepositoryTriggersError {
-    pub fn from_body(body: &str) -> GetRepositoryTriggersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetRepositoryTriggersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        GetRepositoryTriggersError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        GetRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        GetRepositoryTriggersError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        GetRepositoryTriggersError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        GetRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        GetRepositoryTriggersError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        GetRepositoryTriggersError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        GetRepositoryTriggersError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        GetRepositoryTriggersError::Validation(error_message.to_string())
-                    }
-                    _ => GetRepositoryTriggersError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return GetRepositoryTriggersError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return GetRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return GetRepositoryTriggersError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return GetRepositoryTriggersError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return GetRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return GetRepositoryTriggersError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return GetRepositoryTriggersError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return GetRepositoryTriggersError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return GetRepositoryTriggersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRepositoryTriggersError::Unknown(String::from(body)),
         }
+        return GetRepositoryTriggersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRepositoryTriggersError {
     fn from(err: serde_json::error::Error) -> GetRepositoryTriggersError {
-        GetRepositoryTriggersError::Unknown(err.description().to_string())
+        GetRepositoryTriggersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRepositoryTriggersError {
@@ -4268,7 +4404,8 @@ impl Error for GetRepositoryTriggersError {
             GetRepositoryTriggersError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetRepositoryTriggersError::Unknown(ref cause) => cause,
+            GetRepositoryTriggersError::ParseError(ref cause) => cause,
+            GetRepositoryTriggersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4299,67 +4436,67 @@ pub enum ListBranchesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListBranchesError {
-    pub fn from_body(body: &str) -> ListBranchesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListBranchesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        ListBranchesError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        ListBranchesError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        ListBranchesError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        ListBranchesError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        ListBranchesError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        ListBranchesError::InvalidContinuationToken(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        ListBranchesError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        ListBranchesError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        ListBranchesError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListBranchesError::Validation(error_message.to_string())
-                    }
-                    _ => ListBranchesError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return ListBranchesError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return ListBranchesError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return ListBranchesError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return ListBranchesError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return ListBranchesError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "InvalidContinuationTokenException" => {
+                    return ListBranchesError::InvalidContinuationToken(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return ListBranchesError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return ListBranchesError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return ListBranchesError::RepositoryNameRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListBranchesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListBranchesError::Unknown(String::from(body)),
         }
+        return ListBranchesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListBranchesError {
     fn from(err: serde_json::error::Error) -> ListBranchesError {
-        ListBranchesError::Unknown(err.description().to_string())
+        ListBranchesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListBranchesError {
@@ -4397,7 +4534,8 @@ impl Error for ListBranchesError {
             ListBranchesError::Validation(ref cause) => cause,
             ListBranchesError::Credentials(ref err) => err.description(),
             ListBranchesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListBranchesError::Unknown(ref cause) => cause,
+            ListBranchesError::ParseError(ref cause) => cause,
+            ListBranchesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4436,81 +4574,91 @@ pub enum ListPullRequestsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListPullRequestsError {
-    pub fn from_body(body: &str) -> ListPullRequestsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListPullRequestsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AuthorDoesNotExistException" => {
-                        ListPullRequestsError::AuthorDoesNotExist(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        ListPullRequestsError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        ListPullRequestsError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        ListPullRequestsError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        ListPullRequestsError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        ListPullRequestsError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "InvalidAuthorArnException" => {
-                        ListPullRequestsError::InvalidAuthorArn(String::from(error_message))
-                    }
-                    "InvalidContinuationTokenException" => {
-                        ListPullRequestsError::InvalidContinuationToken(String::from(error_message))
-                    }
-                    "InvalidMaxResultsException" => {
-                        ListPullRequestsError::InvalidMaxResults(String::from(error_message))
-                    }
-                    "InvalidPullRequestStatusException" => {
-                        ListPullRequestsError::InvalidPullRequestStatus(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        ListPullRequestsError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        ListPullRequestsError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        ListPullRequestsError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListPullRequestsError::Validation(error_message.to_string())
-                    }
-                    _ => ListPullRequestsError::Unknown(String::from(body)),
+            match *error_type {
+                "AuthorDoesNotExistException" => {
+                    return ListPullRequestsError::AuthorDoesNotExist(String::from(error_message))
                 }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return ListPullRequestsError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return ListPullRequestsError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return ListPullRequestsError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return ListPullRequestsError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return ListPullRequestsError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidAuthorArnException" => {
+                    return ListPullRequestsError::InvalidAuthorArn(String::from(error_message))
+                }
+                "InvalidContinuationTokenException" => {
+                    return ListPullRequestsError::InvalidContinuationToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidMaxResultsException" => {
+                    return ListPullRequestsError::InvalidMaxResults(String::from(error_message))
+                }
+                "InvalidPullRequestStatusException" => {
+                    return ListPullRequestsError::InvalidPullRequestStatus(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return ListPullRequestsError::InvalidRepositoryName(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return ListPullRequestsError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return ListPullRequestsError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListPullRequestsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListPullRequestsError::Unknown(String::from(body)),
         }
+        return ListPullRequestsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListPullRequestsError {
     fn from(err: serde_json::error::Error) -> ListPullRequestsError {
-        ListPullRequestsError::Unknown(err.description().to_string())
+        ListPullRequestsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListPullRequestsError {
@@ -4552,7 +4700,8 @@ impl Error for ListPullRequestsError {
             ListPullRequestsError::Validation(ref cause) => cause,
             ListPullRequestsError::Credentials(ref err) => err.description(),
             ListPullRequestsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListPullRequestsError::Unknown(ref cause) => cause,
+            ListPullRequestsError::ParseError(ref cause) => cause,
+            ListPullRequestsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4571,47 +4720,49 @@ pub enum ListRepositoriesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListRepositoriesError {
-    pub fn from_body(body: &str) -> ListRepositoriesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListRepositoriesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidContinuationTokenException" => {
-                        ListRepositoriesError::InvalidContinuationToken(String::from(error_message))
-                    }
-                    "InvalidOrderException" => {
-                        ListRepositoriesError::InvalidOrder(String::from(error_message))
-                    }
-                    "InvalidSortByException" => {
-                        ListRepositoriesError::InvalidSortBy(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListRepositoriesError::Validation(error_message.to_string())
-                    }
-                    _ => ListRepositoriesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidContinuationTokenException" => {
+                    return ListRepositoriesError::InvalidContinuationToken(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidOrderException" => {
+                    return ListRepositoriesError::InvalidOrder(String::from(error_message))
+                }
+                "InvalidSortByException" => {
+                    return ListRepositoriesError::InvalidSortBy(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListRepositoriesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListRepositoriesError::Unknown(String::from(body)),
         }
+        return ListRepositoriesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListRepositoriesError {
     fn from(err: serde_json::error::Error) -> ListRepositoriesError {
-        ListRepositoriesError::Unknown(err.description().to_string())
+        ListRepositoriesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListRepositoriesError {
@@ -4643,7 +4794,8 @@ impl Error for ListRepositoriesError {
             ListRepositoriesError::Validation(ref cause) => cause,
             ListRepositoriesError::Credentials(ref err) => err.description(),
             ListRepositoriesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListRepositoriesError::Unknown(ref cause) => cause,
+            ListRepositoriesError::ParseError(ref cause) => cause,
+            ListRepositoriesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4688,118 +4840,118 @@ pub enum MergePullRequestByFastForwardError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl MergePullRequestByFastForwardError {
-    pub fn from_body(body: &str) -> MergePullRequestByFastForwardError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> MergePullRequestByFastForwardError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        MergePullRequestByFastForwardError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        MergePullRequestByFastForwardError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        MergePullRequestByFastForwardError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        MergePullRequestByFastForwardError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        MergePullRequestByFastForwardError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitIdException" => {
-                        MergePullRequestByFastForwardError::InvalidCommitId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        MergePullRequestByFastForwardError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        MergePullRequestByFastForwardError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ManualMergeRequiredException" => {
-                        MergePullRequestByFastForwardError::ManualMergeRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestAlreadyClosedException" => {
-                        MergePullRequestByFastForwardError::PullRequestAlreadyClosed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        MergePullRequestByFastForwardError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        MergePullRequestByFastForwardError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ReferenceDoesNotExistException" => {
-                        MergePullRequestByFastForwardError::ReferenceDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        MergePullRequestByFastForwardError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        MergePullRequestByFastForwardError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TipOfSourceReferenceIsDifferentException" => {
-                        MergePullRequestByFastForwardError::TipOfSourceReferenceIsDifferent(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        MergePullRequestByFastForwardError::Validation(error_message.to_string())
-                    }
-                    _ => MergePullRequestByFastForwardError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return MergePullRequestByFastForwardError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return MergePullRequestByFastForwardError::EncryptionKeyAccessDenied(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyDisabledException" => {
+                    return MergePullRequestByFastForwardError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return MergePullRequestByFastForwardError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return MergePullRequestByFastForwardError::EncryptionKeyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidCommitIdException" => {
+                    return MergePullRequestByFastForwardError::InvalidCommitId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestIdException" => {
+                    return MergePullRequestByFastForwardError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return MergePullRequestByFastForwardError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "ManualMergeRequiredException" => {
+                    return MergePullRequestByFastForwardError::ManualMergeRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestAlreadyClosedException" => {
+                    return MergePullRequestByFastForwardError::PullRequestAlreadyClosed(
+                        String::from(error_message),
+                    )
+                }
+                "PullRequestDoesNotExistException" => {
+                    return MergePullRequestByFastForwardError::PullRequestDoesNotExist(
+                        String::from(error_message),
+                    )
+                }
+                "PullRequestIdRequiredException" => {
+                    return MergePullRequestByFastForwardError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ReferenceDoesNotExistException" => {
+                    return MergePullRequestByFastForwardError::ReferenceDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return MergePullRequestByFastForwardError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return MergePullRequestByFastForwardError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "TipOfSourceReferenceIsDifferentException" => {
+                    return MergePullRequestByFastForwardError::TipOfSourceReferenceIsDifferent(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return MergePullRequestByFastForwardError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => MergePullRequestByFastForwardError::Unknown(String::from(body)),
         }
+        return MergePullRequestByFastForwardError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for MergePullRequestByFastForwardError {
     fn from(err: serde_json::error::Error) -> MergePullRequestByFastForwardError {
-        MergePullRequestByFastForwardError::Unknown(err.description().to_string())
+        MergePullRequestByFastForwardError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for MergePullRequestByFastForwardError {
@@ -4846,7 +4998,8 @@ impl Error for MergePullRequestByFastForwardError {
             MergePullRequestByFastForwardError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            MergePullRequestByFastForwardError::Unknown(ref cause) => cause,
+            MergePullRequestByFastForwardError::ParseError(ref cause) => cause,
+            MergePullRequestByFastForwardError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4905,149 +5058,153 @@ pub enum PostCommentForComparedCommitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PostCommentForComparedCommitError {
-    pub fn from_body(body: &str) -> PostCommentForComparedCommitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PostCommentForComparedCommitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BeforeCommitIdAndAfterCommitIdAreSameException" => {
-                        PostCommentForComparedCommitError::BeforeCommitIdAndAfterCommitIdAreSame(
-                            String::from(error_message),
-                        )
-                    }
-                    "ClientRequestTokenRequiredException" => {
-                        PostCommentForComparedCommitError::ClientRequestTokenRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentContentRequiredException" => {
-                        PostCommentForComparedCommitError::CommentContentRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentContentSizeLimitExceededException" => {
-                        PostCommentForComparedCommitError::CommentContentSizeLimitExceeded(
-                            String::from(error_message),
-                        )
-                    }
-                    "CommitDoesNotExistException" => {
-                        PostCommentForComparedCommitError::CommitDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommitIdRequiredException" => {
-                        PostCommentForComparedCommitError::CommitIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        PostCommentForComparedCommitError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        PostCommentForComparedCommitError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        PostCommentForComparedCommitError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        PostCommentForComparedCommitError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        PostCommentForComparedCommitError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "IdempotencyParameterMismatchException" => {
-                        PostCommentForComparedCommitError::IdempotencyParameterMismatch(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidClientRequestTokenException" => {
-                        PostCommentForComparedCommitError::InvalidClientRequestToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitIdException" => {
-                        PostCommentForComparedCommitError::InvalidCommitId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidFileLocationException" => {
-                        PostCommentForComparedCommitError::InvalidFileLocation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidFilePositionException" => {
-                        PostCommentForComparedCommitError::InvalidFilePosition(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPathException" => {
-                        PostCommentForComparedCommitError::InvalidPath(String::from(error_message))
-                    }
-                    "InvalidRelativeFileVersionEnumException" => {
-                        PostCommentForComparedCommitError::InvalidRelativeFileVersionEnum(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryNameException" => {
-                        PostCommentForComparedCommitError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PathDoesNotExistException" => {
-                        PostCommentForComparedCommitError::PathDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PathRequiredException" => {
-                        PostCommentForComparedCommitError::PathRequired(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        PostCommentForComparedCommitError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        PostCommentForComparedCommitError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        PostCommentForComparedCommitError::Validation(error_message.to_string())
-                    }
-                    _ => PostCommentForComparedCommitError::Unknown(String::from(body)),
+            match *error_type {
+                "BeforeCommitIdAndAfterCommitIdAreSameException" => {
+                    return PostCommentForComparedCommitError::BeforeCommitIdAndAfterCommitIdAreSame(
+                        String::from(error_message),
+                    )
                 }
+                "ClientRequestTokenRequiredException" => {
+                    return PostCommentForComparedCommitError::ClientRequestTokenRequired(
+                        String::from(error_message),
+                    )
+                }
+                "CommentContentRequiredException" => {
+                    return PostCommentForComparedCommitError::CommentContentRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentContentSizeLimitExceededException" => {
+                    return PostCommentForComparedCommitError::CommentContentSizeLimitExceeded(
+                        String::from(error_message),
+                    )
+                }
+                "CommitDoesNotExistException" => {
+                    return PostCommentForComparedCommitError::CommitDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "CommitIdRequiredException" => {
+                    return PostCommentForComparedCommitError::CommitIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return PostCommentForComparedCommitError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return PostCommentForComparedCommitError::EncryptionKeyAccessDenied(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyDisabledException" => {
+                    return PostCommentForComparedCommitError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return PostCommentForComparedCommitError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return PostCommentForComparedCommitError::EncryptionKeyUnavailable(
+                        String::from(error_message),
+                    )
+                }
+                "IdempotencyParameterMismatchException" => {
+                    return PostCommentForComparedCommitError::IdempotencyParameterMismatch(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidClientRequestTokenException" => {
+                    return PostCommentForComparedCommitError::InvalidClientRequestToken(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidCommitIdException" => {
+                    return PostCommentForComparedCommitError::InvalidCommitId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidFileLocationException" => {
+                    return PostCommentForComparedCommitError::InvalidFileLocation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidFilePositionException" => {
+                    return PostCommentForComparedCommitError::InvalidFilePosition(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPathException" => {
+                    return PostCommentForComparedCommitError::InvalidPath(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRelativeFileVersionEnumException" => {
+                    return PostCommentForComparedCommitError::InvalidRelativeFileVersionEnum(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryNameException" => {
+                    return PostCommentForComparedCommitError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "PathDoesNotExistException" => {
+                    return PostCommentForComparedCommitError::PathDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PathRequiredException" => {
+                    return PostCommentForComparedCommitError::PathRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return PostCommentForComparedCommitError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return PostCommentForComparedCommitError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return PostCommentForComparedCommitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PostCommentForComparedCommitError::Unknown(String::from(body)),
         }
+        return PostCommentForComparedCommitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PostCommentForComparedCommitError {
     fn from(err: serde_json::error::Error) -> PostCommentForComparedCommitError {
-        PostCommentForComparedCommitError::Unknown(err.description().to_string())
+        PostCommentForComparedCommitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PostCommentForComparedCommitError {
@@ -5103,7 +5260,8 @@ impl Error for PostCommentForComparedCommitError {
             PostCommentForComparedCommitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PostCommentForComparedCommitError::Unknown(ref cause) => cause,
+            PostCommentForComparedCommitError::ParseError(ref cause) => cause,
+            PostCommentForComparedCommitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5170,167 +5328,169 @@ pub enum PostCommentForPullRequestError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PostCommentForPullRequestError {
-    pub fn from_body(body: &str) -> PostCommentForPullRequestError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PostCommentForPullRequestError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BeforeCommitIdAndAfterCommitIdAreSameException" => {
-                        PostCommentForPullRequestError::BeforeCommitIdAndAfterCommitIdAreSame(
-                            String::from(error_message),
-                        )
-                    }
-                    "ClientRequestTokenRequiredException" => {
-                        PostCommentForPullRequestError::ClientRequestTokenRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentContentRequiredException" => {
-                        PostCommentForPullRequestError::CommentContentRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentContentSizeLimitExceededException" => {
-                        PostCommentForPullRequestError::CommentContentSizeLimitExceeded(
-                            String::from(error_message),
-                        )
-                    }
-                    "CommitDoesNotExistException" => {
-                        PostCommentForPullRequestError::CommitDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommitIdRequiredException" => {
-                        PostCommentForPullRequestError::CommitIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        PostCommentForPullRequestError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        PostCommentForPullRequestError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        PostCommentForPullRequestError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        PostCommentForPullRequestError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        PostCommentForPullRequestError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "IdempotencyParameterMismatchException" => {
-                        PostCommentForPullRequestError::IdempotencyParameterMismatch(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidClientRequestTokenException" => {
-                        PostCommentForPullRequestError::InvalidClientRequestToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommitIdException" => {
-                        PostCommentForPullRequestError::InvalidCommitId(String::from(error_message))
-                    }
-                    "InvalidFileLocationException" => {
-                        PostCommentForPullRequestError::InvalidFileLocation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidFilePositionException" => {
-                        PostCommentForPullRequestError::InvalidFilePosition(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPathException" => {
-                        PostCommentForPullRequestError::InvalidPath(String::from(error_message))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        PostCommentForPullRequestError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRelativeFileVersionEnumException" => {
-                        PostCommentForPullRequestError::InvalidRelativeFileVersionEnum(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryNameException" => {
-                        PostCommentForPullRequestError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PathDoesNotExistException" => {
-                        PostCommentForPullRequestError::PathDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PathRequiredException" => {
-                        PostCommentForPullRequestError::PathRequired(String::from(error_message))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        PostCommentForPullRequestError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        PostCommentForPullRequestError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        PostCommentForPullRequestError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        PostCommentForPullRequestError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNotAssociatedWithPullRequestException" => {
-                        PostCommentForPullRequestError::RepositoryNotAssociatedWithPullRequest(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        PostCommentForPullRequestError::Validation(error_message.to_string())
-                    }
-                    _ => PostCommentForPullRequestError::Unknown(String::from(body)),
+            match *error_type {
+                "BeforeCommitIdAndAfterCommitIdAreSameException" => {
+                    return PostCommentForPullRequestError::BeforeCommitIdAndAfterCommitIdAreSame(
+                        String::from(error_message),
+                    )
                 }
+                "ClientRequestTokenRequiredException" => {
+                    return PostCommentForPullRequestError::ClientRequestTokenRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentContentRequiredException" => {
+                    return PostCommentForPullRequestError::CommentContentRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentContentSizeLimitExceededException" => {
+                    return PostCommentForPullRequestError::CommentContentSizeLimitExceeded(
+                        String::from(error_message),
+                    )
+                }
+                "CommitDoesNotExistException" => {
+                    return PostCommentForPullRequestError::CommitDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "CommitIdRequiredException" => {
+                    return PostCommentForPullRequestError::CommitIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return PostCommentForPullRequestError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return PostCommentForPullRequestError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return PostCommentForPullRequestError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return PostCommentForPullRequestError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return PostCommentForPullRequestError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "IdempotencyParameterMismatchException" => {
+                    return PostCommentForPullRequestError::IdempotencyParameterMismatch(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidClientRequestTokenException" => {
+                    return PostCommentForPullRequestError::InvalidClientRequestToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommitIdException" => {
+                    return PostCommentForPullRequestError::InvalidCommitId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidFileLocationException" => {
+                    return PostCommentForPullRequestError::InvalidFileLocation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidFilePositionException" => {
+                    return PostCommentForPullRequestError::InvalidFilePosition(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPathException" => {
+                    return PostCommentForPullRequestError::InvalidPath(String::from(error_message))
+                }
+                "InvalidPullRequestIdException" => {
+                    return PostCommentForPullRequestError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRelativeFileVersionEnumException" => {
+                    return PostCommentForPullRequestError::InvalidRelativeFileVersionEnum(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryNameException" => {
+                    return PostCommentForPullRequestError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "PathDoesNotExistException" => {
+                    return PostCommentForPullRequestError::PathDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PathRequiredException" => {
+                    return PostCommentForPullRequestError::PathRequired(String::from(error_message))
+                }
+                "PullRequestDoesNotExistException" => {
+                    return PostCommentForPullRequestError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return PostCommentForPullRequestError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return PostCommentForPullRequestError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return PostCommentForPullRequestError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNotAssociatedWithPullRequestException" => {
+                    return PostCommentForPullRequestError::RepositoryNotAssociatedWithPullRequest(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return PostCommentForPullRequestError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PostCommentForPullRequestError::Unknown(String::from(body)),
         }
+        return PostCommentForPullRequestError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PostCommentForPullRequestError {
     fn from(err: serde_json::error::Error) -> PostCommentForPullRequestError {
-        PostCommentForPullRequestError::Unknown(err.description().to_string())
+        PostCommentForPullRequestError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PostCommentForPullRequestError {
@@ -5392,7 +5552,8 @@ impl Error for PostCommentForPullRequestError {
             PostCommentForPullRequestError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PostCommentForPullRequestError::Unknown(ref cause) => cause,
+            PostCommentForPullRequestError::ParseError(ref cause) => cause,
+            PostCommentForPullRequestError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5421,70 +5582,72 @@ pub enum PostCommentReplyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PostCommentReplyError {
-    pub fn from_body(body: &str) -> PostCommentReplyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PostCommentReplyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ClientRequestTokenRequiredException" => {
-                        PostCommentReplyError::ClientRequestTokenRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentContentRequiredException" => {
-                        PostCommentReplyError::CommentContentRequired(String::from(error_message))
-                    }
-                    "CommentContentSizeLimitExceededException" => {
-                        PostCommentReplyError::CommentContentSizeLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentDoesNotExistException" => {
-                        PostCommentReplyError::CommentDoesNotExist(String::from(error_message))
-                    }
-                    "CommentIdRequiredException" => {
-                        PostCommentReplyError::CommentIdRequired(String::from(error_message))
-                    }
-                    "IdempotencyParameterMismatchException" => {
-                        PostCommentReplyError::IdempotencyParameterMismatch(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidClientRequestTokenException" => {
-                        PostCommentReplyError::InvalidClientRequestToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCommentIdException" => {
-                        PostCommentReplyError::InvalidCommentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PostCommentReplyError::Validation(error_message.to_string())
-                    }
-                    _ => PostCommentReplyError::Unknown(String::from(body)),
+            match *error_type {
+                "ClientRequestTokenRequiredException" => {
+                    return PostCommentReplyError::ClientRequestTokenRequired(String::from(
+                        error_message,
+                    ))
                 }
+                "CommentContentRequiredException" => {
+                    return PostCommentReplyError::CommentContentRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentContentSizeLimitExceededException" => {
+                    return PostCommentReplyError::CommentContentSizeLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentDoesNotExistException" => {
+                    return PostCommentReplyError::CommentDoesNotExist(String::from(error_message))
+                }
+                "CommentIdRequiredException" => {
+                    return PostCommentReplyError::CommentIdRequired(String::from(error_message))
+                }
+                "IdempotencyParameterMismatchException" => {
+                    return PostCommentReplyError::IdempotencyParameterMismatch(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidClientRequestTokenException" => {
+                    return PostCommentReplyError::InvalidClientRequestToken(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommentIdException" => {
+                    return PostCommentReplyError::InvalidCommentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PostCommentReplyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PostCommentReplyError::Unknown(String::from(body)),
         }
+        return PostCommentReplyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PostCommentReplyError {
     fn from(err: serde_json::error::Error) -> PostCommentReplyError {
-        PostCommentReplyError::Unknown(err.description().to_string())
+        PostCommentReplyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PostCommentReplyError {
@@ -5521,7 +5684,8 @@ impl Error for PostCommentReplyError {
             PostCommentReplyError::Validation(ref cause) => cause,
             PostCommentReplyError::Credentials(ref err) => err.description(),
             PostCommentReplyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PostCommentReplyError::Unknown(ref cause) => cause,
+            PostCommentReplyError::ParseError(ref cause) => cause,
+            PostCommentReplyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5588,121 +5752,123 @@ pub enum PutFileError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutFileError {
-    pub fn from_body(body: &str) -> PutFileError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutFileError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BranchDoesNotExistException" => {
-                        PutFileError::BranchDoesNotExist(String::from(error_message))
-                    }
-                    "BranchNameIsTagNameException" => {
-                        PutFileError::BranchNameIsTagName(String::from(error_message))
-                    }
-                    "BranchNameRequiredException" => {
-                        PutFileError::BranchNameRequired(String::from(error_message))
-                    }
-                    "CommitMessageLengthExceededException" => {
-                        PutFileError::CommitMessageLengthExceeded(String::from(error_message))
-                    }
-                    "DirectoryNameConflictsWithFileNameException" => {
-                        PutFileError::DirectoryNameConflictsWithFileName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        PutFileError::EncryptionIntegrityChecksFailed(String::from(error_message))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        PutFileError::EncryptionKeyAccessDenied(String::from(error_message))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        PutFileError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        PutFileError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        PutFileError::EncryptionKeyUnavailable(String::from(error_message))
-                    }
-                    "FileContentRequiredException" => {
-                        PutFileError::FileContentRequired(String::from(error_message))
-                    }
-                    "FileContentSizeLimitExceededException" => {
-                        PutFileError::FileContentSizeLimitExceeded(String::from(error_message))
-                    }
-                    "FileNameConflictsWithDirectoryNameException" => {
-                        PutFileError::FileNameConflictsWithDirectoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidBranchNameException" => {
-                        PutFileError::InvalidBranchName(String::from(error_message))
-                    }
-                    "InvalidEmailException" => {
-                        PutFileError::InvalidEmail(String::from(error_message))
-                    }
-                    "InvalidFileModeException" => {
-                        PutFileError::InvalidFileMode(String::from(error_message))
-                    }
-                    "InvalidParentCommitIdException" => {
-                        PutFileError::InvalidParentCommitId(String::from(error_message))
-                    }
-                    "InvalidPathException" => {
-                        PutFileError::InvalidPath(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        PutFileError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "NameLengthExceededException" => {
-                        PutFileError::NameLengthExceeded(String::from(error_message))
-                    }
-                    "ParentCommitDoesNotExistException" => {
-                        PutFileError::ParentCommitDoesNotExist(String::from(error_message))
-                    }
-                    "ParentCommitIdOutdatedException" => {
-                        PutFileError::ParentCommitIdOutdated(String::from(error_message))
-                    }
-                    "ParentCommitIdRequiredException" => {
-                        PutFileError::ParentCommitIdRequired(String::from(error_message))
-                    }
-                    "PathRequiredException" => {
-                        PutFileError::PathRequired(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        PutFileError::RepositoryDoesNotExist(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        PutFileError::RepositoryNameRequired(String::from(error_message))
-                    }
-                    "SameFileContentException" => {
-                        PutFileError::SameFileContent(String::from(error_message))
-                    }
-                    "ValidationException" => PutFileError::Validation(error_message.to_string()),
-                    _ => PutFileError::Unknown(String::from(body)),
+            match *error_type {
+                "BranchDoesNotExistException" => {
+                    return PutFileError::BranchDoesNotExist(String::from(error_message))
                 }
+                "BranchNameIsTagNameException" => {
+                    return PutFileError::BranchNameIsTagName(String::from(error_message))
+                }
+                "BranchNameRequiredException" => {
+                    return PutFileError::BranchNameRequired(String::from(error_message))
+                }
+                "CommitMessageLengthExceededException" => {
+                    return PutFileError::CommitMessageLengthExceeded(String::from(error_message))
+                }
+                "DirectoryNameConflictsWithFileNameException" => {
+                    return PutFileError::DirectoryNameConflictsWithFileName(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return PutFileError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return PutFileError::EncryptionKeyAccessDenied(String::from(error_message))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return PutFileError::EncryptionKeyDisabled(String::from(error_message))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return PutFileError::EncryptionKeyNotFound(String::from(error_message))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return PutFileError::EncryptionKeyUnavailable(String::from(error_message))
+                }
+                "FileContentRequiredException" => {
+                    return PutFileError::FileContentRequired(String::from(error_message))
+                }
+                "FileContentSizeLimitExceededException" => {
+                    return PutFileError::FileContentSizeLimitExceeded(String::from(error_message))
+                }
+                "FileNameConflictsWithDirectoryNameException" => {
+                    return PutFileError::FileNameConflictsWithDirectoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidBranchNameException" => {
+                    return PutFileError::InvalidBranchName(String::from(error_message))
+                }
+                "InvalidEmailException" => {
+                    return PutFileError::InvalidEmail(String::from(error_message))
+                }
+                "InvalidFileModeException" => {
+                    return PutFileError::InvalidFileMode(String::from(error_message))
+                }
+                "InvalidParentCommitIdException" => {
+                    return PutFileError::InvalidParentCommitId(String::from(error_message))
+                }
+                "InvalidPathException" => {
+                    return PutFileError::InvalidPath(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return PutFileError::InvalidRepositoryName(String::from(error_message))
+                }
+                "NameLengthExceededException" => {
+                    return PutFileError::NameLengthExceeded(String::from(error_message))
+                }
+                "ParentCommitDoesNotExistException" => {
+                    return PutFileError::ParentCommitDoesNotExist(String::from(error_message))
+                }
+                "ParentCommitIdOutdatedException" => {
+                    return PutFileError::ParentCommitIdOutdated(String::from(error_message))
+                }
+                "ParentCommitIdRequiredException" => {
+                    return PutFileError::ParentCommitIdRequired(String::from(error_message))
+                }
+                "PathRequiredException" => {
+                    return PutFileError::PathRequired(String::from(error_message))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return PutFileError::RepositoryDoesNotExist(String::from(error_message))
+                }
+                "RepositoryNameRequiredException" => {
+                    return PutFileError::RepositoryNameRequired(String::from(error_message))
+                }
+                "SameFileContentException" => {
+                    return PutFileError::SameFileContent(String::from(error_message))
+                }
+                "ValidationException" => return PutFileError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => PutFileError::Unknown(String::from(body)),
         }
+        return PutFileError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutFileError {
     fn from(err: serde_json::error::Error) -> PutFileError {
-        PutFileError::Unknown(err.description().to_string())
+        PutFileError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutFileError {
@@ -5758,7 +5924,8 @@ impl Error for PutFileError {
             PutFileError::Validation(ref cause) => cause,
             PutFileError::Credentials(ref err) => err.description(),
             PutFileError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            PutFileError::Unknown(ref cause) => cause,
+            PutFileError::ParseError(ref cause) => cause,
+            PutFileError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5813,143 +5980,143 @@ pub enum PutRepositoryTriggersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutRepositoryTriggersError {
-    pub fn from_body(body: &str) -> PutRepositoryTriggersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutRepositoryTriggersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        PutRepositoryTriggersError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        PutRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        PutRepositoryTriggersError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        PutRepositoryTriggersError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        PutRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerBranchNameException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerBranchName(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerCustomDataException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerCustomData(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerDestinationArnException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerDestinationArn(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerEventsException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerEvents(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerNameException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerRegionException" => {
-                        PutRepositoryTriggersError::InvalidRepositoryTriggerRegion(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MaximumBranchesExceededException" => {
-                        PutRepositoryTriggersError::MaximumBranchesExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MaximumRepositoryTriggersExceededException" => {
-                        PutRepositoryTriggersError::MaximumRepositoryTriggersExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        PutRepositoryTriggersError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryTriggerBranchNameListRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryTriggerBranchNameListRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerDestinationArnRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryTriggerDestinationArnRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerEventsListRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryTriggerEventsListRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerNameRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryTriggerNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryTriggersListRequiredException" => {
-                        PutRepositoryTriggersError::RepositoryTriggersListRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        PutRepositoryTriggersError::Validation(error_message.to_string())
-                    }
-                    _ => PutRepositoryTriggersError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return PutRepositoryTriggersError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return PutRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return PutRepositoryTriggersError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return PutRepositoryTriggersError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return PutRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryTriggerBranchNameException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerBranchName(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerCustomDataException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerCustomData(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerDestinationArnException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerDestinationArn(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerEventsException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerEvents(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryTriggerNameException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryTriggerRegionException" => {
+                    return PutRepositoryTriggersError::InvalidRepositoryTriggerRegion(String::from(
+                        error_message,
+                    ))
+                }
+                "MaximumBranchesExceededException" => {
+                    return PutRepositoryTriggersError::MaximumBranchesExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "MaximumRepositoryTriggersExceededException" => {
+                    return PutRepositoryTriggersError::MaximumRepositoryTriggersExceeded(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryDoesNotExistException" => {
+                    return PutRepositoryTriggersError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryTriggerBranchNameListRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryTriggerBranchNameListRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerDestinationArnRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryTriggerDestinationArnRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerEventsListRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryTriggerEventsListRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerNameRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryTriggerNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryTriggersListRequiredException" => {
+                    return PutRepositoryTriggersError::RepositoryTriggersListRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return PutRepositoryTriggersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutRepositoryTriggersError::Unknown(String::from(body)),
         }
+        return PutRepositoryTriggersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutRepositoryTriggersError {
     fn from(err: serde_json::error::Error) -> PutRepositoryTriggersError {
-        PutRepositoryTriggersError::Unknown(err.description().to_string())
+        PutRepositoryTriggersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutRepositoryTriggersError {
@@ -6001,7 +6168,8 @@ impl Error for PutRepositoryTriggersError {
             PutRepositoryTriggersError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutRepositoryTriggersError::Unknown(ref cause) => cause,
+            PutRepositoryTriggersError::ParseError(ref cause) => cause,
+            PutRepositoryTriggersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6056,143 +6224,143 @@ pub enum TestRepositoryTriggersError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl TestRepositoryTriggersError {
-    pub fn from_body(body: &str) -> TestRepositoryTriggersError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> TestRepositoryTriggersError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        TestRepositoryTriggersError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        TestRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        TestRepositoryTriggersError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        TestRepositoryTriggersError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        TestRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerBranchNameException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerBranchName(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerCustomDataException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerCustomData(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerDestinationArnException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerDestinationArn(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryTriggerEventsException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerEvents(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerNameException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryTriggerRegionException" => {
-                        TestRepositoryTriggersError::InvalidRepositoryTriggerRegion(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MaximumBranchesExceededException" => {
-                        TestRepositoryTriggersError::MaximumBranchesExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "MaximumRepositoryTriggersExceededException" => {
-                        TestRepositoryTriggersError::MaximumRepositoryTriggersExceeded(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        TestRepositoryTriggersError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryTriggerBranchNameListRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryTriggerBranchNameListRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerDestinationArnRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryTriggerDestinationArnRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerEventsListRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryTriggerEventsListRequired(
-                            String::from(error_message),
-                        )
-                    }
-                    "RepositoryTriggerNameRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryTriggerNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryTriggersListRequiredException" => {
-                        TestRepositoryTriggersError::RepositoryTriggersListRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        TestRepositoryTriggersError::Validation(error_message.to_string())
-                    }
-                    _ => TestRepositoryTriggersError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return TestRepositoryTriggersError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return TestRepositoryTriggersError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return TestRepositoryTriggersError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return TestRepositoryTriggersError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return TestRepositoryTriggersError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryNameException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryTriggerBranchNameException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerBranchName(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerCustomDataException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerCustomData(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerDestinationArnException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerDestinationArn(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerEventsException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerEvents(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryTriggerNameException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerName(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryTriggerRegionException" => {
+                    return TestRepositoryTriggersError::InvalidRepositoryTriggerRegion(
+                        String::from(error_message),
+                    )
+                }
+                "MaximumBranchesExceededException" => {
+                    return TestRepositoryTriggersError::MaximumBranchesExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "MaximumRepositoryTriggersExceededException" => {
+                    return TestRepositoryTriggersError::MaximumRepositoryTriggersExceeded(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryDoesNotExistException" => {
+                    return TestRepositoryTriggersError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryTriggerBranchNameListRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryTriggerBranchNameListRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerDestinationArnRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryTriggerDestinationArnRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerEventsListRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryTriggerEventsListRequired(
+                        String::from(error_message),
+                    )
+                }
+                "RepositoryTriggerNameRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryTriggerNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryTriggersListRequiredException" => {
+                    return TestRepositoryTriggersError::RepositoryTriggersListRequired(
+                        String::from(error_message),
+                    )
+                }
+                "ValidationException" => {
+                    return TestRepositoryTriggersError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => TestRepositoryTriggersError::Unknown(String::from(body)),
         }
+        return TestRepositoryTriggersError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for TestRepositoryTriggersError {
     fn from(err: serde_json::error::Error) -> TestRepositoryTriggersError {
-        TestRepositoryTriggersError::Unknown(err.description().to_string())
+        TestRepositoryTriggersError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for TestRepositoryTriggersError {
@@ -6248,7 +6416,8 @@ impl Error for TestRepositoryTriggersError {
             TestRepositoryTriggersError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            TestRepositoryTriggersError::Unknown(ref cause) => cause,
+            TestRepositoryTriggersError::ParseError(ref cause) => cause,
+            TestRepositoryTriggersError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6275,61 +6444,63 @@ pub enum UpdateCommentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateCommentError {
-    pub fn from_body(body: &str) -> UpdateCommentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateCommentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CommentContentRequiredException" => {
-                        UpdateCommentError::CommentContentRequired(String::from(error_message))
-                    }
-                    "CommentContentSizeLimitExceededException" => {
-                        UpdateCommentError::CommentContentSizeLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CommentDeletedException" => {
-                        UpdateCommentError::CommentDeleted(String::from(error_message))
-                    }
-                    "CommentDoesNotExistException" => {
-                        UpdateCommentError::CommentDoesNotExist(String::from(error_message))
-                    }
-                    "CommentIdRequiredException" => {
-                        UpdateCommentError::CommentIdRequired(String::from(error_message))
-                    }
-                    "CommentNotCreatedByCallerException" => {
-                        UpdateCommentError::CommentNotCreatedByCaller(String::from(error_message))
-                    }
-                    "InvalidCommentIdException" => {
-                        UpdateCommentError::InvalidCommentId(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateCommentError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateCommentError::Unknown(String::from(body)),
+            match *error_type {
+                "CommentContentRequiredException" => {
+                    return UpdateCommentError::CommentContentRequired(String::from(error_message))
                 }
+                "CommentContentSizeLimitExceededException" => {
+                    return UpdateCommentError::CommentContentSizeLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "CommentDeletedException" => {
+                    return UpdateCommentError::CommentDeleted(String::from(error_message))
+                }
+                "CommentDoesNotExistException" => {
+                    return UpdateCommentError::CommentDoesNotExist(String::from(error_message))
+                }
+                "CommentIdRequiredException" => {
+                    return UpdateCommentError::CommentIdRequired(String::from(error_message))
+                }
+                "CommentNotCreatedByCallerException" => {
+                    return UpdateCommentError::CommentNotCreatedByCaller(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCommentIdException" => {
+                    return UpdateCommentError::InvalidCommentId(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateCommentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateCommentError::Unknown(String::from(body)),
         }
+        return UpdateCommentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateCommentError {
     fn from(err: serde_json::error::Error) -> UpdateCommentError {
-        UpdateCommentError::Unknown(err.description().to_string())
+        UpdateCommentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateCommentError {
@@ -6365,7 +6536,8 @@ impl Error for UpdateCommentError {
             UpdateCommentError::Validation(ref cause) => cause,
             UpdateCommentError::Credentials(ref err) => err.description(),
             UpdateCommentError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateCommentError::Unknown(ref cause) => cause,
+            UpdateCommentError::ParseError(ref cause) => cause,
+            UpdateCommentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6400,81 +6572,87 @@ pub enum UpdateDefaultBranchError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateDefaultBranchError {
-    pub fn from_body(body: &str) -> UpdateDefaultBranchError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateDefaultBranchError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "BranchDoesNotExistException" => {
-                        UpdateDefaultBranchError::BranchDoesNotExist(String::from(error_message))
-                    }
-                    "BranchNameRequiredException" => {
-                        UpdateDefaultBranchError::BranchNameRequired(String::from(error_message))
-                    }
-                    "EncryptionIntegrityChecksFailedException" => {
-                        UpdateDefaultBranchError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        UpdateDefaultBranchError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        UpdateDefaultBranchError::EncryptionKeyDisabled(String::from(error_message))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        UpdateDefaultBranchError::EncryptionKeyNotFound(String::from(error_message))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        UpdateDefaultBranchError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidBranchNameException" => {
-                        UpdateDefaultBranchError::InvalidBranchName(String::from(error_message))
-                    }
-                    "InvalidRepositoryNameException" => {
-                        UpdateDefaultBranchError::InvalidRepositoryName(String::from(error_message))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        UpdateDefaultBranchError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        UpdateDefaultBranchError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateDefaultBranchError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateDefaultBranchError::Unknown(String::from(body)),
+            match *error_type {
+                "BranchDoesNotExistException" => {
+                    return UpdateDefaultBranchError::BranchDoesNotExist(String::from(error_message))
                 }
+                "BranchNameRequiredException" => {
+                    return UpdateDefaultBranchError::BranchNameRequired(String::from(error_message))
+                }
+                "EncryptionIntegrityChecksFailedException" => {
+                    return UpdateDefaultBranchError::EncryptionIntegrityChecksFailed(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyAccessDeniedException" => {
+                    return UpdateDefaultBranchError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return UpdateDefaultBranchError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return UpdateDefaultBranchError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return UpdateDefaultBranchError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidBranchNameException" => {
+                    return UpdateDefaultBranchError::InvalidBranchName(String::from(error_message))
+                }
+                "InvalidRepositoryNameException" => {
+                    return UpdateDefaultBranchError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return UpdateDefaultBranchError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return UpdateDefaultBranchError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateDefaultBranchError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateDefaultBranchError::Unknown(String::from(body)),
         }
+        return UpdateDefaultBranchError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateDefaultBranchError {
     fn from(err: serde_json::error::Error) -> UpdateDefaultBranchError {
-        UpdateDefaultBranchError::Unknown(err.description().to_string())
+        UpdateDefaultBranchError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateDefaultBranchError {
@@ -6516,7 +6694,8 @@ impl Error for UpdateDefaultBranchError {
             UpdateDefaultBranchError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateDefaultBranchError::Unknown(ref cause) => cause,
+            UpdateDefaultBranchError::ParseError(ref cause) => cause,
+            UpdateDefaultBranchError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6539,63 +6718,63 @@ pub enum UpdatePullRequestDescriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdatePullRequestDescriptionError {
-    pub fn from_body(body: &str) -> UpdatePullRequestDescriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdatePullRequestDescriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidDescriptionException" => {
-                        UpdatePullRequestDescriptionError::InvalidDescription(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        UpdatePullRequestDescriptionError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestAlreadyClosedException" => {
-                        UpdatePullRequestDescriptionError::PullRequestAlreadyClosed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        UpdatePullRequestDescriptionError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        UpdatePullRequestDescriptionError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdatePullRequestDescriptionError::Validation(error_message.to_string())
-                    }
-                    _ => UpdatePullRequestDescriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidDescriptionException" => {
+                    return UpdatePullRequestDescriptionError::InvalidDescription(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidPullRequestIdException" => {
+                    return UpdatePullRequestDescriptionError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestAlreadyClosedException" => {
+                    return UpdatePullRequestDescriptionError::PullRequestAlreadyClosed(
+                        String::from(error_message),
+                    )
+                }
+                "PullRequestDoesNotExistException" => {
+                    return UpdatePullRequestDescriptionError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return UpdatePullRequestDescriptionError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdatePullRequestDescriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdatePullRequestDescriptionError::Unknown(String::from(body)),
         }
+        return UpdatePullRequestDescriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdatePullRequestDescriptionError {
     fn from(err: serde_json::error::Error) -> UpdatePullRequestDescriptionError {
-        UpdatePullRequestDescriptionError::Unknown(err.description().to_string())
+        UpdatePullRequestDescriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdatePullRequestDescriptionError {
@@ -6631,7 +6810,8 @@ impl Error for UpdatePullRequestDescriptionError {
             UpdatePullRequestDescriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdatePullRequestDescriptionError::Unknown(ref cause) => cause,
+            UpdatePullRequestDescriptionError::ParseError(ref cause) => cause,
+            UpdatePullRequestDescriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6666,93 +6846,93 @@ pub enum UpdatePullRequestStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdatePullRequestStatusError {
-    pub fn from_body(body: &str) -> UpdatePullRequestStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdatePullRequestStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        UpdatePullRequestStatusError::EncryptionIntegrityChecksFailed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        UpdatePullRequestStatusError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        UpdatePullRequestStatusError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        UpdatePullRequestStatusError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        UpdatePullRequestStatusError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestIdException" => {
-                        UpdatePullRequestStatusError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestStatusException" => {
-                        UpdatePullRequestStatusError::InvalidPullRequestStatus(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidPullRequestStatusUpdateException" => {
-                        UpdatePullRequestStatusError::InvalidPullRequestStatusUpdate(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        UpdatePullRequestStatusError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        UpdatePullRequestStatusError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestStatusRequiredException" => {
-                        UpdatePullRequestStatusError::PullRequestStatusRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdatePullRequestStatusError::Validation(error_message.to_string())
-                    }
-                    _ => UpdatePullRequestStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return UpdatePullRequestStatusError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return UpdatePullRequestStatusError::EncryptionKeyAccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyDisabledException" => {
+                    return UpdatePullRequestStatusError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return UpdatePullRequestStatusError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return UpdatePullRequestStatusError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestIdException" => {
+                    return UpdatePullRequestStatusError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestStatusException" => {
+                    return UpdatePullRequestStatusError::InvalidPullRequestStatus(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidPullRequestStatusUpdateException" => {
+                    return UpdatePullRequestStatusError::InvalidPullRequestStatusUpdate(
+                        String::from(error_message),
+                    )
+                }
+                "PullRequestDoesNotExistException" => {
+                    return UpdatePullRequestStatusError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return UpdatePullRequestStatusError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestStatusRequiredException" => {
+                    return UpdatePullRequestStatusError::PullRequestStatusRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdatePullRequestStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdatePullRequestStatusError::Unknown(String::from(body)),
         }
+        return UpdatePullRequestStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdatePullRequestStatusError {
     fn from(err: serde_json::error::Error) -> UpdatePullRequestStatusError {
-        UpdatePullRequestStatusError::Unknown(err.description().to_string())
+        UpdatePullRequestStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdatePullRequestStatusError {
@@ -6794,7 +6974,8 @@ impl Error for UpdatePullRequestStatusError {
             UpdatePullRequestStatusError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdatePullRequestStatusError::Unknown(ref cause) => cause,
+            UpdatePullRequestStatusError::ParseError(ref cause) => cause,
+            UpdatePullRequestStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6819,64 +7000,64 @@ pub enum UpdatePullRequestTitleError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdatePullRequestTitleError {
-    pub fn from_body(body: &str) -> UpdatePullRequestTitleError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdatePullRequestTitleError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidPullRequestIdException" => {
-                        UpdatePullRequestTitleError::InvalidPullRequestId(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidTitleException" => {
-                        UpdatePullRequestTitleError::InvalidTitle(String::from(error_message))
-                    }
-                    "PullRequestAlreadyClosedException" => {
-                        UpdatePullRequestTitleError::PullRequestAlreadyClosed(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestDoesNotExistException" => {
-                        UpdatePullRequestTitleError::PullRequestDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "PullRequestIdRequiredException" => {
-                        UpdatePullRequestTitleError::PullRequestIdRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "TitleRequiredException" => {
-                        UpdatePullRequestTitleError::TitleRequired(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdatePullRequestTitleError::Validation(error_message.to_string())
-                    }
-                    _ => UpdatePullRequestTitleError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidPullRequestIdException" => {
+                    return UpdatePullRequestTitleError::InvalidPullRequestId(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidTitleException" => {
+                    return UpdatePullRequestTitleError::InvalidTitle(String::from(error_message))
+                }
+                "PullRequestAlreadyClosedException" => {
+                    return UpdatePullRequestTitleError::PullRequestAlreadyClosed(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestDoesNotExistException" => {
+                    return UpdatePullRequestTitleError::PullRequestDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "PullRequestIdRequiredException" => {
+                    return UpdatePullRequestTitleError::PullRequestIdRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "TitleRequiredException" => {
+                    return UpdatePullRequestTitleError::TitleRequired(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdatePullRequestTitleError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdatePullRequestTitleError::Unknown(String::from(body)),
         }
+        return UpdatePullRequestTitleError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdatePullRequestTitleError {
     fn from(err: serde_json::error::Error) -> UpdatePullRequestTitleError {
-        UpdatePullRequestTitleError::Unknown(err.description().to_string())
+        UpdatePullRequestTitleError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdatePullRequestTitleError {
@@ -6913,7 +7094,8 @@ impl Error for UpdatePullRequestTitleError {
             UpdatePullRequestTitleError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdatePullRequestTitleError::Unknown(ref cause) => cause,
+            UpdatePullRequestTitleError::ParseError(ref cause) => cause,
+            UpdatePullRequestTitleError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6944,83 +7126,83 @@ pub enum UpdateRepositoryDescriptionError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateRepositoryDescriptionError {
-    pub fn from_body(body: &str) -> UpdateRepositoryDescriptionError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateRepositoryDescriptionError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "EncryptionIntegrityChecksFailedException" => {
-                        UpdateRepositoryDescriptionError::EncryptionIntegrityChecksFailed(
-                            String::from(error_message),
-                        )
-                    }
-                    "EncryptionKeyAccessDeniedException" => {
-                        UpdateRepositoryDescriptionError::EncryptionKeyAccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyDisabledException" => {
-                        UpdateRepositoryDescriptionError::EncryptionKeyDisabled(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyNotFoundException" => {
-                        UpdateRepositoryDescriptionError::EncryptionKeyNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "EncryptionKeyUnavailableException" => {
-                        UpdateRepositoryDescriptionError::EncryptionKeyUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidRepositoryDescriptionException" => {
-                        UpdateRepositoryDescriptionError::InvalidRepositoryDescription(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidRepositoryNameException" => {
-                        UpdateRepositoryDescriptionError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        UpdateRepositoryDescriptionError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        UpdateRepositoryDescriptionError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateRepositoryDescriptionError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateRepositoryDescriptionError::Unknown(String::from(body)),
+            match *error_type {
+                "EncryptionIntegrityChecksFailedException" => {
+                    return UpdateRepositoryDescriptionError::EncryptionIntegrityChecksFailed(
+                        String::from(error_message),
+                    )
                 }
+                "EncryptionKeyAccessDeniedException" => {
+                    return UpdateRepositoryDescriptionError::EncryptionKeyAccessDenied(
+                        String::from(error_message),
+                    )
+                }
+                "EncryptionKeyDisabledException" => {
+                    return UpdateRepositoryDescriptionError::EncryptionKeyDisabled(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyNotFoundException" => {
+                    return UpdateRepositoryDescriptionError::EncryptionKeyNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "EncryptionKeyUnavailableException" => {
+                    return UpdateRepositoryDescriptionError::EncryptionKeyUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidRepositoryDescriptionException" => {
+                    return UpdateRepositoryDescriptionError::InvalidRepositoryDescription(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidRepositoryNameException" => {
+                    return UpdateRepositoryDescriptionError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryDoesNotExistException" => {
+                    return UpdateRepositoryDescriptionError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return UpdateRepositoryDescriptionError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateRepositoryDescriptionError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateRepositoryDescriptionError::Unknown(String::from(body)),
         }
+        return UpdateRepositoryDescriptionError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateRepositoryDescriptionError {
     fn from(err: serde_json::error::Error) -> UpdateRepositoryDescriptionError {
-        UpdateRepositoryDescriptionError::Unknown(err.description().to_string())
+        UpdateRepositoryDescriptionError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateRepositoryDescriptionError {
@@ -7060,7 +7242,8 @@ impl Error for UpdateRepositoryDescriptionError {
             UpdateRepositoryDescriptionError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateRepositoryDescriptionError::Unknown(ref cause) => cause,
+            UpdateRepositoryDescriptionError::ParseError(ref cause) => cause,
+            UpdateRepositoryDescriptionError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7081,56 +7264,58 @@ pub enum UpdateRepositoryNameError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateRepositoryNameError {
-    pub fn from_body(body: &str) -> UpdateRepositoryNameError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateRepositoryNameError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidRepositoryNameException" => {
-                        UpdateRepositoryNameError::InvalidRepositoryName(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryDoesNotExistException" => {
-                        UpdateRepositoryNameError::RepositoryDoesNotExist(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RepositoryNameExistsException" => {
-                        UpdateRepositoryNameError::RepositoryNameExists(String::from(error_message))
-                    }
-                    "RepositoryNameRequiredException" => {
-                        UpdateRepositoryNameError::RepositoryNameRequired(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        UpdateRepositoryNameError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateRepositoryNameError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidRepositoryNameException" => {
+                    return UpdateRepositoryNameError::InvalidRepositoryName(String::from(
+                        error_message,
+                    ))
                 }
+                "RepositoryDoesNotExistException" => {
+                    return UpdateRepositoryNameError::RepositoryDoesNotExist(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameExistsException" => {
+                    return UpdateRepositoryNameError::RepositoryNameExists(String::from(
+                        error_message,
+                    ))
+                }
+                "RepositoryNameRequiredException" => {
+                    return UpdateRepositoryNameError::RepositoryNameRequired(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateRepositoryNameError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateRepositoryNameError::Unknown(String::from(body)),
         }
+        return UpdateRepositoryNameError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateRepositoryNameError {
     fn from(err: serde_json::error::Error) -> UpdateRepositoryNameError {
-        UpdateRepositoryNameError::Unknown(err.description().to_string())
+        UpdateRepositoryNameError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateRepositoryNameError {
@@ -7165,7 +7350,8 @@ impl Error for UpdateRepositoryNameError {
             UpdateRepositoryNameError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateRepositoryNameError::Unknown(ref cause) => cause,
+            UpdateRepositoryNameError::ParseError(ref cause) => cause,
+            UpdateRepositoryNameError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -7431,14 +7617,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<BatchGetRepositoriesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(BatchGetRepositoriesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(BatchGetRepositoriesError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7456,11 +7643,12 @@ impl CodeCommit for CodeCommitClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateBranchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateBranchError::from_response(response))),
+                )
             }
         })
     }
@@ -7488,14 +7676,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<CreatePullRequestOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreatePullRequestError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreatePullRequestError::from_response(response))),
+                )
             }
         })
     }
@@ -7523,14 +7713,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<CreateRepositoryOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateRepositoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateRepositoryError::from_response(response))),
+                )
             }
         })
     }
@@ -7558,14 +7750,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<DeleteBranchOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteBranchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteBranchError::from_response(response))),
+                )
             }
         })
     }
@@ -7593,14 +7787,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<DeleteCommentContentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteCommentContentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DeleteCommentContentError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7628,14 +7823,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<DeleteRepositoryOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteRepositoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteRepositoryError::from_response(response))),
+                )
             }
         })
     }
@@ -7666,13 +7863,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<DescribePullRequestEventsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribePullRequestEventsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribePullRequestEventsError::from_response(response))
                 }))
             }
         })
@@ -7698,14 +7894,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetBlobOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetBlobError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetBlobError::from_response(response))),
+                )
             }
         })
     }
@@ -7730,14 +7928,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetBranchOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetBranchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetBranchError::from_response(response))),
+                )
             }
         })
     }
@@ -7765,14 +7965,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetCommentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCommentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetCommentError::from_response(response))),
+                )
             }
         })
     }
@@ -7803,13 +8005,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetCommentsForComparedCommitOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCommentsForComparedCommitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetCommentsForComparedCommitError::from_response(response))
                 }))
             }
         })
@@ -7841,13 +8042,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetCommentsForPullRequestOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCommentsForPullRequestError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(GetCommentsForPullRequestError::from_response(response))
                 }))
             }
         })
@@ -7873,14 +8073,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetCommitOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCommitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetCommitError::from_response(response))),
+                )
             }
         })
     }
@@ -7908,14 +8110,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetDifferencesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetDifferencesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetDifferencesError::from_response(response))),
+                )
             }
         })
     }
@@ -7943,14 +8147,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetMergeConflictsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetMergeConflictsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetMergeConflictsError::from_response(response))),
+                )
             }
         })
     }
@@ -7978,14 +8184,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetPullRequestOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetPullRequestError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetPullRequestError::from_response(response))),
+                )
             }
         })
     }
@@ -8013,14 +8221,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetRepositoryOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRepositoryError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetRepositoryError::from_response(response))),
+                )
             }
         })
     }
@@ -8048,14 +8258,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<GetRepositoryTriggersOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRepositoryTriggersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(GetRepositoryTriggersError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8083,14 +8294,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<ListBranchesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListBranchesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListBranchesError::from_response(response))),
+                )
             }
         })
     }
@@ -8118,14 +8331,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<ListPullRequestsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListPullRequestsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListPullRequestsError::from_response(response))),
+                )
             }
         })
     }
@@ -8153,14 +8368,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<ListRepositoriesOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListRepositoriesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListRepositoriesError::from_response(response))),
+                )
             }
         })
     }
@@ -8191,13 +8408,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<MergePullRequestByFastForwardOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(MergePullRequestByFastForwardError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(MergePullRequestByFastForwardError::from_response(response))
                 }))
             }
         })
@@ -8229,13 +8445,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<PostCommentForComparedCommitOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PostCommentForComparedCommitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(PostCommentForComparedCommitError::from_response(response))
                 }))
             }
         })
@@ -8267,13 +8482,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<PostCommentForPullRequestOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PostCommentForPullRequestError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(PostCommentForPullRequestError::from_response(response))
                 }))
             }
         })
@@ -8302,14 +8516,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<PostCommentReplyOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PostCommentReplyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PostCommentReplyError::from_response(response))),
+                )
             }
         })
     }
@@ -8334,14 +8550,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<PutFileOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutFileError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutFileError::from_response(response))),
+                )
             }
         })
     }
@@ -8369,14 +8587,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<PutRepositoryTriggersOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutRepositoryTriggersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutRepositoryTriggersError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8404,14 +8623,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<TestRepositoryTriggersOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(TestRepositoryTriggersError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(TestRepositoryTriggersError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8439,14 +8659,16 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<UpdateCommentOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateCommentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateCommentError::from_response(response))),
+                )
             }
         })
     }
@@ -8467,11 +8689,11 @@ impl CodeCommit for CodeCommitClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateDefaultBranchError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateDefaultBranchError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8502,13 +8724,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<UpdatePullRequestDescriptionOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdatePullRequestDescriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdatePullRequestDescriptionError::from_response(response))
                 }))
             }
         })
@@ -8540,13 +8761,12 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<UpdatePullRequestStatusOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdatePullRequestStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdatePullRequestStatusError::from_response(response))
                 }))
             }
         })
@@ -8575,14 +8795,15 @@ impl CodeCommit for CodeCommitClient {
 
                     serde_json::from_str::<UpdatePullRequestTitleOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdatePullRequestTitleError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdatePullRequestTitleError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -8607,9 +8828,7 @@ impl CodeCommit for CodeCommitClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateRepositoryDescriptionError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateRepositoryDescriptionError::from_response(response))
                 }))
             }
         })
@@ -8631,11 +8850,11 @@ impl CodeCommit for CodeCommitClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateRepositoryNameError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(UpdateRepositoryNameError::from_response(response))
+                    }),
+                )
             }
         })
     }

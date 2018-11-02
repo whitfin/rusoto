@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AddTagsToCertificateRequest {
@@ -40,6 +40,7 @@ pub struct AddTagsToCertificateRequest {
 
 /// <p>Contains metadata about an ACM certificate. This structure is returned in the response to a <a>DescribeCertificate</a> request. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CertificateDetail {
     /// <p>The Amazon Resource Name (ARN) of the certificate. For more information about ARNs, see <a href="http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Names (ARNs) and AWS Service Namespaces</a> in the <i>AWS General Reference</i>.</p>
     #[serde(rename = "CertificateArn")]
@@ -158,6 +159,7 @@ pub struct CertificateOptions {
 
 /// <p>This structure is returned in the response object of <a>ListCertificates</a> action. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CertificateSummary {
     /// <p>Amazon Resource Name (ARN) of the certificate. This is of the form:</p> <p> <code>arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012</code> </p> <p>For more information about ARNs, see <a href="http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Names (ARNs) and AWS Service Namespaces</a>. </p>
     #[serde(rename = "CertificateArn")]
@@ -184,6 +186,7 @@ pub struct DescribeCertificateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCertificateResponse {
     /// <p>Metadata about an ACM certificate.</p>
     #[serde(rename = "Certificate")]
@@ -193,6 +196,7 @@ pub struct DescribeCertificateResponse {
 
 /// <p>Contains information about the validation of each domain name in the certificate.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DomainValidation {
     /// <p>A fully qualified domain name (FQDN) in the certificate. For example, <code>www.example.com</code> or <code>example.com</code>. </p>
     #[serde(rename = "DomainName")]
@@ -240,12 +244,13 @@ pub struct ExportCertificateRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub passphrase: Vec<u8>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExportCertificateResponse {
     /// <p>The base64 PEM-encoded certificate.</p>
     #[serde(rename = "Certificate")]
@@ -263,6 +268,7 @@ pub struct ExportCertificateResponse {
 
 /// <p>The Extended Key Usage X.509 v3 extension defines one or more purposes for which the public key can be used. This is in addition to or in place of the basic purposes specified by the Key Usage extension. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ExtendedKeyUsage {
     /// <p>The name of an Extended Key Usage value.</p>
     #[serde(rename = "Name")]
@@ -299,6 +305,7 @@ pub struct GetCertificateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetCertificateResponse {
     /// <p>String that contains the ACM certificate represented by the ARN specified at input.</p>
     #[serde(rename = "Certificate")]
@@ -317,7 +324,7 @@ pub struct ImportCertificateRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub certificate: Vec<u8>,
     /// <p>The <a href="http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Name (ARN)</a> of an imported certificate to replace. To import a new certificate, omit this field. </p>
@@ -329,7 +336,7 @@ pub struct ImportCertificateRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub certificate_chain: Option<Vec<u8>>,
     /// <p>The private key that matches the public key in the certificate.</p>
@@ -337,12 +344,13 @@ pub struct ImportCertificateRequest {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub private_key: Vec<u8>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ImportCertificateResponse {
     /// <p>The <a href="http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html">Amazon Resource Name (ARN)</a> of the imported certificate.</p>
     #[serde(rename = "CertificateArn")]
@@ -352,6 +360,7 @@ pub struct ImportCertificateResponse {
 
 /// <p>The Key Usage X.509 v3 extension defines the purpose of the public key contained in the certificate.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KeyUsage {
     /// <p>A string value that contains a Key Usage extension name.</p>
     #[serde(rename = "Name")]
@@ -380,6 +389,7 @@ pub struct ListCertificatesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListCertificatesResponse {
     /// <p>A list of ACM certificates.</p>
     #[serde(rename = "CertificateSummaryList")]
@@ -399,6 +409,7 @@ pub struct ListTagsForCertificateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTagsForCertificateResponse {
     /// <p>The key-value pairs that define the applied tags.</p>
     #[serde(rename = "Tags")]
@@ -418,6 +429,7 @@ pub struct RemoveTagsFromCertificateRequest {
 
 /// <p>Contains information about the status of ACM's <a href="http://docs.aws.amazon.com/acm/latest/userguide/acm-renewal.html">managed renewal</a> for the certificate. This structure exists only when the certificate type is <code>AMAZON_ISSUED</code>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RenewalSummary {
     /// <p>Contains information about the validation of each domain name in the certificate, as it pertains to ACM's <a href="http://docs.aws.amazon.com/acm/latest/userguide/acm-renewal.html">managed renewal</a>. This is different from the initial validation that occurs as a result of the <a>RequestCertificate</a> request. This field exists only when the certificate type is <code>AMAZON_ISSUED</code>.</p>
     #[serde(rename = "DomainValidationOptions")]
@@ -459,6 +471,7 @@ pub struct RequestCertificateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RequestCertificateResponse {
     /// <p>String that contains the ARN of the issued certificate. This must be of the form:</p> <p> <code>arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012</code> </p>
     #[serde(rename = "CertificateArn")]
@@ -481,6 +494,7 @@ pub struct ResendValidationEmailRequest {
 
 /// <p>Contains a DNS record value that you can use to can use to validate ownership or control of a domain. This is used by the <a>DescribeCertificate</a> action. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourceRecord {
     /// <p>The name of the DNS record to create in your domain. This is supplied by ACM.</p>
     #[serde(rename = "Name")]
@@ -532,50 +546,50 @@ pub enum AddTagsToCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddTagsToCertificateError {
-    pub fn from_body(body: &str) -> AddTagsToCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddTagsToCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        AddTagsToCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "InvalidTagException" => {
-                        AddTagsToCertificateError::InvalidTag(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddTagsToCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "TooManyTagsException" => {
-                        AddTagsToCertificateError::TooManyTags(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddTagsToCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => AddTagsToCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return AddTagsToCertificateError::InvalidArn(String::from(error_message))
                 }
+                "InvalidTagException" => {
+                    return AddTagsToCertificateError::InvalidTag(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AddTagsToCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "TooManyTagsException" => {
+                    return AddTagsToCertificateError::TooManyTags(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AddTagsToCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddTagsToCertificateError::Unknown(String::from(body)),
         }
+        return AddTagsToCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddTagsToCertificateError {
     fn from(err: serde_json::error::Error) -> AddTagsToCertificateError {
-        AddTagsToCertificateError::Unknown(err.description().to_string())
+        AddTagsToCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddTagsToCertificateError {
@@ -610,7 +624,8 @@ impl Error for AddTagsToCertificateError {
             AddTagsToCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddTagsToCertificateError::Unknown(ref cause) => cause,
+            AddTagsToCertificateError::ParseError(ref cause) => cause,
+            AddTagsToCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -629,47 +644,47 @@ pub enum DeleteCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteCertificateError {
-    pub fn from_body(body: &str) -> DeleteCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        DeleteCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "ResourceInUseException" => {
-                        DeleteCertificateError::ResourceInUse(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return DeleteCertificateError::InvalidArn(String::from(error_message))
                 }
+                "ResourceInUseException" => {
+                    return DeleteCertificateError::ResourceInUse(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteCertificateError::Unknown(String::from(body)),
         }
+        return DeleteCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteCertificateError {
     fn from(err: serde_json::error::Error) -> DeleteCertificateError {
-        DeleteCertificateError::Unknown(err.description().to_string())
+        DeleteCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteCertificateError {
@@ -703,7 +718,8 @@ impl Error for DeleteCertificateError {
             DeleteCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteCertificateError::Unknown(ref cause) => cause,
+            DeleteCertificateError::ParseError(ref cause) => cause,
+            DeleteCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -720,44 +736,44 @@ pub enum DescribeCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCertificateError {
-    pub fn from_body(body: &str) -> DescribeCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        DescribeCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return DescribeCertificateError::InvalidArn(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeCertificateError::Unknown(String::from(body)),
         }
+        return DescribeCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCertificateError {
     fn from(err: serde_json::error::Error) -> DescribeCertificateError {
-        DescribeCertificateError::Unknown(err.description().to_string())
+        DescribeCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCertificateError {
@@ -790,7 +806,8 @@ impl Error for DescribeCertificateError {
             DescribeCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeCertificateError::Unknown(ref cause) => cause,
+            DescribeCertificateError::ParseError(ref cause) => cause,
+            DescribeCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -809,47 +826,47 @@ pub enum ExportCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ExportCertificateError {
-    pub fn from_body(body: &str) -> ExportCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ExportCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        ExportCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "RequestInProgressException" => {
-                        ExportCertificateError::RequestInProgress(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ExportCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ExportCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => ExportCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return ExportCertificateError::InvalidArn(String::from(error_message))
                 }
+                "RequestInProgressException" => {
+                    return ExportCertificateError::RequestInProgress(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ExportCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ExportCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ExportCertificateError::Unknown(String::from(body)),
         }
+        return ExportCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ExportCertificateError {
     fn from(err: serde_json::error::Error) -> ExportCertificateError {
-        ExportCertificateError::Unknown(err.description().to_string())
+        ExportCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ExportCertificateError {
@@ -883,7 +900,8 @@ impl Error for ExportCertificateError {
             ExportCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ExportCertificateError::Unknown(ref cause) => cause,
+            ExportCertificateError::ParseError(ref cause) => cause,
+            ExportCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -902,47 +920,47 @@ pub enum GetCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetCertificateError {
-    pub fn from_body(body: &str) -> GetCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        GetCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "RequestInProgressException" => {
-                        GetCertificateError::RequestInProgress(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => GetCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return GetCertificateError::InvalidArn(String::from(error_message))
                 }
+                "RequestInProgressException" => {
+                    return GetCertificateError::RequestInProgress(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return GetCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetCertificateError::Unknown(String::from(body)),
         }
+        return GetCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetCertificateError {
     fn from(err: serde_json::error::Error) -> GetCertificateError {
-        GetCertificateError::Unknown(err.description().to_string())
+        GetCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetCertificateError {
@@ -974,7 +992,8 @@ impl Error for GetCertificateError {
             GetCertificateError::Validation(ref cause) => cause,
             GetCertificateError::Credentials(ref err) => err.description(),
             GetCertificateError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetCertificateError::Unknown(ref cause) => cause,
+            GetCertificateError::ParseError(ref cause) => cause,
+            GetCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -991,44 +1010,44 @@ pub enum ImportCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ImportCertificateError {
-    pub fn from_body(body: &str) -> ImportCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ImportCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "LimitExceededException" => {
-                        ImportCertificateError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ImportCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ImportCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => ImportCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "LimitExceededException" => {
+                    return ImportCertificateError::LimitExceeded(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ImportCertificateError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ImportCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ImportCertificateError::Unknown(String::from(body)),
         }
+        return ImportCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ImportCertificateError {
     fn from(err: serde_json::error::Error) -> ImportCertificateError {
-        ImportCertificateError::Unknown(err.description().to_string())
+        ImportCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ImportCertificateError {
@@ -1061,7 +1080,8 @@ impl Error for ImportCertificateError {
             ImportCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ImportCertificateError::Unknown(ref cause) => cause,
+            ImportCertificateError::ParseError(ref cause) => cause,
+            ImportCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1074,38 +1094,38 @@ pub enum ListCertificatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListCertificatesError {
-    pub fn from_body(body: &str) -> ListCertificatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListCertificatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ValidationException" => {
-                        ListCertificatesError::Validation(error_message.to_string())
-                    }
-                    _ => ListCertificatesError::Unknown(String::from(body)),
+            match *error_type {
+                "ValidationException" => {
+                    return ListCertificatesError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => ListCertificatesError::Unknown(String::from(body)),
         }
+        return ListCertificatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListCertificatesError {
     fn from(err: serde_json::error::Error) -> ListCertificatesError {
-        ListCertificatesError::Unknown(err.description().to_string())
+        ListCertificatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListCertificatesError {
@@ -1134,7 +1154,8 @@ impl Error for ListCertificatesError {
             ListCertificatesError::Validation(ref cause) => cause,
             ListCertificatesError::Credentials(ref err) => err.description(),
             ListCertificatesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListCertificatesError::Unknown(ref cause) => cause,
+            ListCertificatesError::ParseError(ref cause) => cause,
+            ListCertificatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1151,44 +1172,46 @@ pub enum ListTagsForCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTagsForCertificateError {
-    pub fn from_body(body: &str) -> ListTagsForCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListTagsForCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        ListTagsForCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListTagsForCertificateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListTagsForCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => ListTagsForCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return ListTagsForCertificateError::InvalidArn(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ListTagsForCertificateError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListTagsForCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTagsForCertificateError::Unknown(String::from(body)),
         }
+        return ListTagsForCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTagsForCertificateError {
     fn from(err: serde_json::error::Error) -> ListTagsForCertificateError {
-        ListTagsForCertificateError::Unknown(err.description().to_string())
+        ListTagsForCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTagsForCertificateError {
@@ -1221,7 +1244,8 @@ impl Error for ListTagsForCertificateError {
             ListTagsForCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListTagsForCertificateError::Unknown(ref cause) => cause,
+            ListTagsForCertificateError::ParseError(ref cause) => cause,
+            ListTagsForCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1240,49 +1264,49 @@ pub enum RemoveTagsFromCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveTagsFromCertificateError {
-    pub fn from_body(body: &str) -> RemoveTagsFromCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveTagsFromCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        RemoveTagsFromCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "InvalidTagException" => {
-                        RemoveTagsFromCertificateError::InvalidTag(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        RemoveTagsFromCertificateError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RemoveTagsFromCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => RemoveTagsFromCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return RemoveTagsFromCertificateError::InvalidArn(String::from(error_message))
                 }
+                "InvalidTagException" => {
+                    return RemoveTagsFromCertificateError::InvalidTag(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return RemoveTagsFromCertificateError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RemoveTagsFromCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveTagsFromCertificateError::Unknown(String::from(body)),
         }
+        return RemoveTagsFromCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveTagsFromCertificateError {
     fn from(err: serde_json::error::Error) -> RemoveTagsFromCertificateError {
-        RemoveTagsFromCertificateError::Unknown(err.description().to_string())
+        RemoveTagsFromCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveTagsFromCertificateError {
@@ -1316,7 +1340,8 @@ impl Error for RemoveTagsFromCertificateError {
             RemoveTagsFromCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveTagsFromCertificateError::Unknown(ref cause) => cause,
+            RemoveTagsFromCertificateError::ParseError(ref cause) => cause,
+            RemoveTagsFromCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1335,49 +1360,49 @@ pub enum RequestCertificateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RequestCertificateError {
-    pub fn from_body(body: &str) -> RequestCertificateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RequestCertificateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        RequestCertificateError::InvalidArn(String::from(error_message))
-                    }
-                    "InvalidDomainValidationOptionsException" => {
-                        RequestCertificateError::InvalidDomainValidationOptions(String::from(
-                            error_message,
-                        ))
-                    }
-                    "LimitExceededException" => {
-                        RequestCertificateError::LimitExceeded(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        RequestCertificateError::Validation(error_message.to_string())
-                    }
-                    _ => RequestCertificateError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return RequestCertificateError::InvalidArn(String::from(error_message))
                 }
+                "InvalidDomainValidationOptionsException" => {
+                    return RequestCertificateError::InvalidDomainValidationOptions(String::from(
+                        error_message,
+                    ))
+                }
+                "LimitExceededException" => {
+                    return RequestCertificateError::LimitExceeded(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return RequestCertificateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RequestCertificateError::Unknown(String::from(body)),
         }
+        return RequestCertificateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RequestCertificateError {
     fn from(err: serde_json::error::Error) -> RequestCertificateError {
-        RequestCertificateError::Unknown(err.description().to_string())
+        RequestCertificateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RequestCertificateError {
@@ -1411,7 +1436,8 @@ impl Error for RequestCertificateError {
             RequestCertificateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RequestCertificateError::Unknown(ref cause) => cause,
+            RequestCertificateError::ParseError(ref cause) => cause,
+            RequestCertificateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1432,52 +1458,52 @@ pub enum ResendValidationEmailError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ResendValidationEmailError {
-    pub fn from_body(body: &str) -> ResendValidationEmailError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ResendValidationEmailError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        ResendValidationEmailError::InvalidArn(String::from(error_message))
-                    }
-                    "InvalidDomainValidationOptionsException" => {
-                        ResendValidationEmailError::InvalidDomainValidationOptions(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidStateException" => {
-                        ResendValidationEmailError::InvalidState(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ResendValidationEmailError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ResendValidationEmailError::Validation(error_message.to_string())
-                    }
-                    _ => ResendValidationEmailError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return ResendValidationEmailError::InvalidArn(String::from(error_message))
                 }
+                "InvalidDomainValidationOptionsException" => {
+                    return ResendValidationEmailError::InvalidDomainValidationOptions(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidStateException" => {
+                    return ResendValidationEmailError::InvalidState(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ResendValidationEmailError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ResendValidationEmailError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ResendValidationEmailError::Unknown(String::from(body)),
         }
+        return ResendValidationEmailError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ResendValidationEmailError {
     fn from(err: serde_json::error::Error) -> ResendValidationEmailError {
-        ResendValidationEmailError::Unknown(err.description().to_string())
+        ResendValidationEmailError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ResendValidationEmailError {
@@ -1512,7 +1538,8 @@ impl Error for ResendValidationEmailError {
             ResendValidationEmailError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ResendValidationEmailError::Unknown(ref cause) => cause,
+            ResendValidationEmailError::ParseError(ref cause) => cause,
+            ResendValidationEmailError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1533,50 +1560,52 @@ pub enum UpdateCertificateOptionsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateCertificateOptionsError {
-    pub fn from_body(body: &str) -> UpdateCertificateOptionsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateCertificateOptionsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidArnException" => {
-                        UpdateCertificateOptionsError::InvalidArn(String::from(error_message))
-                    }
-                    "InvalidStateException" => {
-                        UpdateCertificateOptionsError::InvalidState(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        UpdateCertificateOptionsError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        UpdateCertificateOptionsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateCertificateOptionsError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateCertificateOptionsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidArnException" => {
+                    return UpdateCertificateOptionsError::InvalidArn(String::from(error_message))
                 }
+                "InvalidStateException" => {
+                    return UpdateCertificateOptionsError::InvalidState(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return UpdateCertificateOptionsError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return UpdateCertificateOptionsError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateCertificateOptionsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateCertificateOptionsError::Unknown(String::from(body)),
         }
+        return UpdateCertificateOptionsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateCertificateOptionsError {
     fn from(err: serde_json::error::Error) -> UpdateCertificateOptionsError {
-        UpdateCertificateOptionsError::Unknown(err.description().to_string())
+        UpdateCertificateOptionsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateCertificateOptionsError {
@@ -1611,7 +1640,8 @@ impl Error for UpdateCertificateOptionsError {
             UpdateCertificateOptionsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateCertificateOptionsError::Unknown(ref cause) => cause,
+            UpdateCertificateOptionsError::ParseError(ref cause) => cause,
+            UpdateCertificateOptionsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1741,11 +1771,11 @@ impl Acm for AcmClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddTagsToCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddTagsToCertificateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -1766,11 +1796,12 @@ impl Acm for AcmClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteCertificateError::from_response(response))),
+                )
             }
         })
     }
@@ -1798,14 +1829,15 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<DescribeCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeCertificateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -1833,14 +1865,16 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<ExportCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ExportCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ExportCertificateError::from_response(response))),
+                )
             }
         })
     }
@@ -1868,14 +1902,16 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<GetCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetCertificateError::from_response(response))),
+                )
             }
         })
     }
@@ -1903,14 +1939,16 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<ImportCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ImportCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ImportCertificateError::from_response(response))),
+                )
             }
         })
     }
@@ -1938,14 +1976,16 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<ListCertificatesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListCertificatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListCertificatesError::from_response(response))),
+                )
             }
         })
     }
@@ -1973,14 +2013,15 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<ListTagsForCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTagsForCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListTagsForCertificateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2005,9 +2046,7 @@ impl Acm for AcmClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveTagsFromCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RemoveTagsFromCertificateError::from_response(response))
                 }))
             }
         })
@@ -2036,14 +2075,16 @@ impl Acm for AcmClient {
 
                     serde_json::from_str::<RequestCertificateResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RequestCertificateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(RequestCertificateError::from_response(response))),
+                )
             }
         })
     }
@@ -2064,11 +2105,11 @@ impl Acm for AcmClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ResendValidationEmailError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ResendValidationEmailError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2093,9 +2134,7 @@ impl Acm for AcmClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateCertificateOptionsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateCertificateOptionsError::from_response(response))
                 }))
             }
         })

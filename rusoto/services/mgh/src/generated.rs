@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AssociateCreatedArtifactRequest {
@@ -46,6 +46,7 @@ pub struct AssociateCreatedArtifactRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssociateCreatedArtifactResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -66,6 +67,7 @@ pub struct AssociateDiscoveredResourceRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AssociateDiscoveredResourceResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -80,6 +82,7 @@ pub struct CreateProgressUpdateStreamRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateProgressUpdateStreamResult {}
 
 /// <p>An ARN of the AWS cloud resource target receiving the migration (e.g., AMI, EC2 instance, RDS instance, etc.).</p>
@@ -106,6 +109,7 @@ pub struct DeleteProgressUpdateStreamRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteProgressUpdateStreamResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -116,6 +120,7 @@ pub struct DescribeApplicationStateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeApplicationStateResult {
     /// <p>Status of the application - Not Started, In-Progress, Complete.</p>
     #[serde(rename = "ApplicationStatus")]
@@ -138,6 +143,7 @@ pub struct DescribeMigrationTaskRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeMigrationTaskResult {
     /// <p>Object encapsulating information about the migration task.</p>
     #[serde(rename = "MigrationTask")]
@@ -163,6 +169,7 @@ pub struct DisassociateCreatedArtifactRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DisassociateCreatedArtifactResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -183,6 +190,7 @@ pub struct DisassociateDiscoveredResourceRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DisassociateDiscoveredResourceResult {}
 
 /// <p>Object representing the on-premises resource being migrated.</p>
@@ -212,6 +220,7 @@ pub struct ImportMigrationTaskRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ImportMigrationTaskResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -233,6 +242,7 @@ pub struct ListCreatedArtifactsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListCreatedArtifactsResult {
     /// <p>List of created artifacts up to the maximum number of results specified in the request.</p>
     #[serde(rename = "CreatedArtifactList")]
@@ -263,6 +273,7 @@ pub struct ListDiscoveredResourcesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListDiscoveredResourcesResult {
     /// <p>Returned list of discovered resources associated with the given MigrationTask.</p>
     #[serde(rename = "DiscoveredResourceList")]
@@ -291,6 +302,7 @@ pub struct ListMigrationTasksRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListMigrationTasksResult {
     /// <p>Lists the migration task's summary which includes: <code>MigrationTaskName</code>, <code>ProgressPercent</code>, <code>ProgressUpdateStream</code>, <code>Status</code>, and the <code>UpdateDateTime</code> for each task.</p>
     #[serde(rename = "MigrationTaskSummaryList")]
@@ -315,6 +327,7 @@ pub struct ListProgressUpdateStreamsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListProgressUpdateStreamsResult {
     /// <p>If there are more streams created than the max result, return the next token to be passed to the next call as a bookmark of where to start from.</p>
     #[serde(rename = "NextToken")]
@@ -328,6 +341,7 @@ pub struct ListProgressUpdateStreamsResult {
 
 /// <p>Represents a migration task in a migration tool.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MigrationTask {
     /// <p>Unique identifier that references the migration task.</p>
     #[serde(rename = "MigrationTaskName")]
@@ -353,6 +367,7 @@ pub struct MigrationTask {
 
 /// <p>MigrationTaskSummary includes <code>MigrationTaskName</code>, <code>ProgressPercent</code>, <code>ProgressUpdateStream</code>, <code>Status</code>, and <code>UpdateDateTime</code> for each task.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct MigrationTaskSummary {
     /// <p>Unique identifier that references the migration task.</p>
     #[serde(rename = "MigrationTaskName")]
@@ -395,6 +410,7 @@ pub struct NotifyApplicationStateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct NotifyApplicationStateResult {}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -421,10 +437,12 @@ pub struct NotifyMigrationTaskStateRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct NotifyMigrationTaskStateResult {}
 
 /// <p>Summary of the AWS resource used for access control that is implicitly linked to your AWS account.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ProgressUpdateStreamSummary {
     /// <p>The name of the ProgressUpdateStream. </p>
     #[serde(rename = "ProgressUpdateStreamName")]
@@ -450,6 +468,7 @@ pub struct PutResourceAttributesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutResourceAttributesResult {}
 
 /// <p><p>Attribute associated with a resource.</p> <p>Note the corresponding format required per type listed below:</p> <dl> <dt>IPV4</dt> <dd> <p> <code>x.x.x.x</code> </p> <p> <i>where x is an integer in the range [0,255]</i> </p> </dd> <dt>IPV6</dt> <dd> <p> <code>y : y : y : y : y : y : y : y</code> </p> <p> <i>where y is a hexadecimal between 0 and FFFF. [0, FFFF]</i> </p> </dd> <dt>MAC_ADDRESS</dt> <dd> <p> <code>^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$</code> </p> </dd> <dt>FQDN</dt> <dd> <p> <code>^[^&lt;&gt;{}\\/?,=\p{Cntrl}]{1,256}$</code> </p> </dd> </dl></p>
@@ -502,63 +521,69 @@ pub enum AssociateCreatedArtifactError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AssociateCreatedArtifactError {
-    pub fn from_body(body: &str) -> AssociateCreatedArtifactError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AssociateCreatedArtifactError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        AssociateCreatedArtifactError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => {
-                        AssociateCreatedArtifactError::DryRunOperation(String::from(error_message))
-                    }
-                    "InternalServerError" => AssociateCreatedArtifactError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        AssociateCreatedArtifactError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AssociateCreatedArtifactError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        AssociateCreatedArtifactError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        AssociateCreatedArtifactError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AssociateCreatedArtifactError::Validation(error_message.to_string())
-                    }
-                    _ => AssociateCreatedArtifactError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return AssociateCreatedArtifactError::AccessDenied(String::from(error_message))
                 }
+                "DryRunOperation" => {
+                    return AssociateCreatedArtifactError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return AssociateCreatedArtifactError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return AssociateCreatedArtifactError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AssociateCreatedArtifactError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return AssociateCreatedArtifactError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return AssociateCreatedArtifactError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AssociateCreatedArtifactError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AssociateCreatedArtifactError::Unknown(String::from(body)),
         }
+        return AssociateCreatedArtifactError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AssociateCreatedArtifactError {
     fn from(err: serde_json::error::Error) -> AssociateCreatedArtifactError {
-        AssociateCreatedArtifactError::Unknown(err.description().to_string())
+        AssociateCreatedArtifactError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AssociateCreatedArtifactError {
@@ -596,7 +621,8 @@ impl Error for AssociateCreatedArtifactError {
             AssociateCreatedArtifactError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AssociateCreatedArtifactError::Unknown(ref cause) => cause,
+            AssociateCreatedArtifactError::ParseError(ref cause) => cause,
+            AssociateCreatedArtifactError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -625,68 +651,78 @@ pub enum AssociateDiscoveredResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AssociateDiscoveredResourceError {
-    pub fn from_body(body: &str) -> AssociateDiscoveredResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AssociateDiscoveredResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        AssociateDiscoveredResourceError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => AssociateDiscoveredResourceError::DryRunOperation(
-                        String::from(error_message),
-                    ),
-                    "InternalServerError" => AssociateDiscoveredResourceError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        AssociateDiscoveredResourceError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyErrorException" => {
-                        AssociateDiscoveredResourceError::PolicyError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AssociateDiscoveredResourceError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        AssociateDiscoveredResourceError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        AssociateDiscoveredResourceError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        AssociateDiscoveredResourceError::Validation(error_message.to_string())
-                    }
-                    _ => AssociateDiscoveredResourceError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return AssociateDiscoveredResourceError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "DryRunOperation" => {
+                    return AssociateDiscoveredResourceError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return AssociateDiscoveredResourceError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return AssociateDiscoveredResourceError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "PolicyErrorException" => {
+                    return AssociateDiscoveredResourceError::PolicyError(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return AssociateDiscoveredResourceError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return AssociateDiscoveredResourceError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return AssociateDiscoveredResourceError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AssociateDiscoveredResourceError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AssociateDiscoveredResourceError::Unknown(String::from(body)),
         }
+        return AssociateDiscoveredResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AssociateDiscoveredResourceError {
     fn from(err: serde_json::error::Error) -> AssociateDiscoveredResourceError {
-        AssociateDiscoveredResourceError::Unknown(err.description().to_string())
+        AssociateDiscoveredResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AssociateDiscoveredResourceError {
@@ -725,7 +761,8 @@ impl Error for AssociateDiscoveredResourceError {
             AssociateDiscoveredResourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AssociateDiscoveredResourceError::Unknown(ref cause) => cause,
+            AssociateDiscoveredResourceError::ParseError(ref cause) => cause,
+            AssociateDiscoveredResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -750,60 +787,68 @@ pub enum CreateProgressUpdateStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateProgressUpdateStreamError {
-    pub fn from_body(body: &str) -> CreateProgressUpdateStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateProgressUpdateStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateProgressUpdateStreamError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => CreateProgressUpdateStreamError::DryRunOperation(
-                        String::from(error_message),
-                    ),
-                    "InternalServerError" => CreateProgressUpdateStreamError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        CreateProgressUpdateStreamError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        CreateProgressUpdateStreamError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        CreateProgressUpdateStreamError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        CreateProgressUpdateStreamError::Validation(error_message.to_string())
-                    }
-                    _ => CreateProgressUpdateStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateProgressUpdateStreamError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "DryRunOperation" => {
+                    return CreateProgressUpdateStreamError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return CreateProgressUpdateStreamError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return CreateProgressUpdateStreamError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return CreateProgressUpdateStreamError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return CreateProgressUpdateStreamError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateProgressUpdateStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateProgressUpdateStreamError::Unknown(String::from(body)),
         }
+        return CreateProgressUpdateStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateProgressUpdateStreamError {
     fn from(err: serde_json::error::Error) -> CreateProgressUpdateStreamError {
-        CreateProgressUpdateStreamError::Unknown(err.description().to_string())
+        CreateProgressUpdateStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateProgressUpdateStreamError {
@@ -840,7 +885,8 @@ impl Error for CreateProgressUpdateStreamError {
             CreateProgressUpdateStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateProgressUpdateStreamError::Unknown(ref cause) => cause,
+            CreateProgressUpdateStreamError::ParseError(ref cause) => cause,
+            CreateProgressUpdateStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -867,65 +913,73 @@ pub enum DeleteProgressUpdateStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteProgressUpdateStreamError {
-    pub fn from_body(body: &str) -> DeleteProgressUpdateStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteProgressUpdateStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DeleteProgressUpdateStreamError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => DeleteProgressUpdateStreamError::DryRunOperation(
-                        String::from(error_message),
-                    ),
-                    "InternalServerError" => DeleteProgressUpdateStreamError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        DeleteProgressUpdateStreamError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DeleteProgressUpdateStreamError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DeleteProgressUpdateStreamError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        DeleteProgressUpdateStreamError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DeleteProgressUpdateStreamError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteProgressUpdateStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DeleteProgressUpdateStreamError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "DryRunOperation" => {
+                    return DeleteProgressUpdateStreamError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return DeleteProgressUpdateStreamError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DeleteProgressUpdateStreamError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return DeleteProgressUpdateStreamError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DeleteProgressUpdateStreamError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return DeleteProgressUpdateStreamError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteProgressUpdateStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteProgressUpdateStreamError::Unknown(String::from(body)),
         }
+        return DeleteProgressUpdateStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteProgressUpdateStreamError {
     fn from(err: serde_json::error::Error) -> DeleteProgressUpdateStreamError {
-        DeleteProgressUpdateStreamError::Unknown(err.description().to_string())
+        DeleteProgressUpdateStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteProgressUpdateStreamError {
@@ -963,7 +1017,8 @@ impl Error for DeleteProgressUpdateStreamError {
             DeleteProgressUpdateStreamError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteProgressUpdateStreamError::Unknown(ref cause) => cause,
+            DeleteProgressUpdateStreamError::ParseError(ref cause) => cause,
+            DeleteProgressUpdateStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -988,58 +1043,62 @@ pub enum DescribeApplicationStateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeApplicationStateError {
-    pub fn from_body(body: &str) -> DescribeApplicationStateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeApplicationStateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DescribeApplicationStateError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => DescribeApplicationStateError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        DescribeApplicationStateError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyErrorException" => {
-                        DescribeApplicationStateError::PolicyError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeApplicationStateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeApplicationStateError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeApplicationStateError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeApplicationStateError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DescribeApplicationStateError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return DescribeApplicationStateError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DescribeApplicationStateError::InvalidInput(String::from(error_message))
+                }
+                "PolicyErrorException" => {
+                    return DescribeApplicationStateError::PolicyError(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DescribeApplicationStateError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeApplicationStateError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeApplicationStateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeApplicationStateError::Unknown(String::from(body)),
         }
+        return DescribeApplicationStateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeApplicationStateError {
     fn from(err: serde_json::error::Error) -> DescribeApplicationStateError {
-        DescribeApplicationStateError::Unknown(err.description().to_string())
+        DescribeApplicationStateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeApplicationStateError {
@@ -1076,7 +1135,8 @@ impl Error for DescribeApplicationStateError {
             DescribeApplicationStateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeApplicationStateError::Unknown(ref cause) => cause,
+            DescribeApplicationStateError::ParseError(ref cause) => cause,
+            DescribeApplicationStateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1099,53 +1159,57 @@ pub enum DescribeMigrationTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeMigrationTaskError {
-    pub fn from_body(body: &str) -> DescribeMigrationTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeMigrationTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DescribeMigrationTaskError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        DescribeMigrationTaskError::InternalServerError(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeMigrationTaskError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeMigrationTaskError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        DescribeMigrationTaskError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeMigrationTaskError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeMigrationTaskError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DescribeMigrationTaskError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return DescribeMigrationTaskError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DescribeMigrationTaskError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return DescribeMigrationTaskError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return DescribeMigrationTaskError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeMigrationTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeMigrationTaskError::Unknown(String::from(body)),
         }
+        return DescribeMigrationTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeMigrationTaskError {
     fn from(err: serde_json::error::Error) -> DescribeMigrationTaskError {
-        DescribeMigrationTaskError::Unknown(err.description().to_string())
+        DescribeMigrationTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeMigrationTaskError {
@@ -1181,7 +1245,8 @@ impl Error for DescribeMigrationTaskError {
             DescribeMigrationTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeMigrationTaskError::Unknown(ref cause) => cause,
+            DescribeMigrationTaskError::ParseError(ref cause) => cause,
+            DescribeMigrationTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1208,65 +1273,73 @@ pub enum DisassociateCreatedArtifactError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisassociateCreatedArtifactError {
-    pub fn from_body(body: &str) -> DisassociateCreatedArtifactError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisassociateCreatedArtifactError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DisassociateCreatedArtifactError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => DisassociateCreatedArtifactError::DryRunOperation(
-                        String::from(error_message),
-                    ),
-                    "InternalServerError" => DisassociateCreatedArtifactError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        DisassociateCreatedArtifactError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DisassociateCreatedArtifactError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DisassociateCreatedArtifactError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        DisassociateCreatedArtifactError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DisassociateCreatedArtifactError::Validation(error_message.to_string())
-                    }
-                    _ => DisassociateCreatedArtifactError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DisassociateCreatedArtifactError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "DryRunOperation" => {
+                    return DisassociateCreatedArtifactError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return DisassociateCreatedArtifactError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DisassociateCreatedArtifactError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return DisassociateCreatedArtifactError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DisassociateCreatedArtifactError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return DisassociateCreatedArtifactError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DisassociateCreatedArtifactError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DisassociateCreatedArtifactError::Unknown(String::from(body)),
         }
+        return DisassociateCreatedArtifactError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisassociateCreatedArtifactError {
     fn from(err: serde_json::error::Error) -> DisassociateCreatedArtifactError {
-        DisassociateCreatedArtifactError::Unknown(err.description().to_string())
+        DisassociateCreatedArtifactError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisassociateCreatedArtifactError {
@@ -1304,7 +1377,8 @@ impl Error for DisassociateCreatedArtifactError {
             DisassociateCreatedArtifactError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisassociateCreatedArtifactError::Unknown(ref cause) => cause,
+            DisassociateCreatedArtifactError::ParseError(ref cause) => cause,
+            DisassociateCreatedArtifactError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1331,67 +1405,75 @@ pub enum DisassociateDiscoveredResourceError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisassociateDiscoveredResourceError {
-    pub fn from_body(body: &str) -> DisassociateDiscoveredResourceError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisassociateDiscoveredResourceError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => DisassociateDiscoveredResourceError::AccessDenied(
-                        String::from(error_message),
-                    ),
-                    "DryRunOperation" => DisassociateDiscoveredResourceError::DryRunOperation(
-                        String::from(error_message),
-                    ),
-                    "InternalServerError" => {
-                        DisassociateDiscoveredResourceError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => DisassociateDiscoveredResourceError::InvalidInput(
-                        String::from(error_message),
-                    ),
-                    "ResourceNotFoundException" => {
-                        DisassociateDiscoveredResourceError::ResourceNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceUnavailableException" => {
-                        DisassociateDiscoveredResourceError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        DisassociateDiscoveredResourceError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DisassociateDiscoveredResourceError::Validation(error_message.to_string())
-                    }
-                    _ => DisassociateDiscoveredResourceError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DisassociateDiscoveredResourceError::AccessDenied(String::from(
+                        error_message,
+                    ))
                 }
+                "DryRunOperation" => {
+                    return DisassociateDiscoveredResourceError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return DisassociateDiscoveredResourceError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DisassociateDiscoveredResourceError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ResourceNotFoundException" => {
+                    return DisassociateDiscoveredResourceError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return DisassociateDiscoveredResourceError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return DisassociateDiscoveredResourceError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DisassociateDiscoveredResourceError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DisassociateDiscoveredResourceError::Unknown(String::from(body)),
         }
+        return DisassociateDiscoveredResourceError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisassociateDiscoveredResourceError {
     fn from(err: serde_json::error::Error) -> DisassociateDiscoveredResourceError {
-        DisassociateDiscoveredResourceError::Unknown(err.description().to_string())
+        DisassociateDiscoveredResourceError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisassociateDiscoveredResourceError {
@@ -1429,7 +1511,8 @@ impl Error for DisassociateDiscoveredResourceError {
             DisassociateDiscoveredResourceError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisassociateDiscoveredResourceError::Unknown(ref cause) => cause,
+            DisassociateDiscoveredResourceError::ParseError(ref cause) => cause,
+            DisassociateDiscoveredResourceError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1456,59 +1539,63 @@ pub enum ImportMigrationTaskError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ImportMigrationTaskError {
-    pub fn from_body(body: &str) -> ImportMigrationTaskError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ImportMigrationTaskError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ImportMigrationTaskError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => {
-                        ImportMigrationTaskError::DryRunOperation(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        ImportMigrationTaskError::InternalServerError(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ImportMigrationTaskError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ImportMigrationTaskError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ImportMigrationTaskError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperation" => {
-                        ImportMigrationTaskError::UnauthorizedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ImportMigrationTaskError::Validation(error_message.to_string())
-                    }
-                    _ => ImportMigrationTaskError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ImportMigrationTaskError::AccessDenied(String::from(error_message))
                 }
+                "DryRunOperation" => {
+                    return ImportMigrationTaskError::DryRunOperation(String::from(error_message))
+                }
+                "InternalServerError" => {
+                    return ImportMigrationTaskError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ImportMigrationTaskError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ImportMigrationTaskError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return ImportMigrationTaskError::ServiceUnavailable(String::from(error_message))
+                }
+                "UnauthorizedOperation" => {
+                    return ImportMigrationTaskError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ImportMigrationTaskError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ImportMigrationTaskError::Unknown(String::from(body)),
         }
+        return ImportMigrationTaskError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ImportMigrationTaskError {
     fn from(err: serde_json::error::Error) -> ImportMigrationTaskError {
-        ImportMigrationTaskError::Unknown(err.description().to_string())
+        ImportMigrationTaskError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ImportMigrationTaskError {
@@ -1546,7 +1633,8 @@ impl Error for ImportMigrationTaskError {
             ImportMigrationTaskError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ImportMigrationTaskError::Unknown(ref cause) => cause,
+            ImportMigrationTaskError::ParseError(ref cause) => cause,
+            ImportMigrationTaskError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1569,53 +1657,57 @@ pub enum ListCreatedArtifactsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListCreatedArtifactsError {
-    pub fn from_body(body: &str) -> ListCreatedArtifactsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListCreatedArtifactsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListCreatedArtifactsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        ListCreatedArtifactsError::InternalServerError(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListCreatedArtifactsError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListCreatedArtifactsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ListCreatedArtifactsError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListCreatedArtifactsError::Validation(error_message.to_string())
-                    }
-                    _ => ListCreatedArtifactsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListCreatedArtifactsError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return ListCreatedArtifactsError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListCreatedArtifactsError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ListCreatedArtifactsError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return ListCreatedArtifactsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListCreatedArtifactsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListCreatedArtifactsError::Unknown(String::from(body)),
         }
+        return ListCreatedArtifactsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListCreatedArtifactsError {
     fn from(err: serde_json::error::Error) -> ListCreatedArtifactsError {
-        ListCreatedArtifactsError::Unknown(err.description().to_string())
+        ListCreatedArtifactsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListCreatedArtifactsError {
@@ -1651,7 +1743,8 @@ impl Error for ListCreatedArtifactsError {
             ListCreatedArtifactsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListCreatedArtifactsError::Unknown(ref cause) => cause,
+            ListCreatedArtifactsError::ParseError(ref cause) => cause,
+            ListCreatedArtifactsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1674,55 +1767,59 @@ pub enum ListDiscoveredResourcesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListDiscoveredResourcesError {
-    pub fn from_body(body: &str) -> ListDiscoveredResourcesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListDiscoveredResourcesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListDiscoveredResourcesError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => ListDiscoveredResourcesError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        ListDiscoveredResourcesError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListDiscoveredResourcesError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ListDiscoveredResourcesError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListDiscoveredResourcesError::Validation(error_message.to_string())
-                    }
-                    _ => ListDiscoveredResourcesError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListDiscoveredResourcesError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return ListDiscoveredResourcesError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListDiscoveredResourcesError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ListDiscoveredResourcesError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return ListDiscoveredResourcesError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListDiscoveredResourcesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListDiscoveredResourcesError::Unknown(String::from(body)),
         }
+        return ListDiscoveredResourcesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListDiscoveredResourcesError {
     fn from(err: serde_json::error::Error) -> ListDiscoveredResourcesError {
-        ListDiscoveredResourcesError::Unknown(err.description().to_string())
+        ListDiscoveredResourcesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListDiscoveredResourcesError {
@@ -1758,7 +1855,8 @@ impl Error for ListDiscoveredResourcesError {
             ListDiscoveredResourcesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListDiscoveredResourcesError::Unknown(ref cause) => cause,
+            ListDiscoveredResourcesError::ParseError(ref cause) => cause,
+            ListDiscoveredResourcesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1783,56 +1881,56 @@ pub enum ListMigrationTasksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListMigrationTasksError {
-    pub fn from_body(body: &str) -> ListMigrationTasksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListMigrationTasksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListMigrationTasksError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        ListMigrationTasksError::InternalServerError(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListMigrationTasksError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyErrorException" => {
-                        ListMigrationTasksError::PolicyError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListMigrationTasksError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ListMigrationTasksError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListMigrationTasksError::Validation(error_message.to_string())
-                    }
-                    _ => ListMigrationTasksError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListMigrationTasksError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return ListMigrationTasksError::InternalServerError(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListMigrationTasksError::InvalidInput(String::from(error_message))
+                }
+                "PolicyErrorException" => {
+                    return ListMigrationTasksError::PolicyError(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ListMigrationTasksError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return ListMigrationTasksError::ServiceUnavailable(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListMigrationTasksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListMigrationTasksError::Unknown(String::from(body)),
         }
+        return ListMigrationTasksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListMigrationTasksError {
     fn from(err: serde_json::error::Error) -> ListMigrationTasksError {
-        ListMigrationTasksError::Unknown(err.description().to_string())
+        ListMigrationTasksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListMigrationTasksError {
@@ -1869,7 +1967,8 @@ impl Error for ListMigrationTasksError {
             ListMigrationTasksError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListMigrationTasksError::Unknown(ref cause) => cause,
+            ListMigrationTasksError::ParseError(ref cause) => cause,
+            ListMigrationTasksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1890,52 +1989,54 @@ pub enum ListProgressUpdateStreamsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListProgressUpdateStreamsError {
-    pub fn from_body(body: &str) -> ListProgressUpdateStreamsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListProgressUpdateStreamsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListProgressUpdateStreamsError::AccessDenied(String::from(error_message))
-                    }
-                    "InternalServerError" => ListProgressUpdateStreamsError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        ListProgressUpdateStreamsError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        ListProgressUpdateStreamsError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListProgressUpdateStreamsError::Validation(error_message.to_string())
-                    }
-                    _ => ListProgressUpdateStreamsError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListProgressUpdateStreamsError::AccessDenied(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return ListProgressUpdateStreamsError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListProgressUpdateStreamsError::InvalidInput(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return ListProgressUpdateStreamsError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListProgressUpdateStreamsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListProgressUpdateStreamsError::Unknown(String::from(body)),
         }
+        return ListProgressUpdateStreamsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListProgressUpdateStreamsError {
     fn from(err: serde_json::error::Error) -> ListProgressUpdateStreamsError {
-        ListProgressUpdateStreamsError::Unknown(err.description().to_string())
+        ListProgressUpdateStreamsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListProgressUpdateStreamsError {
@@ -1970,7 +2071,8 @@ impl Error for ListProgressUpdateStreamsError {
             ListProgressUpdateStreamsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListProgressUpdateStreamsError::Unknown(ref cause) => cause,
+            ListProgressUpdateStreamsError::ParseError(ref cause) => cause,
+            ListProgressUpdateStreamsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1999,62 +2101,70 @@ pub enum NotifyApplicationStateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl NotifyApplicationStateError {
-    pub fn from_body(body: &str) -> NotifyApplicationStateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> NotifyApplicationStateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        NotifyApplicationStateError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => {
-                        NotifyApplicationStateError::DryRunOperation(String::from(error_message))
-                    }
-                    "InternalServerError" => NotifyApplicationStateError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        NotifyApplicationStateError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyErrorException" => {
-                        NotifyApplicationStateError::PolicyError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        NotifyApplicationStateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        NotifyApplicationStateError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperation" => NotifyApplicationStateError::UnauthorizedOperation(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        NotifyApplicationStateError::Validation(error_message.to_string())
-                    }
-                    _ => NotifyApplicationStateError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return NotifyApplicationStateError::AccessDenied(String::from(error_message))
                 }
+                "DryRunOperation" => {
+                    return NotifyApplicationStateError::DryRunOperation(String::from(error_message))
+                }
+                "InternalServerError" => {
+                    return NotifyApplicationStateError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return NotifyApplicationStateError::InvalidInput(String::from(error_message))
+                }
+                "PolicyErrorException" => {
+                    return NotifyApplicationStateError::PolicyError(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return NotifyApplicationStateError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return NotifyApplicationStateError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return NotifyApplicationStateError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return NotifyApplicationStateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => NotifyApplicationStateError::Unknown(String::from(body)),
         }
+        return NotifyApplicationStateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for NotifyApplicationStateError {
     fn from(err: serde_json::error::Error) -> NotifyApplicationStateError {
-        NotifyApplicationStateError::Unknown(err.description().to_string())
+        NotifyApplicationStateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for NotifyApplicationStateError {
@@ -2093,7 +2203,8 @@ impl Error for NotifyApplicationStateError {
             NotifyApplicationStateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            NotifyApplicationStateError::Unknown(ref cause) => cause,
+            NotifyApplicationStateError::ParseError(ref cause) => cause,
+            NotifyApplicationStateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2120,63 +2231,69 @@ pub enum NotifyMigrationTaskStateError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl NotifyMigrationTaskStateError {
-    pub fn from_body(body: &str) -> NotifyMigrationTaskStateError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> NotifyMigrationTaskStateError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        NotifyMigrationTaskStateError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => {
-                        NotifyMigrationTaskStateError::DryRunOperation(String::from(error_message))
-                    }
-                    "InternalServerError" => NotifyMigrationTaskStateError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "InvalidInputException" => {
-                        NotifyMigrationTaskStateError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        NotifyMigrationTaskStateError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        NotifyMigrationTaskStateError::ServiceUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnauthorizedOperation" => {
-                        NotifyMigrationTaskStateError::UnauthorizedOperation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        NotifyMigrationTaskStateError::Validation(error_message.to_string())
-                    }
-                    _ => NotifyMigrationTaskStateError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return NotifyMigrationTaskStateError::AccessDenied(String::from(error_message))
                 }
+                "DryRunOperation" => {
+                    return NotifyMigrationTaskStateError::DryRunOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return NotifyMigrationTaskStateError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return NotifyMigrationTaskStateError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return NotifyMigrationTaskStateError::ResourceNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceUnavailableException" => {
+                    return NotifyMigrationTaskStateError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return NotifyMigrationTaskStateError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return NotifyMigrationTaskStateError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => NotifyMigrationTaskStateError::Unknown(String::from(body)),
         }
+        return NotifyMigrationTaskStateError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for NotifyMigrationTaskStateError {
     fn from(err: serde_json::error::Error) -> NotifyMigrationTaskStateError {
-        NotifyMigrationTaskStateError::Unknown(err.description().to_string())
+        NotifyMigrationTaskStateError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for NotifyMigrationTaskStateError {
@@ -2214,7 +2331,8 @@ impl Error for NotifyMigrationTaskStateError {
             NotifyMigrationTaskStateError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            NotifyMigrationTaskStateError::Unknown(ref cause) => cause,
+            NotifyMigrationTaskStateError::ParseError(ref cause) => cause,
+            NotifyMigrationTaskStateError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2241,59 +2359,65 @@ pub enum PutResourceAttributesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutResourceAttributesError {
-    pub fn from_body(body: &str) -> PutResourceAttributesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutResourceAttributesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        PutResourceAttributesError::AccessDenied(String::from(error_message))
-                    }
-                    "DryRunOperation" => {
-                        PutResourceAttributesError::DryRunOperation(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        PutResourceAttributesError::InternalServerError(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        PutResourceAttributesError::InvalidInput(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        PutResourceAttributesError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ServiceUnavailableException" => {
-                        PutResourceAttributesError::ServiceUnavailable(String::from(error_message))
-                    }
-                    "UnauthorizedOperation" => PutResourceAttributesError::UnauthorizedOperation(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        PutResourceAttributesError::Validation(error_message.to_string())
-                    }
-                    _ => PutResourceAttributesError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return PutResourceAttributesError::AccessDenied(String::from(error_message))
                 }
+                "DryRunOperation" => {
+                    return PutResourceAttributesError::DryRunOperation(String::from(error_message))
+                }
+                "InternalServerError" => {
+                    return PutResourceAttributesError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return PutResourceAttributesError::InvalidInput(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return PutResourceAttributesError::ResourceNotFound(String::from(error_message))
+                }
+                "ServiceUnavailableException" => {
+                    return PutResourceAttributesError::ServiceUnavailable(String::from(
+                        error_message,
+                    ))
+                }
+                "UnauthorizedOperation" => {
+                    return PutResourceAttributesError::UnauthorizedOperation(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return PutResourceAttributesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutResourceAttributesError::Unknown(String::from(body)),
         }
+        return PutResourceAttributesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutResourceAttributesError {
     fn from(err: serde_json::error::Error) -> PutResourceAttributesError {
-        PutResourceAttributesError::Unknown(err.description().to_string())
+        PutResourceAttributesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutResourceAttributesError {
@@ -2331,7 +2455,8 @@ impl Error for PutResourceAttributesError {
             PutResourceAttributesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutResourceAttributesError::Unknown(ref cause) => cause,
+            PutResourceAttributesError::ParseError(ref cause) => cause,
+            PutResourceAttributesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2492,13 +2617,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<AssociateCreatedArtifactResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AssociateCreatedArtifactError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AssociateCreatedArtifactError::from_response(response))
                 }))
             }
         })
@@ -2530,13 +2654,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<AssociateDiscoveredResourceResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AssociateDiscoveredResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(AssociateDiscoveredResourceError::from_response(response))
                 }))
             }
         })
@@ -2565,13 +2688,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<CreateProgressUpdateStreamResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateProgressUpdateStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateProgressUpdateStreamError::from_response(response))
                 }))
             }
         })
@@ -2600,13 +2722,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<DeleteProgressUpdateStreamResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteProgressUpdateStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteProgressUpdateStreamError::from_response(response))
                 }))
             }
         })
@@ -2635,13 +2756,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<DescribeApplicationStateResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeApplicationStateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeApplicationStateError::from_response(response))
                 }))
             }
         })
@@ -2670,14 +2790,15 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<DescribeMigrationTaskResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeMigrationTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeMigrationTaskError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2708,13 +2829,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<DisassociateCreatedArtifactResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisassociateCreatedArtifactError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DisassociateCreatedArtifactError::from_response(response))
                 }))
             }
         })
@@ -2747,13 +2867,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<DisassociateDiscoveredResourceResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisassociateDiscoveredResourceError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DisassociateDiscoveredResourceError::from_response(response))
                 }))
             }
         })
@@ -2782,14 +2901,15 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<ImportMigrationTaskResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ImportMigrationTaskError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ImportMigrationTaskError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2817,14 +2937,15 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<ListCreatedArtifactsResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListCreatedArtifactsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListCreatedArtifactsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2852,13 +2973,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<ListDiscoveredResourcesResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListDiscoveredResourcesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListDiscoveredResourcesError::from_response(response))
                 }))
             }
         })
@@ -2887,14 +3007,16 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<ListMigrationTasksResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListMigrationTasksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListMigrationTasksError::from_response(response))),
+                )
             }
         })
     }
@@ -2922,13 +3044,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<ListProgressUpdateStreamsResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListProgressUpdateStreamsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListProgressUpdateStreamsError::from_response(response))
                 }))
             }
         })
@@ -2957,14 +3078,15 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<NotifyApplicationStateResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(NotifyApplicationStateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(NotifyApplicationStateError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2992,13 +3114,12 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<NotifyMigrationTaskStateResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(NotifyMigrationTaskStateError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(NotifyMigrationTaskStateError::from_response(response))
                 }))
             }
         })
@@ -3027,14 +3148,15 @@ impl MigrationHub for MigrationHubClient {
 
                     serde_json::from_str::<PutResourceAttributesResult>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutResourceAttributesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(PutResourceAttributesError::from_response(response))
+                    }),
+                )
             }
         })
     }

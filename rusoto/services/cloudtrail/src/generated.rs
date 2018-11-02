@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Specifies the tags to add to a trail.</p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -42,6 +42,7 @@ pub struct AddTagsRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddTagsResponse {}
 
 /// <p>Specifies the settings for each trail.</p>
@@ -89,6 +90,7 @@ pub struct CreateTrailRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateTrailResponse {
     /// <p>Specifies the Amazon Resource Name (ARN) of the log group to which CloudTrail logs will be delivered.</p>
     #[serde(rename = "CloudWatchLogsLogGroupArn")]
@@ -159,6 +161,7 @@ pub struct DeleteTrailRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeleteTrailResponse {}
 
 /// <p>Returns information about the trail.</p>
@@ -176,6 +179,7 @@ pub struct DescribeTrailsRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeTrailsResponse {
     /// <p>The list of trail objects.</p>
     #[serde(rename = "trailList")]
@@ -185,6 +189,7 @@ pub struct DescribeTrailsResponse {
 
 /// <p>Contains information about an event that was returned by a lookup request. The result includes a representation of a CloudTrail event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Event {
     /// <p>A JSON string that contains a representation of the event returned.</p>
     #[serde(rename = "CloudTrailEvent")]
@@ -241,6 +246,7 @@ pub struct GetEventSelectorsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetEventSelectorsResponse {
     /// <p>The event selectors that are configured for the trail.</p>
     #[serde(rename = "EventSelectors")]
@@ -262,6 +268,7 @@ pub struct GetTrailStatusRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetTrailStatusResponse {
     /// <p>Whether the CloudTrail is currently logging AWS API calls.</p>
     #[serde(rename = "IsLogging")]
@@ -352,6 +359,7 @@ pub struct ListPublicKeysRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListPublicKeysResponse {
     /// <p>Reserved for future use.</p>
     #[serde(rename = "NextToken")]
@@ -377,6 +385,7 @@ pub struct ListTagsRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTagsResponse {
     /// <p>Reserved for future use.</p>
     #[serde(rename = "NextToken")]
@@ -426,6 +435,7 @@ pub struct LookupEventsRequest {
 
 /// <p>Contains a response to a LookupEvents action.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LookupEventsResponse {
     /// <p>A list of events returned based on the lookup attributes specified and the CloudTrail event. The events list is sorted by time. The most recent event is listed first.</p>
     #[serde(rename = "Events")]
@@ -439,6 +449,7 @@ pub struct LookupEventsResponse {
 
 /// <p>Contains information about a returned public key.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PublicKey {
     /// <p>The fingerprint of the public key.</p>
     #[serde(rename = "Fingerprint")]
@@ -457,7 +468,7 @@ pub struct PublicKey {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub value: Option<Vec<u8>>,
 }
@@ -473,6 +484,7 @@ pub struct PutEventSelectorsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PutEventSelectorsResponse {
     /// <p>Specifies the event selectors configured for your trail.</p>
     #[serde(rename = "EventSelectors")]
@@ -498,10 +510,12 @@ pub struct RemoveTagsRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RemoveTagsResponse {}
 
 /// <p>Specifies the type and name of a resource referenced by an event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Resource {
     /// <p>The name of the resource referenced by the event returned. These are user-created names whose values will depend on the environment. For example, the resource name might be "auto-scaling-test-group" for an Auto Scaling Group or "i-1234567" for an EC2 Instance.</p>
     #[serde(rename = "ResourceName")]
@@ -515,6 +529,7 @@ pub struct Resource {
 
 /// <p>A resource tag.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResourceTag {
     /// <p>Specifies the ARN of the resource.</p>
     #[serde(rename = "ResourceId")]
@@ -536,6 +551,7 @@ pub struct StartLoggingRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StartLoggingResponse {}
 
 /// <p>Passes the request to CloudTrail to stop logging AWS API calls for the specified account.</p>
@@ -548,6 +564,7 @@ pub struct StopLoggingRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StopLoggingResponse {}
 
 /// <p>A custom key-value pair associated with a resource such as a CloudTrail trail.</p>
@@ -564,6 +581,7 @@ pub struct Tag {
 
 /// <p>The settings for a trail.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Trail {
     /// <p>Specifies an Amazon Resource Name (ARN), a unique identifier that represents the log group to which CloudTrail logs will be delivered.</p>
     #[serde(rename = "CloudWatchLogsLogGroupArn")]
@@ -665,6 +683,7 @@ pub struct UpdateTrailRequest {
 
 /// <p>Returns the objects or data listed below if successful. Otherwise, returns an error.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateTrailResponse {
     /// <p>Specifies the Amazon Resource Name (ARN) of the log group to which CloudTrail logs will be delivered.</p>
     #[serde(rename = "CloudWatchLogsLogGroupArn")]
@@ -737,60 +756,60 @@ pub enum AddTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddTagsError {
-    pub fn from_body(body: &str) -> AddTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CloudTrailARNInvalidException" => {
-                        AddTagsError::CloudTrailARNInvalid(String::from(error_message))
-                    }
-                    "InvalidTagParameterException" => {
-                        AddTagsError::InvalidTagParameter(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        AddTagsError::InvalidTrailName(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        AddTagsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        AddTagsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ResourceTypeNotSupportedException" => {
-                        AddTagsError::ResourceTypeNotSupported(String::from(error_message))
-                    }
-                    "TagsLimitExceededException" => {
-                        AddTagsError::TagsLimitExceeded(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        AddTagsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => AddTagsError::Validation(error_message.to_string()),
-                    _ => AddTagsError::Unknown(String::from(body)),
+            match *error_type {
+                "CloudTrailARNInvalidException" => {
+                    return AddTagsError::CloudTrailARNInvalid(String::from(error_message))
                 }
+                "InvalidTagParameterException" => {
+                    return AddTagsError::InvalidTagParameter(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return AddTagsError::InvalidTrailName(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return AddTagsError::OperationNotPermitted(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return AddTagsError::ResourceNotFound(String::from(error_message))
+                }
+                "ResourceTypeNotSupportedException" => {
+                    return AddTagsError::ResourceTypeNotSupported(String::from(error_message))
+                }
+                "TagsLimitExceededException" => {
+                    return AddTagsError::TagsLimitExceeded(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return AddTagsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => return AddTagsError::Validation(error_message.to_string()),
+                _ => {}
             }
-            Err(_) => AddTagsError::Unknown(String::from(body)),
         }
+        return AddTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddTagsError {
     fn from(err: serde_json::error::Error) -> AddTagsError {
-        AddTagsError::Unknown(err.description().to_string())
+        AddTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddTagsError {
@@ -827,7 +846,8 @@ impl Error for AddTagsError {
             AddTagsError::Validation(ref cause) => cause,
             AddTagsError::Credentials(ref err) => err.description(),
             AddTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AddTagsError::Unknown(ref cause) => cause,
+            AddTagsError::ParseError(ref cause) => cause,
+            AddTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -882,103 +902,111 @@ pub enum CreateTrailError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateTrailError {
-    pub fn from_body(body: &str) -> CreateTrailError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateTrailError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CloudWatchLogsDeliveryUnavailableException" => {
-                        CreateTrailError::CloudWatchLogsDeliveryUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InsufficientEncryptionPolicyException" => {
-                        CreateTrailError::InsufficientEncryptionPolicy(String::from(error_message))
-                    }
-                    "InsufficientS3BucketPolicyException" => {
-                        CreateTrailError::InsufficientS3BucketPolicy(String::from(error_message))
-                    }
-                    "InsufficientSnsTopicPolicyException" => {
-                        CreateTrailError::InsufficientSnsTopicPolicy(String::from(error_message))
-                    }
-                    "InvalidCloudWatchLogsLogGroupArnException" => {
-                        CreateTrailError::InvalidCloudWatchLogsLogGroupArn(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCloudWatchLogsRoleArnException" => {
-                        CreateTrailError::InvalidCloudWatchLogsRoleArn(String::from(error_message))
-                    }
-                    "InvalidKmsKeyIdException" => {
-                        CreateTrailError::InvalidKmsKeyId(String::from(error_message))
-                    }
-                    "InvalidParameterCombinationException" => {
-                        CreateTrailError::InvalidParameterCombination(String::from(error_message))
-                    }
-                    "InvalidS3BucketNameException" => {
-                        CreateTrailError::InvalidS3BucketName(String::from(error_message))
-                    }
-                    "InvalidS3PrefixException" => {
-                        CreateTrailError::InvalidS3Prefix(String::from(error_message))
-                    }
-                    "InvalidSnsTopicNameException" => {
-                        CreateTrailError::InvalidSnsTopicName(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        CreateTrailError::InvalidTrailName(String::from(error_message))
-                    }
-                    "KmsException" => CreateTrailError::Kms(String::from(error_message)),
-                    "KmsKeyDisabledException" => {
-                        CreateTrailError::KmsKeyDisabled(String::from(error_message))
-                    }
-                    "KmsKeyNotFoundException" => {
-                        CreateTrailError::KmsKeyNotFound(String::from(error_message))
-                    }
-                    "MaximumNumberOfTrailsExceededException" => {
-                        CreateTrailError::MaximumNumberOfTrailsExceeded(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        CreateTrailError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "S3BucketDoesNotExistException" => {
-                        CreateTrailError::S3BucketDoesNotExist(String::from(error_message))
-                    }
-                    "TrailAlreadyExistsException" => {
-                        CreateTrailError::TrailAlreadyExists(String::from(error_message))
-                    }
-                    "TrailNotProvidedException" => {
-                        CreateTrailError::TrailNotProvided(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        CreateTrailError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateTrailError::Validation(error_message.to_string())
-                    }
-                    _ => CreateTrailError::Unknown(String::from(body)),
+            match *error_type {
+                "CloudWatchLogsDeliveryUnavailableException" => {
+                    return CreateTrailError::CloudWatchLogsDeliveryUnavailable(String::from(
+                        error_message,
+                    ))
                 }
+                "InsufficientEncryptionPolicyException" => {
+                    return CreateTrailError::InsufficientEncryptionPolicy(String::from(
+                        error_message,
+                    ))
+                }
+                "InsufficientS3BucketPolicyException" => {
+                    return CreateTrailError::InsufficientS3BucketPolicy(String::from(error_message))
+                }
+                "InsufficientSnsTopicPolicyException" => {
+                    return CreateTrailError::InsufficientSnsTopicPolicy(String::from(error_message))
+                }
+                "InvalidCloudWatchLogsLogGroupArnException" => {
+                    return CreateTrailError::InvalidCloudWatchLogsLogGroupArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCloudWatchLogsRoleArnException" => {
+                    return CreateTrailError::InvalidCloudWatchLogsRoleArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidKmsKeyIdException" => {
+                    return CreateTrailError::InvalidKmsKeyId(String::from(error_message))
+                }
+                "InvalidParameterCombinationException" => {
+                    return CreateTrailError::InvalidParameterCombination(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidS3BucketNameException" => {
+                    return CreateTrailError::InvalidS3BucketName(String::from(error_message))
+                }
+                "InvalidS3PrefixException" => {
+                    return CreateTrailError::InvalidS3Prefix(String::from(error_message))
+                }
+                "InvalidSnsTopicNameException" => {
+                    return CreateTrailError::InvalidSnsTopicName(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return CreateTrailError::InvalidTrailName(String::from(error_message))
+                }
+                "KmsException" => return CreateTrailError::Kms(String::from(error_message)),
+                "KmsKeyDisabledException" => {
+                    return CreateTrailError::KmsKeyDisabled(String::from(error_message))
+                }
+                "KmsKeyNotFoundException" => {
+                    return CreateTrailError::KmsKeyNotFound(String::from(error_message))
+                }
+                "MaximumNumberOfTrailsExceededException" => {
+                    return CreateTrailError::MaximumNumberOfTrailsExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "OperationNotPermittedException" => {
+                    return CreateTrailError::OperationNotPermitted(String::from(error_message))
+                }
+                "S3BucketDoesNotExistException" => {
+                    return CreateTrailError::S3BucketDoesNotExist(String::from(error_message))
+                }
+                "TrailAlreadyExistsException" => {
+                    return CreateTrailError::TrailAlreadyExists(String::from(error_message))
+                }
+                "TrailNotProvidedException" => {
+                    return CreateTrailError::TrailNotProvided(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return CreateTrailError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateTrailError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateTrailError::Unknown(String::from(body)),
         }
+        return CreateTrailError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateTrailError {
     fn from(err: serde_json::error::Error) -> CreateTrailError {
-        CreateTrailError::Unknown(err.description().to_string())
+        CreateTrailError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateTrailError {
@@ -1028,7 +1056,8 @@ impl Error for CreateTrailError {
             CreateTrailError::Validation(ref cause) => cause,
             CreateTrailError::Credentials(ref err) => err.description(),
             CreateTrailError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateTrailError::Unknown(ref cause) => cause,
+            CreateTrailError::ParseError(ref cause) => cause,
+            CreateTrailError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1047,47 +1076,47 @@ pub enum DeleteTrailError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteTrailError {
-    pub fn from_body(body: &str) -> DeleteTrailError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteTrailError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidHomeRegionException" => {
-                        DeleteTrailError::InvalidHomeRegion(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        DeleteTrailError::InvalidTrailName(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        DeleteTrailError::TrailNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteTrailError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteTrailError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidHomeRegionException" => {
+                    return DeleteTrailError::InvalidHomeRegion(String::from(error_message))
                 }
+                "InvalidTrailNameException" => {
+                    return DeleteTrailError::InvalidTrailName(String::from(error_message))
+                }
+                "TrailNotFoundException" => {
+                    return DeleteTrailError::TrailNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteTrailError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteTrailError::Unknown(String::from(body)),
         }
+        return DeleteTrailError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteTrailError {
     fn from(err: serde_json::error::Error) -> DeleteTrailError {
-        DeleteTrailError::Unknown(err.description().to_string())
+        DeleteTrailError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteTrailError {
@@ -1119,7 +1148,8 @@ impl Error for DeleteTrailError {
             DeleteTrailError::Validation(ref cause) => cause,
             DeleteTrailError::Credentials(ref err) => err.description(),
             DeleteTrailError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeleteTrailError::Unknown(ref cause) => cause,
+            DeleteTrailError::ParseError(ref cause) => cause,
+            DeleteTrailError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1136,44 +1166,44 @@ pub enum DescribeTrailsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeTrailsError {
-    pub fn from_body(body: &str) -> DescribeTrailsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeTrailsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "OperationNotPermittedException" => {
-                        DescribeTrailsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        DescribeTrailsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeTrailsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeTrailsError::Unknown(String::from(body)),
+            match *error_type {
+                "OperationNotPermittedException" => {
+                    return DescribeTrailsError::OperationNotPermitted(String::from(error_message))
                 }
+                "UnsupportedOperationException" => {
+                    return DescribeTrailsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeTrailsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeTrailsError::Unknown(String::from(body)),
         }
+        return DescribeTrailsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeTrailsError {
     fn from(err: serde_json::error::Error) -> DescribeTrailsError {
-        DescribeTrailsError::Unknown(err.description().to_string())
+        DescribeTrailsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeTrailsError {
@@ -1204,7 +1234,8 @@ impl Error for DescribeTrailsError {
             DescribeTrailsError::Validation(ref cause) => cause,
             DescribeTrailsError::Credentials(ref err) => err.description(),
             DescribeTrailsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeTrailsError::Unknown(ref cause) => cause,
+            DescribeTrailsError::ParseError(ref cause) => cause,
+            DescribeTrailsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1225,50 +1256,52 @@ pub enum GetEventSelectorsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetEventSelectorsError {
-    pub fn from_body(body: &str) -> GetEventSelectorsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetEventSelectorsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidTrailNameException" => {
-                        GetEventSelectorsError::InvalidTrailName(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        GetEventSelectorsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        GetEventSelectorsError::TrailNotFound(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        GetEventSelectorsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetEventSelectorsError::Validation(error_message.to_string())
-                    }
-                    _ => GetEventSelectorsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidTrailNameException" => {
+                    return GetEventSelectorsError::InvalidTrailName(String::from(error_message))
                 }
+                "OperationNotPermittedException" => {
+                    return GetEventSelectorsError::OperationNotPermitted(String::from(
+                        error_message,
+                    ))
+                }
+                "TrailNotFoundException" => {
+                    return GetEventSelectorsError::TrailNotFound(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return GetEventSelectorsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetEventSelectorsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetEventSelectorsError::Unknown(String::from(body)),
         }
+        return GetEventSelectorsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetEventSelectorsError {
     fn from(err: serde_json::error::Error) -> GetEventSelectorsError {
-        GetEventSelectorsError::Unknown(err.description().to_string())
+        GetEventSelectorsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetEventSelectorsError {
@@ -1303,7 +1336,8 @@ impl Error for GetEventSelectorsError {
             GetEventSelectorsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            GetEventSelectorsError::Unknown(ref cause) => cause,
+            GetEventSelectorsError::ParseError(ref cause) => cause,
+            GetEventSelectorsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1320,44 +1354,44 @@ pub enum GetTrailStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetTrailStatusError {
-    pub fn from_body(body: &str) -> GetTrailStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetTrailStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidTrailNameException" => {
-                        GetTrailStatusError::InvalidTrailName(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        GetTrailStatusError::TrailNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetTrailStatusError::Validation(error_message.to_string())
-                    }
-                    _ => GetTrailStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidTrailNameException" => {
+                    return GetTrailStatusError::InvalidTrailName(String::from(error_message))
                 }
+                "TrailNotFoundException" => {
+                    return GetTrailStatusError::TrailNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetTrailStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetTrailStatusError::Unknown(String::from(body)),
         }
+        return GetTrailStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetTrailStatusError {
     fn from(err: serde_json::error::Error) -> GetTrailStatusError {
-        GetTrailStatusError::Unknown(err.description().to_string())
+        GetTrailStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetTrailStatusError {
@@ -1388,7 +1422,8 @@ impl Error for GetTrailStatusError {
             GetTrailStatusError::Validation(ref cause) => cause,
             GetTrailStatusError::Credentials(ref err) => err.description(),
             GetTrailStatusError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetTrailStatusError::Unknown(ref cause) => cause,
+            GetTrailStatusError::ParseError(ref cause) => cause,
+            GetTrailStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1409,50 +1444,50 @@ pub enum ListPublicKeysError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListPublicKeysError {
-    pub fn from_body(body: &str) -> ListPublicKeysError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListPublicKeysError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidTimeRangeException" => {
-                        ListPublicKeysError::InvalidTimeRange(String::from(error_message))
-                    }
-                    "InvalidTokenException" => {
-                        ListPublicKeysError::InvalidToken(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        ListPublicKeysError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        ListPublicKeysError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListPublicKeysError::Validation(error_message.to_string())
-                    }
-                    _ => ListPublicKeysError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidTimeRangeException" => {
+                    return ListPublicKeysError::InvalidTimeRange(String::from(error_message))
                 }
+                "InvalidTokenException" => {
+                    return ListPublicKeysError::InvalidToken(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return ListPublicKeysError::OperationNotPermitted(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return ListPublicKeysError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListPublicKeysError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListPublicKeysError::Unknown(String::from(body)),
         }
+        return ListPublicKeysError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListPublicKeysError {
     fn from(err: serde_json::error::Error) -> ListPublicKeysError {
-        ListPublicKeysError::Unknown(err.description().to_string())
+        ListPublicKeysError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListPublicKeysError {
@@ -1485,7 +1520,8 @@ impl Error for ListPublicKeysError {
             ListPublicKeysError::Validation(ref cause) => cause,
             ListPublicKeysError::Credentials(ref err) => err.description(),
             ListPublicKeysError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListPublicKeysError::Unknown(ref cause) => cause,
+            ListPublicKeysError::ParseError(ref cause) => cause,
+            ListPublicKeysError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1512,57 +1548,59 @@ pub enum ListTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTagsError {
-    pub fn from_body(body: &str) -> ListTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CloudTrailARNInvalidException" => {
-                        ListTagsError::CloudTrailARNInvalid(String::from(error_message))
-                    }
-                    "InvalidTokenException" => {
-                        ListTagsError::InvalidToken(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        ListTagsError::InvalidTrailName(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        ListTagsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListTagsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ResourceTypeNotSupportedException" => {
-                        ListTagsError::ResourceTypeNotSupported(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        ListTagsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => ListTagsError::Validation(error_message.to_string()),
-                    _ => ListTagsError::Unknown(String::from(body)),
+            match *error_type {
+                "CloudTrailARNInvalidException" => {
+                    return ListTagsError::CloudTrailARNInvalid(String::from(error_message))
                 }
+                "InvalidTokenException" => {
+                    return ListTagsError::InvalidToken(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return ListTagsError::InvalidTrailName(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return ListTagsError::OperationNotPermitted(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return ListTagsError::ResourceNotFound(String::from(error_message))
+                }
+                "ResourceTypeNotSupportedException" => {
+                    return ListTagsError::ResourceTypeNotSupported(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return ListTagsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListTagsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTagsError::Unknown(String::from(body)),
         }
+        return ListTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTagsError {
     fn from(err: serde_json::error::Error) -> ListTagsError {
-        ListTagsError::Unknown(err.description().to_string())
+        ListTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTagsError {
@@ -1598,7 +1636,8 @@ impl Error for ListTagsError {
             ListTagsError::Validation(ref cause) => cause,
             ListTagsError::Credentials(ref err) => err.description(),
             ListTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListTagsError::Unknown(ref cause) => cause,
+            ListTagsError::ParseError(ref cause) => cause,
+            ListTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1619,50 +1658,50 @@ pub enum LookupEventsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl LookupEventsError {
-    pub fn from_body(body: &str) -> LookupEventsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> LookupEventsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidLookupAttributesException" => {
-                        LookupEventsError::InvalidLookupAttributes(String::from(error_message))
-                    }
-                    "InvalidMaxResultsException" => {
-                        LookupEventsError::InvalidMaxResults(String::from(error_message))
-                    }
-                    "InvalidNextTokenException" => {
-                        LookupEventsError::InvalidNextToken(String::from(error_message))
-                    }
-                    "InvalidTimeRangeException" => {
-                        LookupEventsError::InvalidTimeRange(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        LookupEventsError::Validation(error_message.to_string())
-                    }
-                    _ => LookupEventsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidLookupAttributesException" => {
+                    return LookupEventsError::InvalidLookupAttributes(String::from(error_message))
                 }
+                "InvalidMaxResultsException" => {
+                    return LookupEventsError::InvalidMaxResults(String::from(error_message))
+                }
+                "InvalidNextTokenException" => {
+                    return LookupEventsError::InvalidNextToken(String::from(error_message))
+                }
+                "InvalidTimeRangeException" => {
+                    return LookupEventsError::InvalidTimeRange(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return LookupEventsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => LookupEventsError::Unknown(String::from(body)),
         }
+        return LookupEventsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for LookupEventsError {
     fn from(err: serde_json::error::Error) -> LookupEventsError {
-        LookupEventsError::Unknown(err.description().to_string())
+        LookupEventsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for LookupEventsError {
@@ -1695,7 +1734,8 @@ impl Error for LookupEventsError {
             LookupEventsError::Validation(ref cause) => cause,
             LookupEventsError::Credentials(ref err) => err.description(),
             LookupEventsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            LookupEventsError::Unknown(ref cause) => cause,
+            LookupEventsError::ParseError(ref cause) => cause,
+            LookupEventsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1720,56 +1760,60 @@ pub enum PutEventSelectorsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl PutEventSelectorsError {
-    pub fn from_body(body: &str) -> PutEventSelectorsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> PutEventSelectorsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidEventSelectorsException" => {
-                        PutEventSelectorsError::InvalidEventSelectors(String::from(error_message))
-                    }
-                    "InvalidHomeRegionException" => {
-                        PutEventSelectorsError::InvalidHomeRegion(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        PutEventSelectorsError::InvalidTrailName(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        PutEventSelectorsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        PutEventSelectorsError::TrailNotFound(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        PutEventSelectorsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        PutEventSelectorsError::Validation(error_message.to_string())
-                    }
-                    _ => PutEventSelectorsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidEventSelectorsException" => {
+                    return PutEventSelectorsError::InvalidEventSelectors(String::from(
+                        error_message,
+                    ))
                 }
+                "InvalidHomeRegionException" => {
+                    return PutEventSelectorsError::InvalidHomeRegion(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return PutEventSelectorsError::InvalidTrailName(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return PutEventSelectorsError::OperationNotPermitted(String::from(
+                        error_message,
+                    ))
+                }
+                "TrailNotFoundException" => {
+                    return PutEventSelectorsError::TrailNotFound(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return PutEventSelectorsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return PutEventSelectorsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => PutEventSelectorsError::Unknown(String::from(body)),
         }
+        return PutEventSelectorsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for PutEventSelectorsError {
     fn from(err: serde_json::error::Error) -> PutEventSelectorsError {
-        PutEventSelectorsError::Unknown(err.description().to_string())
+        PutEventSelectorsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for PutEventSelectorsError {
@@ -1806,7 +1850,8 @@ impl Error for PutEventSelectorsError {
             PutEventSelectorsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            PutEventSelectorsError::Unknown(ref cause) => cause,
+            PutEventSelectorsError::ParseError(ref cause) => cause,
+            PutEventSelectorsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1833,57 +1878,59 @@ pub enum RemoveTagsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveTagsError {
-    pub fn from_body(body: &str) -> RemoveTagsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveTagsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CloudTrailARNInvalidException" => {
-                        RemoveTagsError::CloudTrailARNInvalid(String::from(error_message))
-                    }
-                    "InvalidTagParameterException" => {
-                        RemoveTagsError::InvalidTagParameter(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        RemoveTagsError::InvalidTrailName(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        RemoveTagsError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        RemoveTagsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ResourceTypeNotSupportedException" => {
-                        RemoveTagsError::ResourceTypeNotSupported(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        RemoveTagsError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => RemoveTagsError::Validation(error_message.to_string()),
-                    _ => RemoveTagsError::Unknown(String::from(body)),
+            match *error_type {
+                "CloudTrailARNInvalidException" => {
+                    return RemoveTagsError::CloudTrailARNInvalid(String::from(error_message))
                 }
+                "InvalidTagParameterException" => {
+                    return RemoveTagsError::InvalidTagParameter(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return RemoveTagsError::InvalidTrailName(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return RemoveTagsError::OperationNotPermitted(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return RemoveTagsError::ResourceNotFound(String::from(error_message))
+                }
+                "ResourceTypeNotSupportedException" => {
+                    return RemoveTagsError::ResourceTypeNotSupported(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return RemoveTagsError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return RemoveTagsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveTagsError::Unknown(String::from(body)),
         }
+        return RemoveTagsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveTagsError {
     fn from(err: serde_json::error::Error) -> RemoveTagsError {
-        RemoveTagsError::Unknown(err.description().to_string())
+        RemoveTagsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveTagsError {
@@ -1919,7 +1966,8 @@ impl Error for RemoveTagsError {
             RemoveTagsError::Validation(ref cause) => cause,
             RemoveTagsError::Credentials(ref err) => err.description(),
             RemoveTagsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            RemoveTagsError::Unknown(ref cause) => cause,
+            RemoveTagsError::ParseError(ref cause) => cause,
+            RemoveTagsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1938,47 +1986,47 @@ pub enum StartLoggingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StartLoggingError {
-    pub fn from_body(body: &str) -> StartLoggingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StartLoggingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidHomeRegionException" => {
-                        StartLoggingError::InvalidHomeRegion(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        StartLoggingError::InvalidTrailName(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        StartLoggingError::TrailNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StartLoggingError::Validation(error_message.to_string())
-                    }
-                    _ => StartLoggingError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidHomeRegionException" => {
+                    return StartLoggingError::InvalidHomeRegion(String::from(error_message))
                 }
+                "InvalidTrailNameException" => {
+                    return StartLoggingError::InvalidTrailName(String::from(error_message))
+                }
+                "TrailNotFoundException" => {
+                    return StartLoggingError::TrailNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StartLoggingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StartLoggingError::Unknown(String::from(body)),
         }
+        return StartLoggingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StartLoggingError {
     fn from(err: serde_json::error::Error) -> StartLoggingError {
-        StartLoggingError::Unknown(err.description().to_string())
+        StartLoggingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StartLoggingError {
@@ -2010,7 +2058,8 @@ impl Error for StartLoggingError {
             StartLoggingError::Validation(ref cause) => cause,
             StartLoggingError::Credentials(ref err) => err.description(),
             StartLoggingError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StartLoggingError::Unknown(ref cause) => cause,
+            StartLoggingError::ParseError(ref cause) => cause,
+            StartLoggingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2029,47 +2078,47 @@ pub enum StopLoggingError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl StopLoggingError {
-    pub fn from_body(body: &str) -> StopLoggingError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> StopLoggingError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidHomeRegionException" => {
-                        StopLoggingError::InvalidHomeRegion(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        StopLoggingError::InvalidTrailName(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        StopLoggingError::TrailNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        StopLoggingError::Validation(error_message.to_string())
-                    }
-                    _ => StopLoggingError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidHomeRegionException" => {
+                    return StopLoggingError::InvalidHomeRegion(String::from(error_message))
                 }
+                "InvalidTrailNameException" => {
+                    return StopLoggingError::InvalidTrailName(String::from(error_message))
+                }
+                "TrailNotFoundException" => {
+                    return StopLoggingError::TrailNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return StopLoggingError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => StopLoggingError::Unknown(String::from(body)),
         }
+        return StopLoggingError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for StopLoggingError {
     fn from(err: serde_json::error::Error) -> StopLoggingError {
-        StopLoggingError::Unknown(err.description().to_string())
+        StopLoggingError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for StopLoggingError {
@@ -2101,7 +2150,8 @@ impl Error for StopLoggingError {
             StopLoggingError::Validation(ref cause) => cause,
             StopLoggingError::Credentials(ref err) => err.description(),
             StopLoggingError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            StopLoggingError::Unknown(ref cause) => cause,
+            StopLoggingError::ParseError(ref cause) => cause,
+            StopLoggingError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2156,103 +2206,109 @@ pub enum UpdateTrailError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateTrailError {
-    pub fn from_body(body: &str) -> UpdateTrailError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateTrailError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CloudWatchLogsDeliveryUnavailableException" => {
-                        UpdateTrailError::CloudWatchLogsDeliveryUnavailable(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InsufficientEncryptionPolicyException" => {
-                        UpdateTrailError::InsufficientEncryptionPolicy(String::from(error_message))
-                    }
-                    "InsufficientS3BucketPolicyException" => {
-                        UpdateTrailError::InsufficientS3BucketPolicy(String::from(error_message))
-                    }
-                    "InsufficientSnsTopicPolicyException" => {
-                        UpdateTrailError::InsufficientSnsTopicPolicy(String::from(error_message))
-                    }
-                    "InvalidCloudWatchLogsLogGroupArnException" => {
-                        UpdateTrailError::InvalidCloudWatchLogsLogGroupArn(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidCloudWatchLogsRoleArnException" => {
-                        UpdateTrailError::InvalidCloudWatchLogsRoleArn(String::from(error_message))
-                    }
-                    "InvalidHomeRegionException" => {
-                        UpdateTrailError::InvalidHomeRegion(String::from(error_message))
-                    }
-                    "InvalidKmsKeyIdException" => {
-                        UpdateTrailError::InvalidKmsKeyId(String::from(error_message))
-                    }
-                    "InvalidParameterCombinationException" => {
-                        UpdateTrailError::InvalidParameterCombination(String::from(error_message))
-                    }
-                    "InvalidS3BucketNameException" => {
-                        UpdateTrailError::InvalidS3BucketName(String::from(error_message))
-                    }
-                    "InvalidS3PrefixException" => {
-                        UpdateTrailError::InvalidS3Prefix(String::from(error_message))
-                    }
-                    "InvalidSnsTopicNameException" => {
-                        UpdateTrailError::InvalidSnsTopicName(String::from(error_message))
-                    }
-                    "InvalidTrailNameException" => {
-                        UpdateTrailError::InvalidTrailName(String::from(error_message))
-                    }
-                    "KmsException" => UpdateTrailError::Kms(String::from(error_message)),
-                    "KmsKeyDisabledException" => {
-                        UpdateTrailError::KmsKeyDisabled(String::from(error_message))
-                    }
-                    "KmsKeyNotFoundException" => {
-                        UpdateTrailError::KmsKeyNotFound(String::from(error_message))
-                    }
-                    "OperationNotPermittedException" => {
-                        UpdateTrailError::OperationNotPermitted(String::from(error_message))
-                    }
-                    "S3BucketDoesNotExistException" => {
-                        UpdateTrailError::S3BucketDoesNotExist(String::from(error_message))
-                    }
-                    "TrailNotFoundException" => {
-                        UpdateTrailError::TrailNotFound(String::from(error_message))
-                    }
-                    "TrailNotProvidedException" => {
-                        UpdateTrailError::TrailNotProvided(String::from(error_message))
-                    }
-                    "UnsupportedOperationException" => {
-                        UpdateTrailError::UnsupportedOperation(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateTrailError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateTrailError::Unknown(String::from(body)),
+            match *error_type {
+                "CloudWatchLogsDeliveryUnavailableException" => {
+                    return UpdateTrailError::CloudWatchLogsDeliveryUnavailable(String::from(
+                        error_message,
+                    ))
                 }
+                "InsufficientEncryptionPolicyException" => {
+                    return UpdateTrailError::InsufficientEncryptionPolicy(String::from(
+                        error_message,
+                    ))
+                }
+                "InsufficientS3BucketPolicyException" => {
+                    return UpdateTrailError::InsufficientS3BucketPolicy(String::from(error_message))
+                }
+                "InsufficientSnsTopicPolicyException" => {
+                    return UpdateTrailError::InsufficientSnsTopicPolicy(String::from(error_message))
+                }
+                "InvalidCloudWatchLogsLogGroupArnException" => {
+                    return UpdateTrailError::InvalidCloudWatchLogsLogGroupArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidCloudWatchLogsRoleArnException" => {
+                    return UpdateTrailError::InvalidCloudWatchLogsRoleArn(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidHomeRegionException" => {
+                    return UpdateTrailError::InvalidHomeRegion(String::from(error_message))
+                }
+                "InvalidKmsKeyIdException" => {
+                    return UpdateTrailError::InvalidKmsKeyId(String::from(error_message))
+                }
+                "InvalidParameterCombinationException" => {
+                    return UpdateTrailError::InvalidParameterCombination(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidS3BucketNameException" => {
+                    return UpdateTrailError::InvalidS3BucketName(String::from(error_message))
+                }
+                "InvalidS3PrefixException" => {
+                    return UpdateTrailError::InvalidS3Prefix(String::from(error_message))
+                }
+                "InvalidSnsTopicNameException" => {
+                    return UpdateTrailError::InvalidSnsTopicName(String::from(error_message))
+                }
+                "InvalidTrailNameException" => {
+                    return UpdateTrailError::InvalidTrailName(String::from(error_message))
+                }
+                "KmsException" => return UpdateTrailError::Kms(String::from(error_message)),
+                "KmsKeyDisabledException" => {
+                    return UpdateTrailError::KmsKeyDisabled(String::from(error_message))
+                }
+                "KmsKeyNotFoundException" => {
+                    return UpdateTrailError::KmsKeyNotFound(String::from(error_message))
+                }
+                "OperationNotPermittedException" => {
+                    return UpdateTrailError::OperationNotPermitted(String::from(error_message))
+                }
+                "S3BucketDoesNotExistException" => {
+                    return UpdateTrailError::S3BucketDoesNotExist(String::from(error_message))
+                }
+                "TrailNotFoundException" => {
+                    return UpdateTrailError::TrailNotFound(String::from(error_message))
+                }
+                "TrailNotProvidedException" => {
+                    return UpdateTrailError::TrailNotProvided(String::from(error_message))
+                }
+                "UnsupportedOperationException" => {
+                    return UpdateTrailError::UnsupportedOperation(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdateTrailError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateTrailError::Unknown(String::from(body)),
         }
+        return UpdateTrailError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateTrailError {
     fn from(err: serde_json::error::Error) -> UpdateTrailError {
-        UpdateTrailError::Unknown(err.description().to_string())
+        UpdateTrailError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateTrailError {
@@ -2302,7 +2358,8 @@ impl Error for UpdateTrailError {
             UpdateTrailError::Validation(ref cause) => cause,
             UpdateTrailError::Credentials(ref err) => err.description(),
             UpdateTrailError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdateTrailError::Unknown(ref cause) => cause,
+            UpdateTrailError::ParseError(ref cause) => cause,
+            UpdateTrailError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2445,14 +2502,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<AddTagsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AddTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -2483,14 +2542,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<CreateTrailResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateTrailError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateTrailError::from_response(response))),
+                )
             }
         })
     }
@@ -2521,14 +2582,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<DeleteTrailResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteTrailError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteTrailError::from_response(response))),
+                )
             }
         })
     }
@@ -2559,14 +2622,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<DescribeTrailsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeTrailsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeTrailsError::from_response(response))),
+                )
             }
         })
     }
@@ -2597,14 +2662,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<GetEventSelectorsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetEventSelectorsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetEventSelectorsError::from_response(response))),
+                )
             }
         })
     }
@@ -2635,14 +2702,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<GetTrailStatusResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetTrailStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetTrailStatusError::from_response(response))),
+                )
             }
         })
     }
@@ -2673,14 +2742,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<ListPublicKeysResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListPublicKeysError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListPublicKeysError::from_response(response))),
+                )
             }
         })
     }
@@ -2708,14 +2779,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<ListTagsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -2746,14 +2819,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<LookupEventsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(LookupEventsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(LookupEventsError::from_response(response))),
+                )
             }
         })
     }
@@ -2784,14 +2859,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<PutEventSelectorsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(PutEventSelectorsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(PutEventSelectorsError::from_response(response))),
+                )
             }
         })
     }
@@ -2822,14 +2899,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<RemoveTagsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveTagsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(RemoveTagsError::from_response(response))),
+                )
             }
         })
     }
@@ -2860,14 +2939,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<StartLoggingResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StartLoggingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StartLoggingError::from_response(response))),
+                )
             }
         })
     }
@@ -2898,14 +2979,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<StopLoggingResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(StopLoggingError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(StopLoggingError::from_response(response))),
+                )
             }
         })
     }
@@ -2936,14 +3019,16 @@ impl CloudTrail for CloudTrailClient {
 
                     serde_json::from_str::<UpdateTrailResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateTrailError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdateTrailError::from_response(response))),
+                )
             }
         })
     }

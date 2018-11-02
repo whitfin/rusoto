@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 pub struct AcceptHandshakeRequest {
@@ -36,6 +36,7 @@ pub struct AcceptHandshakeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AcceptHandshakeResponse {
     /// <p>A structure that contains details about the accepted handshake.</p>
     #[serde(rename = "Handshake")]
@@ -45,6 +46,7 @@ pub struct AcceptHandshakeResponse {
 
 /// <p>Contains information about an AWS account that is a member of an organization.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Account {
     /// <p>The Amazon Resource Name (ARN) of the account.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -94,6 +96,7 @@ pub struct CancelHandshakeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CancelHandshakeResponse {
     /// <p>A structure that contains details about the handshake that you canceled.</p>
     #[serde(rename = "Handshake")]
@@ -103,6 +106,7 @@ pub struct CancelHandshakeResponse {
 
 /// <p>Contains a list of child entities, either OUs or accounts.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Child {
     /// <p><p>The unique identifier (ID) of this child entity.</p> <p>The <a href="http://wikipedia.org/wiki/regex">regex pattern</a> for a child ID string requires one of the following:</p> <ul> <li> <p>Account: a string that consists of exactly 12 digits.</p> </li> <li> <p>Organizational unit (OU): a string that begins with &quot;ou-&quot; followed by from 4 to 32 lower-case letters or digits (the ID of the root that contains the OU) followed by a second &quot;-&quot; dash and from 8 to 32 additional lower-case letters or digits.</p> </li> </ul></p>
     #[serde(rename = "Id")]
@@ -133,6 +137,7 @@ pub struct CreateAccountRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateAccountResponse {
     /// <p>A structure that contains details about the request to create an account. This response structure might not be fully populated when you first receive it because account creation is an asynchronous process. You can pass the returned CreateAccountStatus ID as a parameter to <code> <a>DescribeCreateAccountStatus</a> </code> to get status about the progress of the request at later times. </p>
     #[serde(rename = "CreateAccountStatus")]
@@ -142,6 +147,7 @@ pub struct CreateAccountResponse {
 
 /// <p>Contains the status about a <a>CreateAccount</a> request to create an AWS account in an organization.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateAccountStatus {
     /// <p>If the account was created successfully, the unique identifier (ID) of the new account.</p> <p>The <a href="http://wikipedia.org/wiki/regex">regex pattern</a> for an account ID string requires exactly 12 digits.</p>
     #[serde(rename = "AccountId")]
@@ -182,6 +188,7 @@ pub struct CreateOrganizationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateOrganizationResponse {
     /// <p>A structure that contains details about the newly created organization.</p>
     #[serde(rename = "Organization")]
@@ -200,6 +207,7 @@ pub struct CreateOrganizationalUnitRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateOrganizationalUnitResponse {
     /// <p>A structure that contains details about the newly created OU.</p>
     #[serde(rename = "OrganizationalUnit")]
@@ -224,6 +232,7 @@ pub struct CreatePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreatePolicyResponse {
     /// <p>A structure that contains details about the newly created policy.</p>
     #[serde(rename = "Policy")]
@@ -239,6 +248,7 @@ pub struct DeclineHandshakeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DeclineHandshakeResponse {
     /// <p>A structure that contains details about the declined handshake. The state is updated to show the value <code>DECLINED</code>.</p>
     #[serde(rename = "Handshake")]
@@ -268,6 +278,7 @@ pub struct DescribeAccountRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAccountResponse {
     /// <p>A structure that contains information about the requested account.</p>
     #[serde(rename = "Account")]
@@ -283,6 +294,7 @@ pub struct DescribeCreateAccountStatusRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCreateAccountStatusResponse {
     /// <p>A structure that contains the current status of an account creation request.</p>
     #[serde(rename = "CreateAccountStatus")]
@@ -298,6 +310,7 @@ pub struct DescribeHandshakeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeHandshakeResponse {
     /// <p>A structure that contains information about the specified handshake.</p>
     #[serde(rename = "Handshake")]
@@ -306,6 +319,7 @@ pub struct DescribeHandshakeResponse {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeOrganizationResponse {
     /// <p>A structure that contains information about the organization.</p>
     #[serde(rename = "Organization")]
@@ -321,6 +335,7 @@ pub struct DescribeOrganizationalUnitRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeOrganizationalUnitResponse {
     /// <p>A structure that contains details about the specified OU.</p>
     #[serde(rename = "OrganizationalUnit")]
@@ -336,6 +351,7 @@ pub struct DescribePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribePolicyResponse {
     /// <p>A structure that contains details about the specified policy.</p>
     #[serde(rename = "Policy")]
@@ -371,6 +387,7 @@ pub struct DisablePolicyTypeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DisablePolicyTypeResponse {
     /// <p>A structure that shows the root with the updated list of enabled policy types.</p>
     #[serde(rename = "Root")]
@@ -389,6 +406,7 @@ pub struct EnableAWSServiceAccessRequest {
 pub struct EnableAllFeaturesRequest {}
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnableAllFeaturesResponse {
     /// <p>A structure that contains details about the handshake created to support this request to enable all features in the organization.</p>
     #[serde(rename = "Handshake")]
@@ -407,6 +425,7 @@ pub struct EnablePolicyTypeRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnablePolicyTypeResponse {
     /// <p>A structure that shows the root with the updated list of enabled policy types.</p>
     #[serde(rename = "Root")]
@@ -416,6 +435,7 @@ pub struct EnablePolicyTypeResponse {
 
 /// <p>A structure that contains details of a service principal that is enabled to integrate with AWS Organizations.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EnabledServicePrincipal {
     /// <p>The date that the service principal was enabled for integration with AWS Organizations.</p>
     #[serde(rename = "DateEnabled")]
@@ -429,6 +449,7 @@ pub struct EnabledServicePrincipal {
 
 /// <p>Contains information that must be exchanged to securely establish a relationship between two accounts (an <i>originator</i> and a <i>recipient</i>). For example, when a master account (the originator) invites another account (the recipient) to join its organization, the two accounts exchange information as a series of handshake requests and responses.</p> <p> <b>Note:</b> Handshakes that are CANCELED, ACCEPTED, or DECLINED show up in lists for only 30 days after entering that state After that they are deleted.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Handshake {
     /// <p><p>The type of handshake, indicating what action occurs when the recipient accepts the handshake. The following handshake types are supported:</p> <ul> <li> <p> <b>INVITE</b>: This type of handshake represents a request to join an organization. It is always sent from the master account to only non-member accounts.</p> </li> <li> <p> <b>ENABLE<em>ALL</em>FEATURES</b>: This type of handshake represents a request to enable all features in an organization. It is always sent from the master account to only <i>invited</i> member accounts. Created accounts do not receive this because those accounts were created by the organization&#39;s master account and approval is inferred.</p> </li> <li> <p> <b>APPROVE<em>ALL</em>FEATURES</b>: This type of handshake is sent from the Organizations service when all member accounts have approved the <code>ENABLE<em>ALL</em>FEATURES</code> invitation. It is sent only to the master account and signals the master that it can finalize the process to enable all features.</p> </li> </ul></p>
     #[serde(rename = "Action")]
@@ -490,6 +511,7 @@ pub struct HandshakeParty {
 
 /// <p>Contains additional data that is needed to process a handshake.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct HandshakeResource {
     /// <p>When needed, contains an additional array of <code>HandshakeResource</code> objects.</p>
     #[serde(rename = "Resources")]
@@ -517,6 +539,7 @@ pub struct InviteAccountToOrganizationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct InviteAccountToOrganizationResponse {
     /// <p>A structure that contains details about the handshake that is created to support this invitation request.</p>
     #[serde(rename = "Handshake")]
@@ -537,6 +560,7 @@ pub struct ListAWSServiceAccessForOrganizationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAWSServiceAccessForOrganizationResponse {
     /// <p>A list of the service principals for the services that are enabled to integrate with your organization. Each principal is a structure that includes the name and the date that it was enabled for integration with AWS Organizations.</p>
     #[serde(rename = "EnabledServicePrincipals")]
@@ -564,6 +588,7 @@ pub struct ListAccountsForParentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAccountsForParentResponse {
     /// <p>A list of the accounts in the specified root or OU.</p>
     #[serde(rename = "Accounts")]
@@ -588,6 +613,7 @@ pub struct ListAccountsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListAccountsResponse {
     /// <p>A list of objects in the organization.</p>
     #[serde(rename = "Accounts")]
@@ -618,6 +644,7 @@ pub struct ListChildrenRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListChildrenResponse {
     /// <p>The list of children of the specified parent container.</p>
     #[serde(rename = "Children")]
@@ -646,6 +673,7 @@ pub struct ListCreateAccountStatusRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListCreateAccountStatusResponse {
     /// <p>A list of objects with details about the requests. Certain elements, such as the accountId number, are present in the output only after the account has been successfully created.</p>
     #[serde(rename = "CreateAccountStatuses")]
@@ -674,6 +702,7 @@ pub struct ListHandshakesForAccountRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListHandshakesForAccountResponse {
     /// <p>A list of <a>Handshake</a> objects with details about each of the handshakes that is associated with the specified account.</p>
     #[serde(rename = "Handshakes")]
@@ -702,6 +731,7 @@ pub struct ListHandshakesForOrganizationRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListHandshakesForOrganizationResponse {
     /// <p>A list of <a>Handshake</a> objects with details about each of the handshakes that are associated with an organization.</p>
     #[serde(rename = "Handshakes")]
@@ -729,6 +759,7 @@ pub struct ListOrganizationalUnitsForParentRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListOrganizationalUnitsForParentResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -756,6 +787,7 @@ pub struct ListParentsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListParentsResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -786,6 +818,7 @@ pub struct ListPoliciesForTargetRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListPoliciesForTargetResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -813,6 +846,7 @@ pub struct ListPoliciesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListPoliciesResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -837,6 +871,7 @@ pub struct ListRootsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListRootsResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -864,6 +899,7 @@ pub struct ListTargetsForPolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListTargetsForPolicyResponse {
     /// <p>If present, this value indicates that there is more output available than is included in the current response. Use this value in the <code>NextToken</code> request parameter in a subsequent call to the operation to get the next part of the output. You should repeat this until the <code>NextToken</code> response element comes back as <code>null</code>.</p>
     #[serde(rename = "NextToken")]
@@ -890,6 +926,7 @@ pub struct MoveAccountRequest {
 
 /// <p>Contains details about an organization. An organization is a collection of accounts that are centrally managed together using consolidated billing, organized hierarchically with organizational units (OUs), and controlled with policies .</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Organization {
     /// <p>The Amazon Resource Name (ARN) of an organization.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -923,6 +960,7 @@ pub struct Organization {
 
 /// <p>Contains details about an organizational unit (OU). An OU is a container of AWS accounts within a root of an organization. Policies that are attached to an OU apply to all accounts contained in that OU and in any child OUs.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct OrganizationalUnit {
     /// <p>The Amazon Resource Name (ARN) of this OU.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -940,6 +978,7 @@ pub struct OrganizationalUnit {
 
 /// <p>Contains information about either a root or an organizational unit (OU) that can contain OUs or accounts in an organization.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Parent {
     /// <p><p>The unique identifier (ID) of the parent entity.</p> <p>The <a href="http://wikipedia.org/wiki/regex">regex pattern</a> for a parent ID string requires one of the following:</p> <ul> <li> <p>Root: a string that begins with &quot;r-&quot; followed by from 4 to 32 lower-case letters or digits.</p> </li> <li> <p>Organizational unit (OU): a string that begins with &quot;ou-&quot; followed by from 4 to 32 lower-case letters or digits (the ID of the root that the OU is in) followed by a second &quot;-&quot; dash and from 8 to 32 additional lower-case letters or digits.</p> </li> </ul></p>
     #[serde(rename = "Id")]
@@ -953,6 +992,7 @@ pub struct Parent {
 
 /// <p>Contains rules to be applied to the affected accounts. Policies can be attached directly to accounts, or to roots and OUs to affect all accounts in those hierarchies.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Policy {
     /// <p>The text content of the policy.</p>
     #[serde(rename = "Content")]
@@ -966,6 +1006,7 @@ pub struct Policy {
 
 /// <p>Contains information about a policy, but does not include the content. To see the content of a policy, see <a>DescribePolicy</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PolicySummary {
     /// <p>The Amazon Resource Name (ARN) of the policy.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -995,6 +1036,7 @@ pub struct PolicySummary {
 
 /// <p>Contains information about a root, OU, or account that a policy is attached to.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PolicyTargetSummary {
     /// <p>The Amazon Resource Name (ARN) of the policy target.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -1016,6 +1058,7 @@ pub struct PolicyTargetSummary {
 
 /// <p>Contains information about a policy type and its status in the associated root.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PolicyTypeSummary {
     /// <p>The status of the policy type as it relates to the associated root. To attach a policy of the specified type to a root or to an OU or account in that root, it must be available in the organization and enabled for that root.</p>
     #[serde(rename = "Status")]
@@ -1036,6 +1079,7 @@ pub struct RemoveAccountFromOrganizationRequest {
 
 /// <p>Contains details about a root. A root is a top-level parent node in the hierarchy of an organization that can contain organizational units (OUs) and accounts. Every root contains every AWS account in the organization. Each root enables the accounts to be organized in a different way and to have different policy types enabled for use in that root.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Root {
     /// <p>The Amazon Resource Name (ARN) of the root.</p> <p>For more information about ARNs in Organizations, see <a href="http://docs.aws.amazon.com/organizations/latest/userguide/orgs_permissions.html#orgs-permissions-arns">ARN Formats Supported by Organizations</a> in the <i>AWS Organizations User Guide</i>.</p>
     #[serde(rename = "Arn")]
@@ -1067,6 +1111,7 @@ pub struct UpdateOrganizationalUnitRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdateOrganizationalUnitResponse {
     /// <p>A structure that contains the details about the specified OU, including its new name.</p>
     #[serde(rename = "OrganizationalUnit")]
@@ -1094,6 +1139,7 @@ pub struct UpdatePolicyRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct UpdatePolicyResponse {
     /// <p>A structure that contains details about the updated policy, showing the requested changes.</p>
     #[serde(rename = "Policy")]
@@ -1132,75 +1178,81 @@ pub enum AcceptHandshakeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AcceptHandshakeError {
-    pub fn from_body(body: &str) -> AcceptHandshakeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AcceptHandshakeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        AcceptHandshakeError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        AcceptHandshakeError::AccessDenied(String::from(error_message))
-                    }
-                    "AccessDeniedForDependencyException" => {
-                        AcceptHandshakeError::AccessDeniedForDependency(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        AcceptHandshakeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "HandshakeAlreadyInStateException" => {
-                        AcceptHandshakeError::HandshakeAlreadyInState(String::from(error_message))
-                    }
-                    "HandshakeConstraintViolationException" => {
-                        AcceptHandshakeError::HandshakeConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "HandshakeNotFoundException" => {
-                        AcceptHandshakeError::HandshakeNotFound(String::from(error_message))
-                    }
-                    "InvalidHandshakeTransitionException" => {
-                        AcceptHandshakeError::InvalidHandshakeTransition(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        AcceptHandshakeError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        AcceptHandshakeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        AcceptHandshakeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AcceptHandshakeError::Validation(error_message.to_string())
-                    }
-                    _ => AcceptHandshakeError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return AcceptHandshakeError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return AcceptHandshakeError::AccessDenied(String::from(error_message))
+                }
+                "AccessDeniedForDependencyException" => {
+                    return AcceptHandshakeError::AccessDeniedForDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "ConcurrentModificationException" => {
+                    return AcceptHandshakeError::ConcurrentModification(String::from(error_message))
+                }
+                "HandshakeAlreadyInStateException" => {
+                    return AcceptHandshakeError::HandshakeAlreadyInState(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeConstraintViolationException" => {
+                    return AcceptHandshakeError::HandshakeConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeNotFoundException" => {
+                    return AcceptHandshakeError::HandshakeNotFound(String::from(error_message))
+                }
+                "InvalidHandshakeTransitionException" => {
+                    return AcceptHandshakeError::InvalidHandshakeTransition(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return AcceptHandshakeError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return AcceptHandshakeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return AcceptHandshakeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AcceptHandshakeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AcceptHandshakeError::Unknown(String::from(body)),
         }
+        return AcceptHandshakeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AcceptHandshakeError {
     fn from(err: serde_json::error::Error) -> AcceptHandshakeError {
-        AcceptHandshakeError::Unknown(err.description().to_string())
+        AcceptHandshakeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AcceptHandshakeError {
@@ -1240,7 +1292,8 @@ impl Error for AcceptHandshakeError {
             AcceptHandshakeError::Validation(ref cause) => cause,
             AcceptHandshakeError::Credentials(ref err) => err.description(),
             AcceptHandshakeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AcceptHandshakeError::Unknown(ref cause) => cause,
+            AcceptHandshakeError::ParseError(ref cause) => cause,
+            AcceptHandshakeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1275,69 +1328,71 @@ pub enum AttachPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AttachPolicyError {
-    pub fn from_body(body: &str) -> AttachPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AttachPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        AttachPolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        AttachPolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        AttachPolicyError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        AttachPolicyError::ConstraintViolation(String::from(error_message))
-                    }
-                    "DuplicatePolicyAttachmentException" => {
-                        AttachPolicyError::DuplicatePolicyAttachment(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        AttachPolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        AttachPolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "PolicyTypeNotEnabledException" => {
-                        AttachPolicyError::PolicyTypeNotEnabled(String::from(error_message))
-                    }
-                    "ServiceException" => AttachPolicyError::Service(String::from(error_message)),
-                    "TargetNotFoundException" => {
-                        AttachPolicyError::TargetNotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        AttachPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AttachPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => AttachPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return AttachPolicyError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return AttachPolicyError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return AttachPolicyError::ConcurrentModification(String::from(error_message))
+                }
+                "ConstraintViolationException" => {
+                    return AttachPolicyError::ConstraintViolation(String::from(error_message))
+                }
+                "DuplicatePolicyAttachmentException" => {
+                    return AttachPolicyError::DuplicatePolicyAttachment(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return AttachPolicyError::InvalidInput(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return AttachPolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "PolicyTypeNotEnabledException" => {
+                    return AttachPolicyError::PolicyTypeNotEnabled(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return AttachPolicyError::Service(String::from(error_message))
+                }
+                "TargetNotFoundException" => {
+                    return AttachPolicyError::TargetNotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return AttachPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return AttachPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AttachPolicyError::Unknown(String::from(body)),
         }
+        return AttachPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AttachPolicyError {
     fn from(err: serde_json::error::Error) -> AttachPolicyError {
-        AttachPolicyError::Unknown(err.description().to_string())
+        AttachPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AttachPolicyError {
@@ -1377,7 +1432,8 @@ impl Error for AttachPolicyError {
             AttachPolicyError::Validation(ref cause) => cause,
             AttachPolicyError::Credentials(ref err) => err.description(),
             AttachPolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            AttachPolicyError::Unknown(ref cause) => cause,
+            AttachPolicyError::ParseError(ref cause) => cause,
+            AttachPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1406,64 +1462,66 @@ pub enum CancelHandshakeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CancelHandshakeError {
-    pub fn from_body(body: &str) -> CancelHandshakeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CancelHandshakeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CancelHandshakeError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        CancelHandshakeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "HandshakeAlreadyInStateException" => {
-                        CancelHandshakeError::HandshakeAlreadyInState(String::from(error_message))
-                    }
-                    "HandshakeNotFoundException" => {
-                        CancelHandshakeError::HandshakeNotFound(String::from(error_message))
-                    }
-                    "InvalidHandshakeTransitionException" => {
-                        CancelHandshakeError::InvalidHandshakeTransition(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        CancelHandshakeError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        CancelHandshakeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CancelHandshakeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CancelHandshakeError::Validation(error_message.to_string())
-                    }
-                    _ => CancelHandshakeError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CancelHandshakeError::AccessDenied(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return CancelHandshakeError::ConcurrentModification(String::from(error_message))
+                }
+                "HandshakeAlreadyInStateException" => {
+                    return CancelHandshakeError::HandshakeAlreadyInState(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeNotFoundException" => {
+                    return CancelHandshakeError::HandshakeNotFound(String::from(error_message))
+                }
+                "InvalidHandshakeTransitionException" => {
+                    return CancelHandshakeError::InvalidHandshakeTransition(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return CancelHandshakeError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return CancelHandshakeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CancelHandshakeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CancelHandshakeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CancelHandshakeError::Unknown(String::from(body)),
         }
+        return CancelHandshakeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CancelHandshakeError {
     fn from(err: serde_json::error::Error) -> CancelHandshakeError {
-        CancelHandshakeError::Unknown(err.description().to_string())
+        CancelHandshakeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CancelHandshakeError {
@@ -1500,7 +1558,8 @@ impl Error for CancelHandshakeError {
             CancelHandshakeError::Validation(ref cause) => cause,
             CancelHandshakeError::Credentials(ref err) => err.description(),
             CancelHandshakeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CancelHandshakeError::Unknown(ref cause) => cause,
+            CancelHandshakeError::ParseError(ref cause) => cause,
+            CancelHandshakeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1529,60 +1588,62 @@ pub enum CreateAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateAccountError {
-    pub fn from_body(body: &str) -> CreateAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        CreateAccountError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        CreateAccountError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        CreateAccountError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        CreateAccountError::ConstraintViolation(String::from(error_message))
-                    }
-                    "FinalizingOrganizationException" => {
-                        CreateAccountError::FinalizingOrganization(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateAccountError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => CreateAccountError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreateAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateAccountError::Validation(error_message.to_string())
-                    }
-                    _ => CreateAccountError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return CreateAccountError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return CreateAccountError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return CreateAccountError::ConcurrentModification(String::from(error_message))
+                }
+                "ConstraintViolationException" => {
+                    return CreateAccountError::ConstraintViolation(String::from(error_message))
+                }
+                "FinalizingOrganizationException" => {
+                    return CreateAccountError::FinalizingOrganization(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateAccountError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return CreateAccountError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateAccountError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateAccountError::Unknown(String::from(body)),
         }
+        return CreateAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateAccountError {
     fn from(err: serde_json::error::Error) -> CreateAccountError {
-        CreateAccountError::Unknown(err.description().to_string())
+        CreateAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateAccountError {
@@ -1619,7 +1680,8 @@ impl Error for CreateAccountError {
             CreateAccountError::Validation(ref cause) => cause,
             CreateAccountError::Credentials(ref err) => err.description(),
             CreateAccountError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateAccountError::Unknown(ref cause) => cause,
+            CreateAccountError::ParseError(ref cause) => cause,
+            CreateAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1648,64 +1710,68 @@ pub enum CreateOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateOrganizationError {
-    pub fn from_body(body: &str) -> CreateOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        CreateOrganizationError::AccessDenied(String::from(error_message))
-                    }
-                    "AccessDeniedForDependencyException" => {
-                        CreateOrganizationError::AccessDeniedForDependency(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AlreadyInOrganizationException" => {
-                        CreateOrganizationError::AlreadyInOrganization(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        CreateOrganizationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        CreateOrganizationError::ConstraintViolation(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreateOrganizationError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        CreateOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateOrganizationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => CreateOrganizationError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return CreateOrganizationError::AccessDenied(String::from(error_message))
                 }
+                "AccessDeniedForDependencyException" => {
+                    return CreateOrganizationError::AccessDeniedForDependency(String::from(
+                        error_message,
+                    ))
+                }
+                "AlreadyInOrganizationException" => {
+                    return CreateOrganizationError::AlreadyInOrganization(String::from(
+                        error_message,
+                    ))
+                }
+                "ConcurrentModificationException" => {
+                    return CreateOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return CreateOrganizationError::ConstraintViolation(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreateOrganizationError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return CreateOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateOrganizationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateOrganizationError::Unknown(String::from(body)),
         }
+        return CreateOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateOrganizationError {
     fn from(err: serde_json::error::Error) -> CreateOrganizationError {
-        CreateOrganizationError::Unknown(err.description().to_string())
+        CreateOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateOrganizationError {
@@ -1744,7 +1810,8 @@ impl Error for CreateOrganizationError {
             CreateOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateOrganizationError::Unknown(ref cause) => cause,
+            CreateOrganizationError::ParseError(ref cause) => cause,
+            CreateOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1775,73 +1842,77 @@ pub enum CreateOrganizationalUnitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateOrganizationalUnitError {
-    pub fn from_body(body: &str) -> CreateOrganizationalUnitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateOrganizationalUnitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        CreateOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        CreateOrganizationalUnitError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        CreateOrganizationalUnitError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConstraintViolationException" => {
-                        CreateOrganizationalUnitError::ConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DuplicateOrganizationalUnitException" => {
-                        CreateOrganizationalUnitError::DuplicateOrganizationalUnit(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        CreateOrganizationalUnitError::InvalidInput(String::from(error_message))
-                    }
-                    "ParentNotFoundException" => {
-                        CreateOrganizationalUnitError::ParentNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        CreateOrganizationalUnitError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        CreateOrganizationalUnitError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreateOrganizationalUnitError::Validation(error_message.to_string())
-                    }
-                    _ => CreateOrganizationalUnitError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return CreateOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return CreateOrganizationalUnitError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return CreateOrganizationalUnitError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return CreateOrganizationalUnitError::ConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "DuplicateOrganizationalUnitException" => {
+                    return CreateOrganizationalUnitError::DuplicateOrganizationalUnit(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return CreateOrganizationalUnitError::InvalidInput(String::from(error_message))
+                }
+                "ParentNotFoundException" => {
+                    return CreateOrganizationalUnitError::ParentNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return CreateOrganizationalUnitError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreateOrganizationalUnitError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return CreateOrganizationalUnitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateOrganizationalUnitError::Unknown(String::from(body)),
         }
+        return CreateOrganizationalUnitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateOrganizationalUnitError {
     fn from(err: serde_json::error::Error) -> CreateOrganizationalUnitError {
-        CreateOrganizationalUnitError::Unknown(err.description().to_string())
+        CreateOrganizationalUnitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateOrganizationalUnitError {
@@ -1881,7 +1952,8 @@ impl Error for CreateOrganizationalUnitError {
             CreateOrganizationalUnitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            CreateOrganizationalUnitError::Unknown(ref cause) => cause,
+            CreateOrganizationalUnitError::ParseError(ref cause) => cause,
+            CreateOrganizationalUnitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1914,68 +1986,70 @@ pub enum CreatePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreatePolicyError {
-    pub fn from_body(body: &str) -> CreatePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreatePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        CreatePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        CreatePolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        CreatePolicyError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        CreatePolicyError::ConstraintViolation(String::from(error_message))
-                    }
-                    "DuplicatePolicyException" => {
-                        CreatePolicyError::DuplicatePolicy(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        CreatePolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "MalformedPolicyDocumentException" => {
-                        CreatePolicyError::MalformedPolicyDocument(String::from(error_message))
-                    }
-                    "PolicyTypeNotAvailableForOrganizationException" => {
-                        CreatePolicyError::PolicyTypeNotAvailableForOrganization(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => CreatePolicyError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        CreatePolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        CreatePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => CreatePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return CreatePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return CreatePolicyError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return CreatePolicyError::ConcurrentModification(String::from(error_message))
+                }
+                "ConstraintViolationException" => {
+                    return CreatePolicyError::ConstraintViolation(String::from(error_message))
+                }
+                "DuplicatePolicyException" => {
+                    return CreatePolicyError::DuplicatePolicy(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return CreatePolicyError::InvalidInput(String::from(error_message))
+                }
+                "MalformedPolicyDocumentException" => {
+                    return CreatePolicyError::MalformedPolicyDocument(String::from(error_message))
+                }
+                "PolicyTypeNotAvailableForOrganizationException" => {
+                    return CreatePolicyError::PolicyTypeNotAvailableForOrganization(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return CreatePolicyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return CreatePolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreatePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreatePolicyError::Unknown(String::from(body)),
         }
+        return CreatePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreatePolicyError {
     fn from(err: serde_json::error::Error) -> CreatePolicyError {
-        CreatePolicyError::Unknown(err.description().to_string())
+        CreatePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreatePolicyError {
@@ -2014,7 +2088,8 @@ impl Error for CreatePolicyError {
             CreatePolicyError::Validation(ref cause) => cause,
             CreatePolicyError::Credentials(ref err) => err.description(),
             CreatePolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreatePolicyError::Unknown(ref cause) => cause,
+            CreatePolicyError::ParseError(ref cause) => cause,
+            CreatePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2043,64 +2118,68 @@ pub enum DeclineHandshakeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeclineHandshakeError {
-    pub fn from_body(body: &str) -> DeclineHandshakeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeclineHandshakeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DeclineHandshakeError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DeclineHandshakeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "HandshakeAlreadyInStateException" => {
-                        DeclineHandshakeError::HandshakeAlreadyInState(String::from(error_message))
-                    }
-                    "HandshakeNotFoundException" => {
-                        DeclineHandshakeError::HandshakeNotFound(String::from(error_message))
-                    }
-                    "InvalidHandshakeTransitionException" => {
-                        DeclineHandshakeError::InvalidHandshakeTransition(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        DeclineHandshakeError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DeclineHandshakeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeclineHandshakeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeclineHandshakeError::Validation(error_message.to_string())
-                    }
-                    _ => DeclineHandshakeError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DeclineHandshakeError::AccessDenied(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return DeclineHandshakeError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeAlreadyInStateException" => {
+                    return DeclineHandshakeError::HandshakeAlreadyInState(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeNotFoundException" => {
+                    return DeclineHandshakeError::HandshakeNotFound(String::from(error_message))
+                }
+                "InvalidHandshakeTransitionException" => {
+                    return DeclineHandshakeError::InvalidHandshakeTransition(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DeclineHandshakeError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DeclineHandshakeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeclineHandshakeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeclineHandshakeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeclineHandshakeError::Unknown(String::from(body)),
         }
+        return DeclineHandshakeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeclineHandshakeError {
     fn from(err: serde_json::error::Error) -> DeclineHandshakeError {
-        DeclineHandshakeError::Unknown(err.description().to_string())
+        DeclineHandshakeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeclineHandshakeError {
@@ -2137,7 +2216,8 @@ impl Error for DeclineHandshakeError {
             DeclineHandshakeError::Validation(ref cause) => cause,
             DeclineHandshakeError::Credentials(ref err) => err.description(),
             DeclineHandshakeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeclineHandshakeError::Unknown(ref cause) => cause,
+            DeclineHandshakeError::ParseError(ref cause) => cause,
+            DeclineHandshakeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2164,61 +2244,65 @@ pub enum DeleteOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteOrganizationError {
-    pub fn from_body(body: &str) -> DeleteOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DeleteOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DeleteOrganizationError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DeleteOrganizationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DeleteOrganizationError::InvalidInput(String::from(error_message))
-                    }
-                    "OrganizationNotEmptyException" => {
-                        DeleteOrganizationError::OrganizationNotEmpty(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DeleteOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteOrganizationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteOrganizationError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DeleteOrganizationError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DeleteOrganizationError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DeleteOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DeleteOrganizationError::InvalidInput(String::from(error_message))
+                }
+                "OrganizationNotEmptyException" => {
+                    return DeleteOrganizationError::OrganizationNotEmpty(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DeleteOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteOrganizationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeleteOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteOrganizationError::Unknown(String::from(body)),
         }
+        return DeleteOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteOrganizationError {
     fn from(err: serde_json::error::Error) -> DeleteOrganizationError {
-        DeleteOrganizationError::Unknown(err.description().to_string())
+        DeleteOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteOrganizationError {
@@ -2256,7 +2340,8 @@ impl Error for DeleteOrganizationError {
             DeleteOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteOrganizationError::Unknown(ref cause) => cause,
+            DeleteOrganizationError::ParseError(ref cause) => cause,
+            DeleteOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2285,70 +2370,72 @@ pub enum DeleteOrganizationalUnitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeleteOrganizationalUnitError {
-    pub fn from_body(body: &str) -> DeleteOrganizationalUnitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeleteOrganizationalUnitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DeleteOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DeleteOrganizationalUnitError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DeleteOrganizationalUnitError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        DeleteOrganizationalUnitError::InvalidInput(String::from(error_message))
-                    }
-                    "OrganizationalUnitNotEmptyException" => {
-                        DeleteOrganizationalUnitError::OrganizationalUnitNotEmpty(String::from(
-                            error_message,
-                        ))
-                    }
-                    "OrganizationalUnitNotFoundException" => {
-                        DeleteOrganizationalUnitError::OrganizationalUnitNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        DeleteOrganizationalUnitError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DeleteOrganizationalUnitError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeleteOrganizationalUnitError::Validation(error_message.to_string())
-                    }
-                    _ => DeleteOrganizationalUnitError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DeleteOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DeleteOrganizationalUnitError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DeleteOrganizationalUnitError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DeleteOrganizationalUnitError::InvalidInput(String::from(error_message))
+                }
+                "OrganizationalUnitNotEmptyException" => {
+                    return DeleteOrganizationalUnitError::OrganizationalUnitNotEmpty(String::from(
+                        error_message,
+                    ))
+                }
+                "OrganizationalUnitNotFoundException" => {
+                    return DeleteOrganizationalUnitError::OrganizationalUnitNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DeleteOrganizationalUnitError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeleteOrganizationalUnitError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DeleteOrganizationalUnitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeleteOrganizationalUnitError::Unknown(String::from(body)),
         }
+        return DeleteOrganizationalUnitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeleteOrganizationalUnitError {
     fn from(err: serde_json::error::Error) -> DeleteOrganizationalUnitError {
-        DeleteOrganizationalUnitError::Unknown(err.description().to_string())
+        DeleteOrganizationalUnitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeleteOrganizationalUnitError {
@@ -2387,7 +2474,8 @@ impl Error for DeleteOrganizationalUnitError {
             DeleteOrganizationalUnitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DeleteOrganizationalUnitError::Unknown(ref cause) => cause,
+            DeleteOrganizationalUnitError::ParseError(ref cause) => cause,
+            DeleteOrganizationalUnitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2416,60 +2504,62 @@ pub enum DeletePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DeletePolicyError {
-    pub fn from_body(body: &str) -> DeletePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DeletePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DeletePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        DeletePolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DeletePolicyError::ConcurrentModification(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DeletePolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyInUseException" => {
-                        DeletePolicyError::PolicyInUse(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        DeletePolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => DeletePolicyError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DeletePolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DeletePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => DeletePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DeletePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return DeletePolicyError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DeletePolicyError::ConcurrentModification(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DeletePolicyError::InvalidInput(String::from(error_message))
+                }
+                "PolicyInUseException" => {
+                    return DeletePolicyError::PolicyInUse(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return DeletePolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DeletePolicyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DeletePolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DeletePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DeletePolicyError::Unknown(String::from(body)),
         }
+        return DeletePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DeletePolicyError {
     fn from(err: serde_json::error::Error) -> DeletePolicyError {
-        DeletePolicyError::Unknown(err.description().to_string())
+        DeletePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DeletePolicyError {
@@ -2506,7 +2596,8 @@ impl Error for DeletePolicyError {
             DeletePolicyError::Validation(ref cause) => cause,
             DeletePolicyError::Credentials(ref err) => err.description(),
             DeletePolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DeletePolicyError::Unknown(ref cause) => cause,
+            DeletePolicyError::ParseError(ref cause) => cause,
+            DeletePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2531,56 +2622,58 @@ pub enum DescribeAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAccountError {
-    pub fn from_body(body: &str) -> DescribeAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DescribeAccountError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        DescribeAccountError::AccessDenied(String::from(error_message))
-                    }
-                    "AccountNotFoundException" => {
-                        DescribeAccountError::AccountNotFound(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeAccountError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DescribeAccountError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DescribeAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAccountError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAccountError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DescribeAccountError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DescribeAccountError::AccessDenied(String::from(error_message))
+                }
+                "AccountNotFoundException" => {
+                    return DescribeAccountError::AccountNotFound(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DescribeAccountError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DescribeAccountError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribeAccountError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAccountError::Unknown(String::from(body)),
         }
+        return DescribeAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAccountError {
     fn from(err: serde_json::error::Error) -> DescribeAccountError {
-        DescribeAccountError::Unknown(err.description().to_string())
+        DescribeAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAccountError {
@@ -2615,7 +2708,8 @@ impl Error for DescribeAccountError {
             DescribeAccountError::Validation(ref cause) => cause,
             DescribeAccountError::Credentials(ref err) => err.description(),
             DescribeAccountError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeAccountError::Unknown(ref cause) => cause,
+            DescribeAccountError::ParseError(ref cause) => cause,
+            DescribeAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2640,62 +2734,66 @@ pub enum DescribeCreateAccountStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCreateAccountStatusError {
-    pub fn from_body(body: &str) -> DescribeCreateAccountStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCreateAccountStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DescribeCreateAccountStatusError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DescribeCreateAccountStatusError::AccessDenied(String::from(error_message))
-                    }
-                    "CreateAccountStatusNotFoundException" => {
-                        DescribeCreateAccountStatusError::CreateAccountStatusNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        DescribeCreateAccountStatusError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DescribeCreateAccountStatusError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DescribeCreateAccountStatusError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeCreateAccountStatusError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCreateAccountStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DescribeCreateAccountStatusError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DescribeCreateAccountStatusError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "CreateAccountStatusNotFoundException" => {
+                    return DescribeCreateAccountStatusError::CreateAccountStatusNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInputException" => {
+                    return DescribeCreateAccountStatusError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DescribeCreateAccountStatusError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribeCreateAccountStatusError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeCreateAccountStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeCreateAccountStatusError::Unknown(String::from(body)),
         }
+        return DescribeCreateAccountStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCreateAccountStatusError {
     fn from(err: serde_json::error::Error) -> DescribeCreateAccountStatusError {
-        DescribeCreateAccountStatusError::Unknown(err.description().to_string())
+        DescribeCreateAccountStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCreateAccountStatusError {
@@ -2732,7 +2830,8 @@ impl Error for DescribeCreateAccountStatusError {
             DescribeCreateAccountStatusError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeCreateAccountStatusError::Unknown(ref cause) => cause,
+            DescribeCreateAccountStatusError::ParseError(ref cause) => cause,
+            DescribeCreateAccountStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2757,56 +2856,58 @@ pub enum DescribeHandshakeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeHandshakeError {
-    pub fn from_body(body: &str) -> DescribeHandshakeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeHandshakeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        DescribeHandshakeError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DescribeHandshakeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "HandshakeNotFoundException" => {
-                        DescribeHandshakeError::HandshakeNotFound(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeHandshakeError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DescribeHandshakeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DescribeHandshakeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeHandshakeError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeHandshakeError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return DescribeHandshakeError::AccessDenied(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return DescribeHandshakeError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeNotFoundException" => {
+                    return DescribeHandshakeError::HandshakeNotFound(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DescribeHandshakeError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DescribeHandshakeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribeHandshakeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeHandshakeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeHandshakeError::Unknown(String::from(body)),
         }
+        return DescribeHandshakeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeHandshakeError {
     fn from(err: serde_json::error::Error) -> DescribeHandshakeError {
-        DescribeHandshakeError::Unknown(err.description().to_string())
+        DescribeHandshakeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeHandshakeError {
@@ -2843,7 +2944,8 @@ impl Error for DescribeHandshakeError {
             DescribeHandshakeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeHandshakeError::Unknown(ref cause) => cause,
+            DescribeHandshakeError::ParseError(ref cause) => cause,
+            DescribeHandshakeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2866,57 +2968,57 @@ pub enum DescribeOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeOrganizationError {
-    pub fn from_body(body: &str) -> DescribeOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DescribeOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DescribeOrganizationError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DescribeOrganizationError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        DescribeOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DescribeOrganizationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeOrganizationError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DescribeOrganizationError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DescribeOrganizationError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DescribeOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return DescribeOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribeOrganizationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeOrganizationError::Unknown(String::from(body)),
         }
+        return DescribeOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeOrganizationError {
     fn from(err: serde_json::error::Error) -> DescribeOrganizationError {
-        DescribeOrganizationError::Unknown(err.description().to_string())
+        DescribeOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeOrganizationError {
@@ -2952,7 +3054,8 @@ impl Error for DescribeOrganizationError {
             DescribeOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeOrganizationError::Unknown(ref cause) => cause,
+            DescribeOrganizationError::ParseError(ref cause) => cause,
+            DescribeOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2977,60 +3080,66 @@ pub enum DescribeOrganizationalUnitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeOrganizationalUnitError {
-    pub fn from_body(body: &str) -> DescribeOrganizationalUnitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeOrganizationalUnitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DescribeOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DescribeOrganizationalUnitError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribeOrganizationalUnitError::InvalidInput(String::from(error_message))
-                    }
-                    "OrganizationalUnitNotFoundException" => {
-                        DescribeOrganizationalUnitError::OrganizationalUnitNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        DescribeOrganizationalUnitError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => DescribeOrganizationalUnitError::TooManyRequests(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DescribeOrganizationalUnitError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeOrganizationalUnitError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DescribeOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DescribeOrganizationalUnitError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DescribeOrganizationalUnitError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "OrganizationalUnitNotFoundException" => {
+                    return DescribeOrganizationalUnitError::OrganizationalUnitNotFound(
+                        String::from(error_message),
+                    )
+                }
+                "ServiceException" => {
+                    return DescribeOrganizationalUnitError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribeOrganizationalUnitError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeOrganizationalUnitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeOrganizationalUnitError::Unknown(String::from(body)),
         }
+        return DescribeOrganizationalUnitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeOrganizationalUnitError {
     fn from(err: serde_json::error::Error) -> DescribeOrganizationalUnitError {
-        DescribeOrganizationalUnitError::Unknown(err.description().to_string())
+        DescribeOrganizationalUnitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeOrganizationalUnitError {
@@ -3067,7 +3176,8 @@ impl Error for DescribeOrganizationalUnitError {
             DescribeOrganizationalUnitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeOrganizationalUnitError::Unknown(ref cause) => cause,
+            DescribeOrganizationalUnitError::ParseError(ref cause) => cause,
+            DescribeOrganizationalUnitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3092,54 +3202,58 @@ pub enum DescribePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribePolicyError {
-    pub fn from_body(body: &str) -> DescribePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DescribePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        DescribePolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DescribePolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        DescribePolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => DescribePolicyError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        DescribePolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => DescribePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DescribePolicyError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DescribePolicyError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DescribePolicyError::InvalidInput(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return DescribePolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DescribePolicyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DescribePolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribePolicyError::Unknown(String::from(body)),
         }
+        return DescribePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribePolicyError {
     fn from(err: serde_json::error::Error) -> DescribePolicyError {
-        DescribePolicyError::Unknown(err.description().to_string())
+        DescribePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribePolicyError {
@@ -3174,7 +3288,8 @@ impl Error for DescribePolicyError {
             DescribePolicyError::Validation(ref cause) => cause,
             DescribePolicyError::Credentials(ref err) => err.description(),
             DescribePolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribePolicyError::Unknown(ref cause) => cause,
+            DescribePolicyError::ParseError(ref cause) => cause,
+            DescribePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3207,66 +3322,68 @@ pub enum DetachPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DetachPolicyError {
-    pub fn from_body(body: &str) -> DetachPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DetachPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DetachPolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        DetachPolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DetachPolicyError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        DetachPolicyError::ConstraintViolation(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DetachPolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyNotAttachedException" => {
-                        DetachPolicyError::PolicyNotAttached(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        DetachPolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => DetachPolicyError::Service(String::from(error_message)),
-                    "TargetNotFoundException" => {
-                        DetachPolicyError::TargetNotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DetachPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DetachPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => DetachPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DetachPolicyError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return DetachPolicyError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DetachPolicyError::ConcurrentModification(String::from(error_message))
+                }
+                "ConstraintViolationException" => {
+                    return DetachPolicyError::ConstraintViolation(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DetachPolicyError::InvalidInput(String::from(error_message))
+                }
+                "PolicyNotAttachedException" => {
+                    return DetachPolicyError::PolicyNotAttached(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return DetachPolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DetachPolicyError::Service(String::from(error_message))
+                }
+                "TargetNotFoundException" => {
+                    return DetachPolicyError::TargetNotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DetachPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DetachPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DetachPolicyError::Unknown(String::from(body)),
         }
+        return DetachPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DetachPolicyError {
     fn from(err: serde_json::error::Error) -> DetachPolicyError {
-        DetachPolicyError::Unknown(err.description().to_string())
+        DetachPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DetachPolicyError {
@@ -3305,7 +3422,8 @@ impl Error for DetachPolicyError {
             DetachPolicyError::Validation(ref cause) => cause,
             DetachPolicyError::Credentials(ref err) => err.description(),
             DetachPolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DetachPolicyError::Unknown(ref cause) => cause,
+            DetachPolicyError::ParseError(ref cause) => cause,
+            DetachPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3332,65 +3450,67 @@ pub enum DisableAWSServiceAccessError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisableAWSServiceAccessError {
-    pub fn from_body(body: &str) -> DisableAWSServiceAccessError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisableAWSServiceAccessError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DisableAWSServiceAccessError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DisableAWSServiceAccessError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DisableAWSServiceAccessError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConstraintViolationException" => {
-                        DisableAWSServiceAccessError::ConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        DisableAWSServiceAccessError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DisableAWSServiceAccessError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DisableAWSServiceAccessError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DisableAWSServiceAccessError::Validation(error_message.to_string())
-                    }
-                    _ => DisableAWSServiceAccessError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DisableAWSServiceAccessError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DisableAWSServiceAccessError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DisableAWSServiceAccessError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return DisableAWSServiceAccessError::ConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return DisableAWSServiceAccessError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DisableAWSServiceAccessError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DisableAWSServiceAccessError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DisableAWSServiceAccessError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DisableAWSServiceAccessError::Unknown(String::from(body)),
         }
+        return DisableAWSServiceAccessError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisableAWSServiceAccessError {
     fn from(err: serde_json::error::Error) -> DisableAWSServiceAccessError {
-        DisableAWSServiceAccessError::Unknown(err.description().to_string())
+        DisableAWSServiceAccessError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisableAWSServiceAccessError {
@@ -3428,7 +3548,8 @@ impl Error for DisableAWSServiceAccessError {
             DisableAWSServiceAccessError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisableAWSServiceAccessError::Unknown(ref cause) => cause,
+            DisableAWSServiceAccessError::ParseError(ref cause) => cause,
+            DisableAWSServiceAccessError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3459,67 +3580,69 @@ pub enum DisablePolicyTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DisablePolicyTypeError {
-    pub fn from_body(body: &str) -> DisablePolicyTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DisablePolicyTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        DisablePolicyTypeError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        DisablePolicyTypeError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        DisablePolicyTypeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        DisablePolicyTypeError::ConstraintViolation(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        DisablePolicyTypeError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyTypeNotEnabledException" => {
-                        DisablePolicyTypeError::PolicyTypeNotEnabled(String::from(error_message))
-                    }
-                    "RootNotFoundException" => {
-                        DisablePolicyTypeError::RootNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        DisablePolicyTypeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        DisablePolicyTypeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DisablePolicyTypeError::Validation(error_message.to_string())
-                    }
-                    _ => DisablePolicyTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return DisablePolicyTypeError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return DisablePolicyTypeError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return DisablePolicyTypeError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return DisablePolicyTypeError::ConstraintViolation(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return DisablePolicyTypeError::InvalidInput(String::from(error_message))
+                }
+                "PolicyTypeNotEnabledException" => {
+                    return DisablePolicyTypeError::PolicyTypeNotEnabled(String::from(error_message))
+                }
+                "RootNotFoundException" => {
+                    return DisablePolicyTypeError::RootNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return DisablePolicyTypeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return DisablePolicyTypeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DisablePolicyTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DisablePolicyTypeError::Unknown(String::from(body)),
         }
+        return DisablePolicyTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DisablePolicyTypeError {
     fn from(err: serde_json::error::Error) -> DisablePolicyTypeError {
-        DisablePolicyTypeError::Unknown(err.description().to_string())
+        DisablePolicyTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DisablePolicyTypeError {
@@ -3559,7 +3682,8 @@ impl Error for DisablePolicyTypeError {
             DisablePolicyTypeError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DisablePolicyTypeError::Unknown(ref cause) => cause,
+            DisablePolicyTypeError::ParseError(ref cause) => cause,
+            DisablePolicyTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3586,65 +3710,65 @@ pub enum EnableAWSServiceAccessError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl EnableAWSServiceAccessError {
-    pub fn from_body(body: &str) -> EnableAWSServiceAccessError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> EnableAWSServiceAccessError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        EnableAWSServiceAccessError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        EnableAWSServiceAccessError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        EnableAWSServiceAccessError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConstraintViolationException" => {
-                        EnableAWSServiceAccessError::ConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        EnableAWSServiceAccessError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        EnableAWSServiceAccessError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        EnableAWSServiceAccessError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        EnableAWSServiceAccessError::Validation(error_message.to_string())
-                    }
-                    _ => EnableAWSServiceAccessError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return EnableAWSServiceAccessError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return EnableAWSServiceAccessError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return EnableAWSServiceAccessError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return EnableAWSServiceAccessError::ConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return EnableAWSServiceAccessError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return EnableAWSServiceAccessError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return EnableAWSServiceAccessError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return EnableAWSServiceAccessError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => EnableAWSServiceAccessError::Unknown(String::from(body)),
         }
+        return EnableAWSServiceAccessError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for EnableAWSServiceAccessError {
     fn from(err: serde_json::error::Error) -> EnableAWSServiceAccessError {
-        EnableAWSServiceAccessError::Unknown(err.description().to_string())
+        EnableAWSServiceAccessError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for EnableAWSServiceAccessError {
@@ -3682,7 +3806,8 @@ impl Error for EnableAWSServiceAccessError {
             EnableAWSServiceAccessError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            EnableAWSServiceAccessError::Unknown(ref cause) => cause,
+            EnableAWSServiceAccessError::ParseError(ref cause) => cause,
+            EnableAWSServiceAccessError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3709,63 +3834,65 @@ pub enum EnableAllFeaturesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl EnableAllFeaturesError {
-    pub fn from_body(body: &str) -> EnableAllFeaturesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> EnableAllFeaturesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        EnableAllFeaturesError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        EnableAllFeaturesError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        EnableAllFeaturesError::ConcurrentModification(String::from(error_message))
-                    }
-                    "HandshakeConstraintViolationException" => {
-                        EnableAllFeaturesError::HandshakeConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        EnableAllFeaturesError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        EnableAllFeaturesError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        EnableAllFeaturesError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        EnableAllFeaturesError::Validation(error_message.to_string())
-                    }
-                    _ => EnableAllFeaturesError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return EnableAllFeaturesError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return EnableAllFeaturesError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return EnableAllFeaturesError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeConstraintViolationException" => {
+                    return EnableAllFeaturesError::HandshakeConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return EnableAllFeaturesError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return EnableAllFeaturesError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return EnableAllFeaturesError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return EnableAllFeaturesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => EnableAllFeaturesError::Unknown(String::from(body)),
         }
+        return EnableAllFeaturesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for EnableAllFeaturesError {
     fn from(err: serde_json::error::Error) -> EnableAllFeaturesError {
-        EnableAllFeaturesError::Unknown(err.description().to_string())
+        EnableAllFeaturesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for EnableAllFeaturesError {
@@ -3803,7 +3930,8 @@ impl Error for EnableAllFeaturesError {
             EnableAllFeaturesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            EnableAllFeaturesError::Unknown(ref cause) => cause,
+            EnableAllFeaturesError::ParseError(ref cause) => cause,
+            EnableAllFeaturesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3836,70 +3964,76 @@ pub enum EnablePolicyTypeError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl EnablePolicyTypeError {
-    pub fn from_body(body: &str) -> EnablePolicyTypeError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> EnablePolicyTypeError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        EnablePolicyTypeError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        EnablePolicyTypeError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        EnablePolicyTypeError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        EnablePolicyTypeError::ConstraintViolation(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        EnablePolicyTypeError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyTypeAlreadyEnabledException" => {
-                        EnablePolicyTypeError::PolicyTypeAlreadyEnabled(String::from(error_message))
-                    }
-                    "PolicyTypeNotAvailableForOrganizationException" => {
-                        EnablePolicyTypeError::PolicyTypeNotAvailableForOrganization(String::from(
-                            error_message,
-                        ))
-                    }
-                    "RootNotFoundException" => {
-                        EnablePolicyTypeError::RootNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        EnablePolicyTypeError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        EnablePolicyTypeError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        EnablePolicyTypeError::Validation(error_message.to_string())
-                    }
-                    _ => EnablePolicyTypeError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return EnablePolicyTypeError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return EnablePolicyTypeError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return EnablePolicyTypeError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return EnablePolicyTypeError::ConstraintViolation(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return EnablePolicyTypeError::InvalidInput(String::from(error_message))
+                }
+                "PolicyTypeAlreadyEnabledException" => {
+                    return EnablePolicyTypeError::PolicyTypeAlreadyEnabled(String::from(
+                        error_message,
+                    ))
+                }
+                "PolicyTypeNotAvailableForOrganizationException" => {
+                    return EnablePolicyTypeError::PolicyTypeNotAvailableForOrganization(
+                        String::from(error_message),
+                    )
+                }
+                "RootNotFoundException" => {
+                    return EnablePolicyTypeError::RootNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return EnablePolicyTypeError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return EnablePolicyTypeError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return EnablePolicyTypeError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => EnablePolicyTypeError::Unknown(String::from(body)),
         }
+        return EnablePolicyTypeError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for EnablePolicyTypeError {
     fn from(err: serde_json::error::Error) -> EnablePolicyTypeError {
-        EnablePolicyTypeError::Unknown(err.description().to_string())
+        EnablePolicyTypeError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for EnablePolicyTypeError {
@@ -3938,7 +4072,8 @@ impl Error for EnablePolicyTypeError {
             EnablePolicyTypeError::Validation(ref cause) => cause,
             EnablePolicyTypeError::Credentials(ref err) => err.description(),
             EnablePolicyTypeError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            EnablePolicyTypeError::Unknown(ref cause) => cause,
+            EnablePolicyTypeError::ParseError(ref cause) => cause,
+            EnablePolicyTypeError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -3969,77 +4104,81 @@ pub enum InviteAccountToOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl InviteAccountToOrganizationError {
-    pub fn from_body(body: &str) -> InviteAccountToOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> InviteAccountToOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        InviteAccountToOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        InviteAccountToOrganizationError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        InviteAccountToOrganizationError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DuplicateHandshakeException" => {
-                        InviteAccountToOrganizationError::DuplicateHandshake(String::from(
-                            error_message,
-                        ))
-                    }
-                    "FinalizingOrganizationException" => {
-                        InviteAccountToOrganizationError::FinalizingOrganization(String::from(
-                            error_message,
-                        ))
-                    }
-                    "HandshakeConstraintViolationException" => {
-                        InviteAccountToOrganizationError::HandshakeConstraintViolation(
-                            String::from(error_message),
-                        )
-                    }
-                    "InvalidInputException" => {
-                        InviteAccountToOrganizationError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        InviteAccountToOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        InviteAccountToOrganizationError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        InviteAccountToOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => InviteAccountToOrganizationError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return InviteAccountToOrganizationError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return InviteAccountToOrganizationError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "ConcurrentModificationException" => {
+                    return InviteAccountToOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "DuplicateHandshakeException" => {
+                    return InviteAccountToOrganizationError::DuplicateHandshake(String::from(
+                        error_message,
+                    ))
+                }
+                "FinalizingOrganizationException" => {
+                    return InviteAccountToOrganizationError::FinalizingOrganization(String::from(
+                        error_message,
+                    ))
+                }
+                "HandshakeConstraintViolationException" => {
+                    return InviteAccountToOrganizationError::HandshakeConstraintViolation(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInputException" => {
+                    return InviteAccountToOrganizationError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return InviteAccountToOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return InviteAccountToOrganizationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return InviteAccountToOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => InviteAccountToOrganizationError::Unknown(String::from(body)),
         }
+        return InviteAccountToOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for InviteAccountToOrganizationError {
     fn from(err: serde_json::error::Error) -> InviteAccountToOrganizationError {
-        InviteAccountToOrganizationError::Unknown(err.description().to_string())
+        InviteAccountToOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for InviteAccountToOrganizationError {
@@ -4079,7 +4218,8 @@ impl Error for InviteAccountToOrganizationError {
             InviteAccountToOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            InviteAccountToOrganizationError::Unknown(ref cause) => cause,
+            InviteAccountToOrganizationError::ParseError(ref cause) => cause,
+            InviteAccountToOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4110,69 +4250,71 @@ pub enum LeaveOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl LeaveOrganizationError {
-    pub fn from_body(body: &str) -> LeaveOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> LeaveOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        LeaveOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        LeaveOrganizationError::AccessDenied(String::from(error_message))
-                    }
-                    "AccountNotFoundException" => {
-                        LeaveOrganizationError::AccountNotFound(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        LeaveOrganizationError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        LeaveOrganizationError::ConstraintViolation(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        LeaveOrganizationError::InvalidInput(String::from(error_message))
-                    }
-                    "MasterCannotLeaveOrganizationException" => {
-                        LeaveOrganizationError::MasterCannotLeaveOrganization(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        LeaveOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        LeaveOrganizationError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        LeaveOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => LeaveOrganizationError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return LeaveOrganizationError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return LeaveOrganizationError::AccessDenied(String::from(error_message))
+                }
+                "AccountNotFoundException" => {
+                    return LeaveOrganizationError::AccountNotFound(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return LeaveOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return LeaveOrganizationError::ConstraintViolation(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return LeaveOrganizationError::InvalidInput(String::from(error_message))
+                }
+                "MasterCannotLeaveOrganizationException" => {
+                    return LeaveOrganizationError::MasterCannotLeaveOrganization(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return LeaveOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return LeaveOrganizationError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return LeaveOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => LeaveOrganizationError::Unknown(String::from(body)),
         }
+        return LeaveOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for LeaveOrganizationError {
     fn from(err: serde_json::error::Error) -> LeaveOrganizationError {
-        LeaveOrganizationError::Unknown(err.description().to_string())
+        LeaveOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for LeaveOrganizationError {
@@ -4212,7 +4354,8 @@ impl Error for LeaveOrganizationError {
             LeaveOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            LeaveOrganizationError::Unknown(ref cause) => cause,
+            LeaveOrganizationError::ParseError(ref cause) => cause,
+            LeaveOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4237,66 +4380,70 @@ pub enum ListAWSServiceAccessForOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAWSServiceAccessForOrganizationError {
-    pub fn from_body(body: &str) -> ListAWSServiceAccessForOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAWSServiceAccessForOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListAWSServiceAccessForOrganizationError::AWSOrganizationsNotInUse(
-                            String::from(error_message),
-                        )
-                    }
-                    "AccessDeniedException" => {
-                        ListAWSServiceAccessForOrganizationError::AccessDenied(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConstraintViolationException" => {
-                        ListAWSServiceAccessForOrganizationError::ConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        ListAWSServiceAccessForOrganizationError::InvalidInput(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => ListAWSServiceAccessForOrganizationError::Service(
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListAWSServiceAccessForOrganizationError::AWSOrganizationsNotInUse(
                         String::from(error_message),
-                    ),
-                    "TooManyRequestsException" => {
-                        ListAWSServiceAccessForOrganizationError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => ListAWSServiceAccessForOrganizationError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => ListAWSServiceAccessForOrganizationError::Unknown(String::from(body)),
+                    )
                 }
+                "AccessDeniedException" => {
+                    return ListAWSServiceAccessForOrganizationError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return ListAWSServiceAccessForOrganizationError::ConstraintViolation(
+                        String::from(error_message),
+                    )
+                }
+                "InvalidInputException" => {
+                    return ListAWSServiceAccessForOrganizationError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return ListAWSServiceAccessForOrganizationError::Service(String::from(
+                        error_message,
+                    ))
+                }
+                "TooManyRequestsException" => {
+                    return ListAWSServiceAccessForOrganizationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListAWSServiceAccessForOrganizationError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => ListAWSServiceAccessForOrganizationError::Unknown(String::from(body)),
         }
+        return ListAWSServiceAccessForOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAWSServiceAccessForOrganizationError {
     fn from(err: serde_json::error::Error) -> ListAWSServiceAccessForOrganizationError {
-        ListAWSServiceAccessForOrganizationError::Unknown(err.description().to_string())
+        ListAWSServiceAccessForOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAWSServiceAccessForOrganizationError {
@@ -4333,7 +4480,8 @@ impl Error for ListAWSServiceAccessForOrganizationError {
             ListAWSServiceAccessForOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAWSServiceAccessForOrganizationError::Unknown(ref cause) => cause,
+            ListAWSServiceAccessForOrganizationError::ParseError(ref cause) => cause,
+            ListAWSServiceAccessForOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4356,51 +4504,53 @@ pub enum ListAccountsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAccountsError {
-    pub fn from_body(body: &str) -> ListAccountsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAccountsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListAccountsError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        ListAccountsError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAccountsError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => ListAccountsError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListAccountsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAccountsError::Validation(error_message.to_string())
-                    }
-                    _ => ListAccountsError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListAccountsError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return ListAccountsError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAccountsError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListAccountsError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListAccountsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAccountsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAccountsError::Unknown(String::from(body)),
         }
+        return ListAccountsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAccountsError {
     fn from(err: serde_json::error::Error) -> ListAccountsError {
-        ListAccountsError::Unknown(err.description().to_string())
+        ListAccountsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAccountsError {
@@ -4434,7 +4584,8 @@ impl Error for ListAccountsError {
             ListAccountsError::Validation(ref cause) => cause,
             ListAccountsError::Credentials(ref err) => err.description(),
             ListAccountsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListAccountsError::Unknown(ref cause) => cause,
+            ListAccountsError::ParseError(ref cause) => cause,
+            ListAccountsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4459,58 +4610,58 @@ pub enum ListAccountsForParentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListAccountsForParentError {
-    pub fn from_body(body: &str) -> ListAccountsForParentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListAccountsForParentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListAccountsForParentError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        ListAccountsForParentError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListAccountsForParentError::InvalidInput(String::from(error_message))
-                    }
-                    "ParentNotFoundException" => {
-                        ListAccountsForParentError::ParentNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListAccountsForParentError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListAccountsForParentError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListAccountsForParentError::Validation(error_message.to_string())
-                    }
-                    _ => ListAccountsForParentError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListAccountsForParentError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return ListAccountsForParentError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListAccountsForParentError::InvalidInput(String::from(error_message))
+                }
+                "ParentNotFoundException" => {
+                    return ListAccountsForParentError::ParentNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListAccountsForParentError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListAccountsForParentError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListAccountsForParentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListAccountsForParentError::Unknown(String::from(body)),
         }
+        return ListAccountsForParentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListAccountsForParentError {
     fn from(err: serde_json::error::Error) -> ListAccountsForParentError {
-        ListAccountsForParentError::Unknown(err.description().to_string())
+        ListAccountsForParentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListAccountsForParentError {
@@ -4547,7 +4698,8 @@ impl Error for ListAccountsForParentError {
             ListAccountsForParentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListAccountsForParentError::Unknown(ref cause) => cause,
+            ListAccountsForParentError::ParseError(ref cause) => cause,
+            ListAccountsForParentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4572,54 +4724,56 @@ pub enum ListChildrenError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListChildrenError {
-    pub fn from_body(body: &str) -> ListChildrenError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListChildrenError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListChildrenError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        ListChildrenError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListChildrenError::InvalidInput(String::from(error_message))
-                    }
-                    "ParentNotFoundException" => {
-                        ListChildrenError::ParentNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => ListChildrenError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListChildrenError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListChildrenError::Validation(error_message.to_string())
-                    }
-                    _ => ListChildrenError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListChildrenError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return ListChildrenError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListChildrenError::InvalidInput(String::from(error_message))
+                }
+                "ParentNotFoundException" => {
+                    return ListChildrenError::ParentNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListChildrenError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListChildrenError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListChildrenError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListChildrenError::Unknown(String::from(body)),
         }
+        return ListChildrenError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListChildrenError {
     fn from(err: serde_json::error::Error) -> ListChildrenError {
-        ListChildrenError::Unknown(err.description().to_string())
+        ListChildrenError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListChildrenError {
@@ -4654,7 +4808,8 @@ impl Error for ListChildrenError {
             ListChildrenError::Validation(ref cause) => cause,
             ListChildrenError::Credentials(ref err) => err.description(),
             ListChildrenError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListChildrenError::Unknown(ref cause) => cause,
+            ListChildrenError::ParseError(ref cause) => cause,
+            ListChildrenError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4677,55 +4832,57 @@ pub enum ListCreateAccountStatusError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListCreateAccountStatusError {
-    pub fn from_body(body: &str) -> ListCreateAccountStatusError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListCreateAccountStatusError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListCreateAccountStatusError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        ListCreateAccountStatusError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListCreateAccountStatusError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListCreateAccountStatusError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListCreateAccountStatusError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListCreateAccountStatusError::Validation(error_message.to_string())
-                    }
-                    _ => ListCreateAccountStatusError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListCreateAccountStatusError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return ListCreateAccountStatusError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListCreateAccountStatusError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListCreateAccountStatusError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListCreateAccountStatusError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListCreateAccountStatusError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListCreateAccountStatusError::Unknown(String::from(body)),
         }
+        return ListCreateAccountStatusError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListCreateAccountStatusError {
     fn from(err: serde_json::error::Error) -> ListCreateAccountStatusError {
-        ListCreateAccountStatusError::Unknown(err.description().to_string())
+        ListCreateAccountStatusError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListCreateAccountStatusError {
@@ -4761,7 +4918,8 @@ impl Error for ListCreateAccountStatusError {
             ListCreateAccountStatusError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListCreateAccountStatusError::Unknown(ref cause) => cause,
+            ListCreateAccountStatusError::ParseError(ref cause) => cause,
+            ListCreateAccountStatusError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4784,55 +4942,57 @@ pub enum ListHandshakesForAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListHandshakesForAccountError {
-    pub fn from_body(body: &str) -> ListHandshakesForAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListHandshakesForAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AccessDeniedException" => {
-                        ListHandshakesForAccountError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        ListHandshakesForAccountError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        ListHandshakesForAccountError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListHandshakesForAccountError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListHandshakesForAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListHandshakesForAccountError::Validation(error_message.to_string())
-                    }
-                    _ => ListHandshakesForAccountError::Unknown(String::from(body)),
+            match *error_type {
+                "AccessDeniedException" => {
+                    return ListHandshakesForAccountError::AccessDenied(String::from(error_message))
                 }
+                "ConcurrentModificationException" => {
+                    return ListHandshakesForAccountError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListHandshakesForAccountError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListHandshakesForAccountError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListHandshakesForAccountError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListHandshakesForAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListHandshakesForAccountError::Unknown(String::from(body)),
         }
+        return ListHandshakesForAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListHandshakesForAccountError {
     fn from(err: serde_json::error::Error) -> ListHandshakesForAccountError {
-        ListHandshakesForAccountError::Unknown(err.description().to_string())
+        ListHandshakesForAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListHandshakesForAccountError {
@@ -4868,7 +5028,8 @@ impl Error for ListHandshakesForAccountError {
             ListHandshakesForAccountError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListHandshakesForAccountError::Unknown(ref cause) => cause,
+            ListHandshakesForAccountError::ParseError(ref cause) => cause,
+            ListHandshakesForAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -4893,62 +5054,66 @@ pub enum ListHandshakesForOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListHandshakesForOrganizationError {
-    pub fn from_body(body: &str) -> ListHandshakesForOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListHandshakesForOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListHandshakesForOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => ListHandshakesForOrganizationError::AccessDenied(
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListHandshakesForOrganizationError::AWSOrganizationsNotInUse(
                         String::from(error_message),
-                    ),
-                    "ConcurrentModificationException" => {
-                        ListHandshakesForOrganizationError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => ListHandshakesForOrganizationError::InvalidInput(
-                        String::from(error_message),
-                    ),
-                    "ServiceException" => {
-                        ListHandshakesForOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListHandshakesForOrganizationError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListHandshakesForOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => ListHandshakesForOrganizationError::Unknown(String::from(body)),
+                    )
                 }
+                "AccessDeniedException" => {
+                    return ListHandshakesForOrganizationError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "ConcurrentModificationException" => {
+                    return ListHandshakesForOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListHandshakesForOrganizationError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return ListHandshakesForOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListHandshakesForOrganizationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListHandshakesForOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListHandshakesForOrganizationError::Unknown(String::from(body)),
         }
+        return ListHandshakesForOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListHandshakesForOrganizationError {
     fn from(err: serde_json::error::Error) -> ListHandshakesForOrganizationError {
-        ListHandshakesForOrganizationError::Unknown(err.description().to_string())
+        ListHandshakesForOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListHandshakesForOrganizationError {
@@ -4985,7 +5150,8 @@ impl Error for ListHandshakesForOrganizationError {
             ListHandshakesForOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListHandshakesForOrganizationError::Unknown(ref cause) => cause,
+            ListHandshakesForOrganizationError::ParseError(ref cause) => cause,
+            ListHandshakesForOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5010,62 +5176,70 @@ pub enum ListOrganizationalUnitsForParentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListOrganizationalUnitsForParentError {
-    pub fn from_body(body: &str) -> ListOrganizationalUnitsForParentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListOrganizationalUnitsForParentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListOrganizationalUnitsForParentError::AWSOrganizationsNotInUse(
-                            String::from(error_message),
-                        )
-                    }
-                    "AccessDeniedException" => ListOrganizationalUnitsForParentError::AccessDenied(
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListOrganizationalUnitsForParentError::AWSOrganizationsNotInUse(
                         String::from(error_message),
-                    ),
-                    "InvalidInputException" => ListOrganizationalUnitsForParentError::InvalidInput(
-                        String::from(error_message),
-                    ),
-                    "ParentNotFoundException" => {
-                        ListOrganizationalUnitsForParentError::ParentNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        ListOrganizationalUnitsForParentError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListOrganizationalUnitsForParentError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        ListOrganizationalUnitsForParentError::Validation(error_message.to_string())
-                    }
-                    _ => ListOrganizationalUnitsForParentError::Unknown(String::from(body)),
+                    )
                 }
+                "AccessDeniedException" => {
+                    return ListOrganizationalUnitsForParentError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return ListOrganizationalUnitsForParentError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "ParentNotFoundException" => {
+                    return ListOrganizationalUnitsForParentError::ParentNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return ListOrganizationalUnitsForParentError::Service(String::from(
+                        error_message,
+                    ))
+                }
+                "TooManyRequestsException" => {
+                    return ListOrganizationalUnitsForParentError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return ListOrganizationalUnitsForParentError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => ListOrganizationalUnitsForParentError::Unknown(String::from(body)),
         }
+        return ListOrganizationalUnitsForParentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListOrganizationalUnitsForParentError {
     fn from(err: serde_json::error::Error) -> ListOrganizationalUnitsForParentError {
-        ListOrganizationalUnitsForParentError::Unknown(err.description().to_string())
+        ListOrganizationalUnitsForParentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListOrganizationalUnitsForParentError {
@@ -5102,7 +5276,8 @@ impl Error for ListOrganizationalUnitsForParentError {
             ListOrganizationalUnitsForParentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListOrganizationalUnitsForParentError::Unknown(ref cause) => cause,
+            ListOrganizationalUnitsForParentError::ParseError(ref cause) => cause,
+            ListOrganizationalUnitsForParentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5127,54 +5302,54 @@ pub enum ListParentsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListParentsError {
-    pub fn from_body(body: &str) -> ListParentsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListParentsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListParentsError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        ListParentsError::AccessDenied(String::from(error_message))
-                    }
-                    "ChildNotFoundException" => {
-                        ListParentsError::ChildNotFound(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListParentsError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => ListParentsError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListParentsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListParentsError::Validation(error_message.to_string())
-                    }
-                    _ => ListParentsError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListParentsError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return ListParentsError::AccessDenied(String::from(error_message))
+                }
+                "ChildNotFoundException" => {
+                    return ListParentsError::ChildNotFound(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListParentsError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => return ListParentsError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return ListParentsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListParentsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListParentsError::Unknown(String::from(body)),
         }
+        return ListParentsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListParentsError {
     fn from(err: serde_json::error::Error) -> ListParentsError {
-        ListParentsError::Unknown(err.description().to_string())
+        ListParentsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListParentsError {
@@ -5209,7 +5384,8 @@ impl Error for ListParentsError {
             ListParentsError::Validation(ref cause) => cause,
             ListParentsError::Credentials(ref err) => err.description(),
             ListParentsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListParentsError::Unknown(ref cause) => cause,
+            ListParentsError::ParseError(ref cause) => cause,
+            ListParentsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5232,51 +5408,53 @@ pub enum ListPoliciesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListPoliciesError {
-    pub fn from_body(body: &str) -> ListPoliciesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListPoliciesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListPoliciesError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        ListPoliciesError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListPoliciesError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => ListPoliciesError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListPoliciesError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListPoliciesError::Validation(error_message.to_string())
-                    }
-                    _ => ListPoliciesError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListPoliciesError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return ListPoliciesError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListPoliciesError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListPoliciesError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListPoliciesError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListPoliciesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListPoliciesError::Unknown(String::from(body)),
         }
+        return ListPoliciesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListPoliciesError {
     fn from(err: serde_json::error::Error) -> ListPoliciesError {
-        ListPoliciesError::Unknown(err.description().to_string())
+        ListPoliciesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListPoliciesError {
@@ -5310,7 +5488,8 @@ impl Error for ListPoliciesError {
             ListPoliciesError::Validation(ref cause) => cause,
             ListPoliciesError::Credentials(ref err) => err.description(),
             ListPoliciesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListPoliciesError::Unknown(ref cause) => cause,
+            ListPoliciesError::ParseError(ref cause) => cause,
+            ListPoliciesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5335,58 +5514,58 @@ pub enum ListPoliciesForTargetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListPoliciesForTargetError {
-    pub fn from_body(body: &str) -> ListPoliciesForTargetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListPoliciesForTargetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListPoliciesForTargetError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        ListPoliciesForTargetError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListPoliciesForTargetError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListPoliciesForTargetError::Service(String::from(error_message))
-                    }
-                    "TargetNotFoundException" => {
-                        ListPoliciesForTargetError::TargetNotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListPoliciesForTargetError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListPoliciesForTargetError::Validation(error_message.to_string())
-                    }
-                    _ => ListPoliciesForTargetError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListPoliciesForTargetError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return ListPoliciesForTargetError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListPoliciesForTargetError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListPoliciesForTargetError::Service(String::from(error_message))
+                }
+                "TargetNotFoundException" => {
+                    return ListPoliciesForTargetError::TargetNotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListPoliciesForTargetError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListPoliciesForTargetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListPoliciesForTargetError::Unknown(String::from(body)),
         }
+        return ListPoliciesForTargetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListPoliciesForTargetError {
     fn from(err: serde_json::error::Error) -> ListPoliciesForTargetError {
-        ListPoliciesForTargetError::Unknown(err.description().to_string())
+        ListPoliciesForTargetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListPoliciesForTargetError {
@@ -5423,7 +5602,8 @@ impl Error for ListPoliciesForTargetError {
             ListPoliciesForTargetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListPoliciesForTargetError::Unknown(ref cause) => cause,
+            ListPoliciesForTargetError::ParseError(ref cause) => cause,
+            ListPoliciesForTargetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5446,49 +5626,51 @@ pub enum ListRootsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListRootsError {
-    pub fn from_body(body: &str) -> ListRootsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListRootsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListRootsError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        ListRootsError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListRootsError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => ListRootsError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        ListRootsError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => ListRootsError::Validation(error_message.to_string()),
-                    _ => ListRootsError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListRootsError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return ListRootsError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListRootsError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => return ListRootsError::Service(String::from(error_message)),
+                "TooManyRequestsException" => {
+                    return ListRootsError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListRootsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListRootsError::Unknown(String::from(body)),
         }
+        return ListRootsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListRootsError {
     fn from(err: serde_json::error::Error) -> ListRootsError {
-        ListRootsError::Unknown(err.description().to_string())
+        ListRootsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListRootsError {
@@ -5522,7 +5704,8 @@ impl Error for ListRootsError {
             ListRootsError::Validation(ref cause) => cause,
             ListRootsError::Credentials(ref err) => err.description(),
             ListRootsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListRootsError::Unknown(ref cause) => cause,
+            ListRootsError::ParseError(ref cause) => cause,
+            ListRootsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5547,58 +5730,58 @@ pub enum ListTargetsForPolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListTargetsForPolicyError {
-    pub fn from_body(body: &str) -> ListTargetsForPolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListTargetsForPolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        ListTargetsForPolicyError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        ListTargetsForPolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        ListTargetsForPolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        ListTargetsForPolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => {
-                        ListTargetsForPolicyError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        ListTargetsForPolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListTargetsForPolicyError::Validation(error_message.to_string())
-                    }
-                    _ => ListTargetsForPolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return ListTargetsForPolicyError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return ListTargetsForPolicyError::AccessDenied(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return ListTargetsForPolicyError::InvalidInput(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return ListTargetsForPolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return ListTargetsForPolicyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return ListTargetsForPolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListTargetsForPolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListTargetsForPolicyError::Unknown(String::from(body)),
         }
+        return ListTargetsForPolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListTargetsForPolicyError {
     fn from(err: serde_json::error::Error) -> ListTargetsForPolicyError {
-        ListTargetsForPolicyError::Unknown(err.description().to_string())
+        ListTargetsForPolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListTargetsForPolicyError {
@@ -5635,7 +5818,8 @@ impl Error for ListTargetsForPolicyError {
             ListTargetsForPolicyError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            ListTargetsForPolicyError::Unknown(ref cause) => cause,
+            ListTargetsForPolicyError::ParseError(ref cause) => cause,
+            ListTargetsForPolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5668,66 +5852,66 @@ pub enum MoveAccountError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl MoveAccountError {
-    pub fn from_body(body: &str) -> MoveAccountError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> MoveAccountError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        MoveAccountError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        MoveAccountError::AccessDenied(String::from(error_message))
-                    }
-                    "AccountNotFoundException" => {
-                        MoveAccountError::AccountNotFound(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        MoveAccountError::ConcurrentModification(String::from(error_message))
-                    }
-                    "DestinationParentNotFoundException" => {
-                        MoveAccountError::DestinationParentNotFound(String::from(error_message))
-                    }
-                    "DuplicateAccountException" => {
-                        MoveAccountError::DuplicateAccount(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        MoveAccountError::InvalidInput(String::from(error_message))
-                    }
-                    "ServiceException" => MoveAccountError::Service(String::from(error_message)),
-                    "SourceParentNotFoundException" => {
-                        MoveAccountError::SourceParentNotFound(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        MoveAccountError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        MoveAccountError::Validation(error_message.to_string())
-                    }
-                    _ => MoveAccountError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return MoveAccountError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return MoveAccountError::AccessDenied(String::from(error_message))
+                }
+                "AccountNotFoundException" => {
+                    return MoveAccountError::AccountNotFound(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return MoveAccountError::ConcurrentModification(String::from(error_message))
+                }
+                "DestinationParentNotFoundException" => {
+                    return MoveAccountError::DestinationParentNotFound(String::from(error_message))
+                }
+                "DuplicateAccountException" => {
+                    return MoveAccountError::DuplicateAccount(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return MoveAccountError::InvalidInput(String::from(error_message))
+                }
+                "ServiceException" => return MoveAccountError::Service(String::from(error_message)),
+                "SourceParentNotFoundException" => {
+                    return MoveAccountError::SourceParentNotFound(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return MoveAccountError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return MoveAccountError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => MoveAccountError::Unknown(String::from(body)),
         }
+        return MoveAccountError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for MoveAccountError {
     fn from(err: serde_json::error::Error) -> MoveAccountError {
-        MoveAccountError::Unknown(err.description().to_string())
+        MoveAccountError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for MoveAccountError {
@@ -5766,7 +5950,8 @@ impl Error for MoveAccountError {
             MoveAccountError::Validation(ref cause) => cause,
             MoveAccountError::Credentials(ref err) => err.description(),
             MoveAccountError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            MoveAccountError::Unknown(ref cause) => cause,
+            MoveAccountError::ParseError(ref cause) => cause,
+            MoveAccountError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5797,77 +5982,81 @@ pub enum RemoveAccountFromOrganizationError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RemoveAccountFromOrganizationError {
-    pub fn from_body(body: &str) -> RemoveAccountFromOrganizationError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RemoveAccountFromOrganizationError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        RemoveAccountFromOrganizationError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => RemoveAccountFromOrganizationError::AccessDenied(
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return RemoveAccountFromOrganizationError::AWSOrganizationsNotInUse(
                         String::from(error_message),
-                    ),
-                    "AccountNotFoundException" => {
-                        RemoveAccountFromOrganizationError::AccountNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConcurrentModificationException" => {
-                        RemoveAccountFromOrganizationError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ConstraintViolationException" => {
-                        RemoveAccountFromOrganizationError::ConstraintViolation(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => RemoveAccountFromOrganizationError::InvalidInput(
-                        String::from(error_message),
-                    ),
-                    "MasterCannotLeaveOrganizationException" => {
-                        RemoveAccountFromOrganizationError::MasterCannotLeaveOrganization(
-                            String::from(error_message),
-                        )
-                    }
-                    "ServiceException" => {
-                        RemoveAccountFromOrganizationError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        RemoveAccountFromOrganizationError::TooManyRequests(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        RemoveAccountFromOrganizationError::Validation(error_message.to_string())
-                    }
-                    _ => RemoveAccountFromOrganizationError::Unknown(String::from(body)),
+                    )
                 }
+                "AccessDeniedException" => {
+                    return RemoveAccountFromOrganizationError::AccessDenied(String::from(
+                        error_message,
+                    ))
+                }
+                "AccountNotFoundException" => {
+                    return RemoveAccountFromOrganizationError::AccountNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ConcurrentModificationException" => {
+                    return RemoveAccountFromOrganizationError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "ConstraintViolationException" => {
+                    return RemoveAccountFromOrganizationError::ConstraintViolation(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return RemoveAccountFromOrganizationError::InvalidInput(String::from(
+                        error_message,
+                    ))
+                }
+                "MasterCannotLeaveOrganizationException" => {
+                    return RemoveAccountFromOrganizationError::MasterCannotLeaveOrganization(
+                        String::from(error_message),
+                    )
+                }
+                "ServiceException" => {
+                    return RemoveAccountFromOrganizationError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return RemoveAccountFromOrganizationError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return RemoveAccountFromOrganizationError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RemoveAccountFromOrganizationError::Unknown(String::from(body)),
         }
+        return RemoveAccountFromOrganizationError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RemoveAccountFromOrganizationError {
     fn from(err: serde_json::error::Error) -> RemoveAccountFromOrganizationError {
-        RemoveAccountFromOrganizationError::Unknown(err.description().to_string())
+        RemoveAccountFromOrganizationError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RemoveAccountFromOrganizationError {
@@ -5907,7 +6096,8 @@ impl Error for RemoveAccountFromOrganizationError {
             RemoveAccountFromOrganizationError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RemoveAccountFromOrganizationError::Unknown(ref cause) => cause,
+            RemoveAccountFromOrganizationError::ParseError(ref cause) => cause,
+            RemoveAccountFromOrganizationError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -5936,70 +6126,72 @@ pub enum UpdateOrganizationalUnitError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdateOrganizationalUnitError {
-    pub fn from_body(body: &str) -> UpdateOrganizationalUnitError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdateOrganizationalUnitError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        UpdateOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
-                            error_message,
-                        ))
-                    }
-                    "AccessDeniedException" => {
-                        UpdateOrganizationalUnitError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        UpdateOrganizationalUnitError::ConcurrentModification(String::from(
-                            error_message,
-                        ))
-                    }
-                    "DuplicateOrganizationalUnitException" => {
-                        UpdateOrganizationalUnitError::DuplicateOrganizationalUnit(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InvalidInputException" => {
-                        UpdateOrganizationalUnitError::InvalidInput(String::from(error_message))
-                    }
-                    "OrganizationalUnitNotFoundException" => {
-                        UpdateOrganizationalUnitError::OrganizationalUnitNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ServiceException" => {
-                        UpdateOrganizationalUnitError::Service(String::from(error_message))
-                    }
-                    "TooManyRequestsException" => {
-                        UpdateOrganizationalUnitError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdateOrganizationalUnitError::Validation(error_message.to_string())
-                    }
-                    _ => UpdateOrganizationalUnitError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return UpdateOrganizationalUnitError::AWSOrganizationsNotInUse(String::from(
+                        error_message,
+                    ))
                 }
+                "AccessDeniedException" => {
+                    return UpdateOrganizationalUnitError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return UpdateOrganizationalUnitError::ConcurrentModification(String::from(
+                        error_message,
+                    ))
+                }
+                "DuplicateOrganizationalUnitException" => {
+                    return UpdateOrganizationalUnitError::DuplicateOrganizationalUnit(String::from(
+                        error_message,
+                    ))
+                }
+                "InvalidInputException" => {
+                    return UpdateOrganizationalUnitError::InvalidInput(String::from(error_message))
+                }
+                "OrganizationalUnitNotFoundException" => {
+                    return UpdateOrganizationalUnitError::OrganizationalUnitNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "ServiceException" => {
+                    return UpdateOrganizationalUnitError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdateOrganizationalUnitError::TooManyRequests(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return UpdateOrganizationalUnitError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdateOrganizationalUnitError::Unknown(String::from(body)),
         }
+        return UpdateOrganizationalUnitError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdateOrganizationalUnitError {
     fn from(err: serde_json::error::Error) -> UpdateOrganizationalUnitError {
-        UpdateOrganizationalUnitError::Unknown(err.description().to_string())
+        UpdateOrganizationalUnitError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdateOrganizationalUnitError {
@@ -6038,7 +6230,8 @@ impl Error for UpdateOrganizationalUnitError {
             UpdateOrganizationalUnitError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            UpdateOrganizationalUnitError::Unknown(ref cause) => cause,
+            UpdateOrganizationalUnitError::ParseError(ref cause) => cause,
+            UpdateOrganizationalUnitError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6071,66 +6264,68 @@ pub enum UpdatePolicyError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl UpdatePolicyError {
-    pub fn from_body(body: &str) -> UpdatePolicyError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> UpdatePolicyError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AWSOrganizationsNotInUseException" => {
-                        UpdatePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
-                    }
-                    "AccessDeniedException" => {
-                        UpdatePolicyError::AccessDenied(String::from(error_message))
-                    }
-                    "ConcurrentModificationException" => {
-                        UpdatePolicyError::ConcurrentModification(String::from(error_message))
-                    }
-                    "ConstraintViolationException" => {
-                        UpdatePolicyError::ConstraintViolation(String::from(error_message))
-                    }
-                    "DuplicatePolicyException" => {
-                        UpdatePolicyError::DuplicatePolicy(String::from(error_message))
-                    }
-                    "InvalidInputException" => {
-                        UpdatePolicyError::InvalidInput(String::from(error_message))
-                    }
-                    "MalformedPolicyDocumentException" => {
-                        UpdatePolicyError::MalformedPolicyDocument(String::from(error_message))
-                    }
-                    "PolicyNotFoundException" => {
-                        UpdatePolicyError::PolicyNotFound(String::from(error_message))
-                    }
-                    "ServiceException" => UpdatePolicyError::Service(String::from(error_message)),
-                    "TooManyRequestsException" => {
-                        UpdatePolicyError::TooManyRequests(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        UpdatePolicyError::Validation(error_message.to_string())
-                    }
-                    _ => UpdatePolicyError::Unknown(String::from(body)),
+            match *error_type {
+                "AWSOrganizationsNotInUseException" => {
+                    return UpdatePolicyError::AWSOrganizationsNotInUse(String::from(error_message))
                 }
+                "AccessDeniedException" => {
+                    return UpdatePolicyError::AccessDenied(String::from(error_message))
+                }
+                "ConcurrentModificationException" => {
+                    return UpdatePolicyError::ConcurrentModification(String::from(error_message))
+                }
+                "ConstraintViolationException" => {
+                    return UpdatePolicyError::ConstraintViolation(String::from(error_message))
+                }
+                "DuplicatePolicyException" => {
+                    return UpdatePolicyError::DuplicatePolicy(String::from(error_message))
+                }
+                "InvalidInputException" => {
+                    return UpdatePolicyError::InvalidInput(String::from(error_message))
+                }
+                "MalformedPolicyDocumentException" => {
+                    return UpdatePolicyError::MalformedPolicyDocument(String::from(error_message))
+                }
+                "PolicyNotFoundException" => {
+                    return UpdatePolicyError::PolicyNotFound(String::from(error_message))
+                }
+                "ServiceException" => {
+                    return UpdatePolicyError::Service(String::from(error_message))
+                }
+                "TooManyRequestsException" => {
+                    return UpdatePolicyError::TooManyRequests(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return UpdatePolicyError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => UpdatePolicyError::Unknown(String::from(body)),
         }
+        return UpdatePolicyError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for UpdatePolicyError {
     fn from(err: serde_json::error::Error) -> UpdatePolicyError {
-        UpdatePolicyError::Unknown(err.description().to_string())
+        UpdatePolicyError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for UpdatePolicyError {
@@ -6169,7 +6364,8 @@ impl Error for UpdatePolicyError {
             UpdatePolicyError::Validation(ref cause) => cause,
             UpdatePolicyError::Credentials(ref err) => err.description(),
             UpdatePolicyError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            UpdatePolicyError::Unknown(ref cause) => cause,
+            UpdatePolicyError::ParseError(ref cause) => cause,
+            UpdatePolicyError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -6469,14 +6665,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<AcceptHandshakeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AcceptHandshakeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AcceptHandshakeError::from_response(response))),
+                )
             }
         })
     }
@@ -6494,11 +6692,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AttachPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(AttachPolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -6526,14 +6725,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<CancelHandshakeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CancelHandshakeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CancelHandshakeError::from_response(response))),
+                )
             }
         })
     }
@@ -6561,14 +6762,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<CreateAccountResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateAccountError::from_response(response))),
+                )
             }
         })
     }
@@ -6599,14 +6802,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<CreateOrganizationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateOrganizationError::from_response(response))),
+                )
             }
         })
     }
@@ -6637,13 +6842,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<CreateOrganizationalUnitResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateOrganizationalUnitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(CreateOrganizationalUnitError::from_response(response))
                 }))
             }
         })
@@ -6672,14 +6876,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<CreatePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreatePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreatePolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -6707,14 +6913,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DeclineHandshakeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeclineHandshakeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeclineHandshakeError::from_response(response))),
+                )
             }
         })
     }
@@ -6734,11 +6942,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeleteOrganizationError::from_response(response))),
+                )
             }
         })
     }
@@ -6763,9 +6972,7 @@ impl Organizations for OrganizationsClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeleteOrganizationalUnitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DeleteOrganizationalUnitError::from_response(response))
                 }))
             }
         })
@@ -6784,11 +6991,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DeletePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DeletePolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -6816,14 +7024,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribeAccountResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeAccountError::from_response(response))),
+                )
             }
         })
     }
@@ -6854,13 +7064,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribeCreateAccountStatusResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCreateAccountStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeCreateAccountStatusError::from_response(response))
                 }))
             }
         })
@@ -6892,14 +7101,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribeHandshakeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeHandshakeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeHandshakeError::from_response(response))),
+                )
             }
         })
     }
@@ -6928,14 +7139,15 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribeOrganizationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeOrganizationError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -6966,13 +7178,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribeOrganizationalUnitResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeOrganizationalUnitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeOrganizationalUnitError::from_response(response))
                 }))
             }
         })
@@ -7001,14 +7212,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DescribePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribePolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -7026,11 +7239,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DetachPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DetachPolicyError::from_response(response))),
+                )
             }
         })
     }
@@ -7055,9 +7269,7 @@ impl Organizations for OrganizationsClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisableAWSServiceAccessError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DisableAWSServiceAccessError::from_response(response))
                 }))
             }
         })
@@ -7089,14 +7301,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<DisablePolicyTypeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DisablePolicyTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DisablePolicyTypeError::from_response(response))),
+                )
             }
         })
     }
@@ -7120,11 +7334,11 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(EnableAWSServiceAccessError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(EnableAWSServiceAccessError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7153,14 +7367,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<EnableAllFeaturesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(EnableAllFeaturesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(EnableAllFeaturesError::from_response(response))),
+                )
             }
         })
     }
@@ -7188,14 +7404,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<EnablePolicyTypeResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(EnablePolicyTypeError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(EnablePolicyTypeError::from_response(response))),
+                )
             }
         })
     }
@@ -7226,13 +7444,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<InviteAccountToOrganizationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(InviteAccountToOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(InviteAccountToOrganizationError::from_response(response))
                 }))
             }
         })
@@ -7253,11 +7470,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(LeaveOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(LeaveOrganizationError::from_response(response))),
+                )
             }
         })
     }
@@ -7291,12 +7509,13 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListAWSServiceAccessForOrganizationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAWSServiceAccessForOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(ListAWSServiceAccessForOrganizationError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -7326,14 +7545,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListAccountsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAccountsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListAccountsError::from_response(response))),
+                )
             }
         })
     }
@@ -7364,14 +7585,15 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListAccountsForParentResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListAccountsForParentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListAccountsForParentError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7399,14 +7621,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListChildrenResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListChildrenError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListChildrenError::from_response(response))),
+                )
             }
         })
     }
@@ -7437,13 +7661,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListCreateAccountStatusResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListCreateAccountStatusError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListCreateAccountStatusError::from_response(response))
                 }))
             }
         })
@@ -7475,13 +7698,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListHandshakesForAccountResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListHandshakesForAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListHandshakesForAccountError::from_response(response))
                 }))
             }
         })
@@ -7514,13 +7736,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListHandshakesForOrganizationResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListHandshakesForOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(ListHandshakesForOrganizationError::from_response(response))
                 }))
             }
         })
@@ -7553,12 +7774,13 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListOrganizationalUnitsForParentResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListOrganizationalUnitsForParentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(ListOrganizationalUnitsForParentError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -7588,14 +7810,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListParentsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListParentsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListParentsError::from_response(response))),
+                )
             }
         })
     }
@@ -7623,14 +7847,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListPoliciesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListPoliciesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListPoliciesError::from_response(response))),
+                )
             }
         })
     }
@@ -7661,14 +7887,15 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListPoliciesForTargetResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListPoliciesForTargetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListPoliciesForTargetError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7696,14 +7923,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListRootsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListRootsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListRootsError::from_response(response))),
+                )
             }
         })
     }
@@ -7734,14 +7963,15 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<ListTargetsForPolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListTargetsForPolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(ListTargetsForPolicyError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -7759,11 +7989,12 @@ impl Organizations for OrganizationsClient {
             if response.status.is_success() {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(MoveAccountError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(MoveAccountError::from_response(response))),
+                )
             }
         })
     }
@@ -7788,9 +8019,7 @@ impl Organizations for OrganizationsClient {
                 Box::new(future::ok(::std::mem::drop(response)))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RemoveAccountFromOrganizationError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RemoveAccountFromOrganizationError::from_response(response))
                 }))
             }
         })
@@ -7822,13 +8051,12 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<UpdateOrganizationalUnitResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdateOrganizationalUnitError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(UpdateOrganizationalUnitError::from_response(response))
                 }))
             }
         })
@@ -7857,14 +8085,16 @@ impl Organizations for OrganizationsClient {
 
                     serde_json::from_str::<UpdatePolicyResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(UpdatePolicyError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(UpdatePolicyError::from_response(response))),
+                )
             }
         })
     }

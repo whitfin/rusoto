@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,10 +26,11 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Information about an entity that is affected by a Health event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AffectedEntity {
     /// <p>The 12-digit AWS account number that contains the affected entity.</p>
     #[serde(rename = "awsAccountId")]
@@ -94,6 +95,7 @@ pub struct DescribeAffectedEntitiesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAffectedEntitiesResponse {
     /// <p>The entities that match the filter criteria.</p>
     #[serde(rename = "entities")]
@@ -114,6 +116,7 @@ pub struct DescribeEntityAggregatesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEntityAggregatesResponse {
     /// <p>The number of entities that are affected by each of the specified events.</p>
     #[serde(rename = "entityAggregates")]
@@ -141,6 +144,7 @@ pub struct DescribeEventAggregatesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEventAggregatesResponse {
     /// <p>The number of events in each category that meet the optional filter criteria.</p>
     #[serde(rename = "eventAggregates")]
@@ -164,6 +168,7 @@ pub struct DescribeEventDetailsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEventDetailsResponse {
     /// <p>Error messages for any events that could not be retrieved.</p>
     #[serde(rename = "failedSet")]
@@ -196,6 +201,7 @@ pub struct DescribeEventTypesRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEventTypesResponse {
     /// <p>A list of event types that match the filter criteria. Event types have a category (<code>issue</code>, <code>accountNotification</code>, or <code>scheduledChange</code>), a service (for example, <code>EC2</code>, <code>RDS</code>, <code>DATAPIPELINE</code>, <code>BILLING</code>), and a code (in the format <code>AWS_<i>SERVICE</i>_<i>DESCRIPTION</i> </code>; for example, <code>AWS_EC2_SYSTEM_MAINTENANCE_EVENT</code>).</p>
     #[serde(rename = "eventTypes")]
@@ -228,6 +234,7 @@ pub struct DescribeEventsRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeEventsResponse {
     /// <p>The events that match the specified filter criteria.</p>
     #[serde(rename = "events")]
@@ -241,6 +248,7 @@ pub struct DescribeEventsResponse {
 
 /// <p>The number of entities that are affected by one or more events. Returned by the <a>DescribeEntityAggregates</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EntityAggregate {
     /// <p>The number entities that match the criteria for the specified events.</p>
     #[serde(rename = "count")]
@@ -282,6 +290,7 @@ pub struct EntityFilter {
 
 /// <p>Summary information about an event, returned by the <a>DescribeEvents</a> operation. The <a>DescribeEventDetails</a> operation also returns this information, as well as the <a>EventDescription</a> and additional event metadata.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Event {
     /// <p>The unique identifier for the event. Format: <code>arn:aws:health:<i>event-region</i>::event/<i>EVENT_TYPE_PLUS_ID</i> </code>. Example: <code>arn:aws:health:us-east-1::event/AWS_EC2_MAINTENANCE_5331</code> </p>
     #[serde(rename = "arn")]
@@ -327,6 +336,7 @@ pub struct Event {
 
 /// <p>The number of events of each issue type. Returned by the <a>DescribeEventAggregates</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EventAggregate {
     /// <p>The issue type for the associated count.</p>
     #[serde(rename = "aggregateValue")]
@@ -340,6 +350,7 @@ pub struct EventAggregate {
 
 /// <p>Detailed information about an event. A combination of an <a>Event</a> object, an <a>EventDescription</a> object, and additional metadata about the event. Returned by the <a>DescribeEventDetails</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EventDetails {
     /// <p>Summary information about the event.</p>
     #[serde(rename = "event")]
@@ -357,6 +368,7 @@ pub struct EventDetails {
 
 /// <p>Error information returned when a <a>DescribeEventDetails</a> operation cannot find a specified event.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct EventDetailsErrorItem {
     /// <p>A message that describes the error.</p>
     #[serde(rename = "errorMessage")]
@@ -459,46 +471,48 @@ pub enum DescribeAffectedEntitiesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAffectedEntitiesError {
-    pub fn from_body(body: &str) -> DescribeAffectedEntitiesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAffectedEntitiesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidPaginationToken" => {
-                        DescribeAffectedEntitiesError::InvalidPaginationToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "UnsupportedLocale" => DescribeAffectedEntitiesError::UnsupportedLocale(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DescribeAffectedEntitiesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAffectedEntitiesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidPaginationToken" => {
+                    return DescribeAffectedEntitiesError::InvalidPaginationToken(String::from(
+                        error_message,
+                    ))
                 }
+                "UnsupportedLocale" => {
+                    return DescribeAffectedEntitiesError::UnsupportedLocale(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeAffectedEntitiesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAffectedEntitiesError::Unknown(String::from(body)),
         }
+        return DescribeAffectedEntitiesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAffectedEntitiesError {
     fn from(err: serde_json::error::Error) -> DescribeAffectedEntitiesError {
-        DescribeAffectedEntitiesError::Unknown(err.description().to_string())
+        DescribeAffectedEntitiesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAffectedEntitiesError {
@@ -531,7 +545,8 @@ impl Error for DescribeAffectedEntitiesError {
             DescribeAffectedEntitiesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeAffectedEntitiesError::Unknown(ref cause) => cause,
+            DescribeAffectedEntitiesError::ParseError(ref cause) => cause,
+            DescribeAffectedEntitiesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -544,38 +559,38 @@ pub enum DescribeEntityAggregatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEntityAggregatesError {
-    pub fn from_body(body: &str) -> DescribeEntityAggregatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEntityAggregatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ValidationException" => {
-                        DescribeEntityAggregatesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEntityAggregatesError::Unknown(String::from(body)),
+            match *error_type {
+                "ValidationException" => {
+                    return DescribeEntityAggregatesError::Validation(error_message.to_string())
                 }
+                _ => {}
             }
-            Err(_) => DescribeEntityAggregatesError::Unknown(String::from(body)),
         }
+        return DescribeEntityAggregatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEntityAggregatesError {
     fn from(err: serde_json::error::Error) -> DescribeEntityAggregatesError {
-        DescribeEntityAggregatesError::Unknown(err.description().to_string())
+        DescribeEntityAggregatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEntityAggregatesError {
@@ -606,7 +621,8 @@ impl Error for DescribeEntityAggregatesError {
             DescribeEntityAggregatesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeEntityAggregatesError::Unknown(ref cause) => cause,
+            DescribeEntityAggregatesError::ParseError(ref cause) => cause,
+            DescribeEntityAggregatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -621,43 +637,43 @@ pub enum DescribeEventAggregatesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEventAggregatesError {
-    pub fn from_body(body: &str) -> DescribeEventAggregatesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEventAggregatesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidPaginationToken" => {
-                        DescribeEventAggregatesError::InvalidPaginationToken(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeEventAggregatesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEventAggregatesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidPaginationToken" => {
+                    return DescribeEventAggregatesError::InvalidPaginationToken(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return DescribeEventAggregatesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeEventAggregatesError::Unknown(String::from(body)),
         }
+        return DescribeEventAggregatesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEventAggregatesError {
     fn from(err: serde_json::error::Error) -> DescribeEventAggregatesError {
-        DescribeEventAggregatesError::Unknown(err.description().to_string())
+        DescribeEventAggregatesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEventAggregatesError {
@@ -689,7 +705,8 @@ impl Error for DescribeEventAggregatesError {
             DescribeEventAggregatesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeEventAggregatesError::Unknown(ref cause) => cause,
+            DescribeEventAggregatesError::ParseError(ref cause) => cause,
+            DescribeEventAggregatesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -704,41 +721,41 @@ pub enum DescribeEventDetailsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEventDetailsError {
-    pub fn from_body(body: &str) -> DescribeEventDetailsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEventDetailsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "UnsupportedLocale" => {
-                        DescribeEventDetailsError::UnsupportedLocale(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeEventDetailsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEventDetailsError::Unknown(String::from(body)),
+            match *error_type {
+                "UnsupportedLocale" => {
+                    return DescribeEventDetailsError::UnsupportedLocale(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return DescribeEventDetailsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeEventDetailsError::Unknown(String::from(body)),
         }
+        return DescribeEventDetailsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEventDetailsError {
     fn from(err: serde_json::error::Error) -> DescribeEventDetailsError {
-        DescribeEventDetailsError::Unknown(err.description().to_string())
+        DescribeEventDetailsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEventDetailsError {
@@ -770,7 +787,8 @@ impl Error for DescribeEventDetailsError {
             DescribeEventDetailsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeEventDetailsError::Unknown(ref cause) => cause,
+            DescribeEventDetailsError::ParseError(ref cause) => cause,
+            DescribeEventDetailsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -787,44 +805,46 @@ pub enum DescribeEventTypesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEventTypesError {
-    pub fn from_body(body: &str) -> DescribeEventTypesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEventTypesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidPaginationToken" => {
-                        DescribeEventTypesError::InvalidPaginationToken(String::from(error_message))
-                    }
-                    "UnsupportedLocale" => {
-                        DescribeEventTypesError::UnsupportedLocale(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeEventTypesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEventTypesError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidPaginationToken" => {
+                    return DescribeEventTypesError::InvalidPaginationToken(String::from(
+                        error_message,
+                    ))
                 }
+                "UnsupportedLocale" => {
+                    return DescribeEventTypesError::UnsupportedLocale(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeEventTypesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeEventTypesError::Unknown(String::from(body)),
         }
+        return DescribeEventTypesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEventTypesError {
     fn from(err: serde_json::error::Error) -> DescribeEventTypesError {
-        DescribeEventTypesError::Unknown(err.description().to_string())
+        DescribeEventTypesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEventTypesError {
@@ -857,7 +877,8 @@ impl Error for DescribeEventTypesError {
             DescribeEventTypesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeEventTypesError::Unknown(ref cause) => cause,
+            DescribeEventTypesError::ParseError(ref cause) => cause,
+            DescribeEventTypesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -874,44 +895,44 @@ pub enum DescribeEventsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeEventsError {
-    pub fn from_body(body: &str) -> DescribeEventsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeEventsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InvalidPaginationToken" => {
-                        DescribeEventsError::InvalidPaginationToken(String::from(error_message))
-                    }
-                    "UnsupportedLocale" => {
-                        DescribeEventsError::UnsupportedLocale(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeEventsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeEventsError::Unknown(String::from(body)),
+            match *error_type {
+                "InvalidPaginationToken" => {
+                    return DescribeEventsError::InvalidPaginationToken(String::from(error_message))
                 }
+                "UnsupportedLocale" => {
+                    return DescribeEventsError::UnsupportedLocale(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeEventsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeEventsError::Unknown(String::from(body)),
         }
+        return DescribeEventsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeEventsError {
     fn from(err: serde_json::error::Error) -> DescribeEventsError {
-        DescribeEventsError::Unknown(err.description().to_string())
+        DescribeEventsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeEventsError {
@@ -942,7 +963,8 @@ impl Error for DescribeEventsError {
             DescribeEventsError::Validation(ref cause) => cause,
             DescribeEventsError::Credentials(ref err) => err.description(),
             DescribeEventsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeEventsError::Unknown(ref cause) => cause,
+            DescribeEventsError::ParseError(ref cause) => cause,
+            DescribeEventsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1046,13 +1068,12 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeAffectedEntitiesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAffectedEntitiesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeAffectedEntitiesError::from_response(response))
                 }))
             }
         })
@@ -1084,13 +1105,12 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeEntityAggregatesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEntityAggregatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeEntityAggregatesError::from_response(response))
                 }))
             }
         })
@@ -1119,13 +1139,12 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeEventAggregatesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEventAggregatesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeEventAggregatesError::from_response(response))
                 }))
             }
         })
@@ -1154,14 +1173,15 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeEventDetailsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEventDetailsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeEventDetailsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -1189,14 +1209,16 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeEventTypesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEventTypesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeEventTypesError::from_response(response))),
+                )
             }
         })
     }
@@ -1224,14 +1246,16 @@ impl AWSHealth for AWSHealthClient {
 
                     serde_json::from_str::<DescribeEventsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeEventsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeEventsError::from_response(response))),
+                )
             }
         })
     }

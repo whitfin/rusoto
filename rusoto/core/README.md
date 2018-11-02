@@ -44,9 +44,9 @@ For example, to include only S3 and SQS:
 
 ``` toml
 [dependencies]
-rusoto_core = "0.34.0"
-rusoto_sqs = "0.34.0"
-rusoto_s3 = "0.34.0"
+rusoto_core = "0.35.0"
+rusoto_sqs = "0.35.0"
+rusoto_s3 = "0.35.0"
 ```
 
 ## Migration notes
@@ -62,7 +62,7 @@ Consult the rustdoc documentation for full details by running `cargo doc` or vis
 
 A simple example of using Rusoto's DynamoDB API to list the names of all tables in a database:
 
-```rust
+```rust,no_run
 extern crate rusoto_core;
 extern crate rusoto_dynamodb;
 
@@ -70,7 +70,7 @@ use rusoto_core::Region;
 use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ListTablesInput};
 
 fn main() {
-    let client = DynamoDbClient::simple(Region::UsEast1);
+    let client = DynamoDbClient::new(Region::UsEast1);
     let list_tables_input: ListTablesInput = Default::default();
 
     match client.list_tables(list_tables_input).sync() {
@@ -99,9 +99,9 @@ If you do not want to use OpenSSL, you can replace it with rustls by editing you
 
 ``` toml
 [dependencies]
-rusoto_core = { version="0.34.0", default_features=false, features=["rustls"] }
-rusoto_sqs = { version="0.34.0", default_features=false, features=["rustls"] }
-rusoto_s3 = { version="0.34.0", default_features=false, features=["rustls"] }
+rusoto_core = { version="0.35.0", default_features=false, features=["rustls"] }
+rusoto_sqs = { version="0.35.0", default_features=false, features=["rustls"] }
+rusoto_s3 = { version="0.35.0", default_features=false, features=["rustls"] }
 ```
 
 ### Credentials

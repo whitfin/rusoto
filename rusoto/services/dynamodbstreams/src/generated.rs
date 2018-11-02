@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,17 +26,18 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p>Represents the data for an attribute. You can set one, and only one, of the elements.</p> <p>Each attribute in an item is a name-value pair. An attribute can be single-valued or multi-valued set. For example, a book item can have title and authors attributes. Each book has one title but can have many authors. The multi-valued attribute is a set; duplicate values are not allowed.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttributeValue {
     /// <p>A Binary data type.</p>
     #[serde(rename = "B")]
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub b: Option<Vec<u8>>,
     /// <p>A Boolean data type.</p>
@@ -95,6 +96,7 @@ pub struct DescribeStreamInput {
 
 /// <p>Represents the output of a <code>DescribeStream</code> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeStreamOutput {
     /// <p>A complete description of the stream, including its creation date and time, the DynamoDB table associated with the stream, the shard IDs within the stream, and the beginning and ending sequence numbers of stream records within the shards.</p>
     #[serde(rename = "StreamDescription")]
@@ -116,6 +118,7 @@ pub struct GetRecordsInput {
 
 /// <p>Represents the output of a <code>GetRecords</code> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetRecordsOutput {
     /// <p>The next position in the shard from which to start sequentially reading stream records. If set to <code>null</code>, the shard has been closed and the requested iterator will not return any more data.</p>
     #[serde(rename = "NextShardIterator")]
@@ -147,6 +150,7 @@ pub struct GetShardIteratorInput {
 
 /// <p>Represents the output of a <code>GetShardIterator</code> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GetShardIteratorOutput {
     /// <p>The position in the shard from which to start reading stream records sequentially. A shard iterator specifies this position using the sequence number of a stream record in a shard.</p>
     #[serde(rename = "ShardIterator")]
@@ -156,6 +160,7 @@ pub struct GetShardIteratorOutput {
 
 /// <p>Contains details about the type of identity that made the request.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Identity {
     /// <p>A unique identifier for the entity that made the call. For Time To Live, the principalId is "dynamodb.amazonaws.com".</p>
     #[serde(rename = "PrincipalId")]
@@ -169,6 +174,7 @@ pub struct Identity {
 
 /// <p><p>Represents <i>a single element</i> of a key schema. A key schema specifies the attributes that make up the primary key of a table, or the key attributes of an index.</p> <p>A <code>KeySchemaElement</code> represents exactly one attribute of the primary key. For example, a simple primary key (partition key) would be represented by one <code>KeySchemaElement</code>. A composite primary key (partition key and sort key) would require one <code>KeySchemaElement</code> for the partition key, and another <code>KeySchemaElement</code> for the sort key.</p> <note> <p>The partition key of an item is also known as its <i>hash attribute</i>. The term &quot;hash attribute&quot; derives from DynamoDB&#39;s usage of an internal hash function to evenly distribute data items across partitions, based on their partition key values.</p> <p>The sort key of an item is also known as its <i>range attribute</i>. The term &quot;range attribute&quot; derives from the way DynamoDB stores items with the same partition key physically close together, in sorted order by the sort key value.</p> </note></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct KeySchemaElement {
     /// <p>The name of a key attribute.</p>
     #[serde(rename = "AttributeName")]
@@ -197,6 +203,7 @@ pub struct ListStreamsInput {
 
 /// <p>Represents the output of a <code>ListStreams</code> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ListStreamsOutput {
     /// <p>The stream ARN of the item where the operation stopped, inclusive of the previous result set. Use this value to start a new operation, excluding this value in the new request.</p> <p>If <code>LastEvaluatedStreamArn</code> is empty, then the "last page" of results has been processed and there is no more data to be retrieved.</p> <p>If <code>LastEvaluatedStreamArn</code> is not empty, it does not necessarily mean that there is more data in the result set. The only way to know when you have reached the end of the result set is when <code>LastEvaluatedStreamArn</code> is empty.</p>
     #[serde(rename = "LastEvaluatedStreamArn")]
@@ -210,6 +217,7 @@ pub struct ListStreamsOutput {
 
 /// <p>A description of a unique event within a stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Record {
     /// <p>The region in which the <code>GetRecords</code> request was received.</p>
     #[serde(rename = "awsRegion")]
@@ -243,6 +251,7 @@ pub struct Record {
 
 /// <p>The beginning and ending sequence numbers for the stream records contained within a shard.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SequenceNumberRange {
     /// <p>The last sequence number.</p>
     #[serde(rename = "EndingSequenceNumber")]
@@ -256,6 +265,7 @@ pub struct SequenceNumberRange {
 
 /// <p>A uniquely identified group of stream records within a stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Shard {
     /// <p>The shard ID of the current shard's parent.</p>
     #[serde(rename = "ParentShardId")]
@@ -273,6 +283,7 @@ pub struct Shard {
 
 /// <p>Represents all of the data describing a particular stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Stream {
     /// <p>The Amazon Resource Name (ARN) for the stream.</p>
     #[serde(rename = "StreamArn")]
@@ -290,6 +301,7 @@ pub struct Stream {
 
 /// <p>Represents all of the data describing a particular stream.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StreamDescription {
     /// <p>The date and time when the request to create this stream was issued.</p>
     #[serde(rename = "CreationRequestDateTime")]
@@ -331,6 +343,7 @@ pub struct StreamDescription {
 
 /// <p>A description of a single data modification that was performed on an item in a DynamoDB table.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct StreamRecord {
     /// <p>The approximate date and time when the stream record was created, in <a href="http://www.epochconverter.com/">UNIX epoch time</a> format.</p>
     #[serde(rename = "ApproximateCreationDateTime")]
@@ -375,44 +388,44 @@ pub enum DescribeStreamError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeStreamError {
-    pub fn from_body(body: &str) -> DescribeStreamError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeStreamError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeStreamError::InternalServerError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        DescribeStreamError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeStreamError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeStreamError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeStreamError::InternalServerError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return DescribeStreamError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeStreamError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeStreamError::Unknown(String::from(body)),
         }
+        return DescribeStreamError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeStreamError {
     fn from(err: serde_json::error::Error) -> DescribeStreamError {
-        DescribeStreamError::Unknown(err.description().to_string())
+        DescribeStreamError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeStreamError {
@@ -443,7 +456,8 @@ impl Error for DescribeStreamError {
             DescribeStreamError::Validation(ref cause) => cause,
             DescribeStreamError::Credentials(ref err) => err.description(),
             DescribeStreamError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeStreamError::Unknown(ref cause) => cause,
+            DescribeStreamError::ParseError(ref cause) => cause,
+            DescribeStreamError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -466,51 +480,53 @@ pub enum GetRecordsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetRecordsError {
-    pub fn from_body(body: &str) -> GetRecordsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetRecordsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "ExpiredIteratorException" => {
-                        GetRecordsError::ExpiredIterator(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        GetRecordsError::InternalServerError(String::from(error_message))
-                    }
-                    "LimitExceededException" => {
-                        GetRecordsError::LimitExceeded(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetRecordsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "TrimmedDataAccessException" => {
-                        GetRecordsError::TrimmedDataAccess(String::from(error_message))
-                    }
-                    "ValidationException" => GetRecordsError::Validation(error_message.to_string()),
-                    _ => GetRecordsError::Unknown(String::from(body)),
+            match *error_type {
+                "ExpiredIteratorException" => {
+                    return GetRecordsError::ExpiredIterator(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return GetRecordsError::InternalServerError(String::from(error_message))
+                }
+                "LimitExceededException" => {
+                    return GetRecordsError::LimitExceeded(String::from(error_message))
+                }
+                "ResourceNotFoundException" => {
+                    return GetRecordsError::ResourceNotFound(String::from(error_message))
+                }
+                "TrimmedDataAccessException" => {
+                    return GetRecordsError::TrimmedDataAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetRecordsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetRecordsError::Unknown(String::from(body)),
         }
+        return GetRecordsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetRecordsError {
     fn from(err: serde_json::error::Error) -> GetRecordsError {
-        GetRecordsError::Unknown(err.description().to_string())
+        GetRecordsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetRecordsError {
@@ -544,7 +560,8 @@ impl Error for GetRecordsError {
             GetRecordsError::Validation(ref cause) => cause,
             GetRecordsError::Credentials(ref err) => err.description(),
             GetRecordsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetRecordsError::Unknown(ref cause) => cause,
+            GetRecordsError::ParseError(ref cause) => cause,
+            GetRecordsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -563,47 +580,47 @@ pub enum GetShardIteratorError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl GetShardIteratorError {
-    pub fn from_body(body: &str) -> GetShardIteratorError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> GetShardIteratorError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        GetShardIteratorError::InternalServerError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        GetShardIteratorError::ResourceNotFound(String::from(error_message))
-                    }
-                    "TrimmedDataAccessException" => {
-                        GetShardIteratorError::TrimmedDataAccess(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        GetShardIteratorError::Validation(error_message.to_string())
-                    }
-                    _ => GetShardIteratorError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return GetShardIteratorError::InternalServerError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return GetShardIteratorError::ResourceNotFound(String::from(error_message))
+                }
+                "TrimmedDataAccessException" => {
+                    return GetShardIteratorError::TrimmedDataAccess(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return GetShardIteratorError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => GetShardIteratorError::Unknown(String::from(body)),
         }
+        return GetShardIteratorError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for GetShardIteratorError {
     fn from(err: serde_json::error::Error) -> GetShardIteratorError {
-        GetShardIteratorError::Unknown(err.description().to_string())
+        GetShardIteratorError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for GetShardIteratorError {
@@ -635,7 +652,8 @@ impl Error for GetShardIteratorError {
             GetShardIteratorError::Validation(ref cause) => cause,
             GetShardIteratorError::Credentials(ref err) => err.description(),
             GetShardIteratorError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            GetShardIteratorError::Unknown(ref cause) => cause,
+            GetShardIteratorError::ParseError(ref cause) => cause,
+            GetShardIteratorError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -652,44 +670,44 @@ pub enum ListStreamsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ListStreamsError {
-    pub fn from_body(body: &str) -> ListStreamsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ListStreamsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        ListStreamsError::InternalServerError(String::from(error_message))
-                    }
-                    "ResourceNotFoundException" => {
-                        ListStreamsError::ResourceNotFound(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ListStreamsError::Validation(error_message.to_string())
-                    }
-                    _ => ListStreamsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return ListStreamsError::InternalServerError(String::from(error_message))
                 }
+                "ResourceNotFoundException" => {
+                    return ListStreamsError::ResourceNotFound(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ListStreamsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ListStreamsError::Unknown(String::from(body)),
         }
+        return ListStreamsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ListStreamsError {
     fn from(err: serde_json::error::Error) -> ListStreamsError {
-        ListStreamsError::Unknown(err.description().to_string())
+        ListStreamsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ListStreamsError {
@@ -720,7 +738,8 @@ impl Error for ListStreamsError {
             ListStreamsError::Validation(ref cause) => cause,
             ListStreamsError::Credentials(ref err) => err.description(),
             ListStreamsError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ListStreamsError::Unknown(ref cause) => cause,
+            ListStreamsError::ParseError(ref cause) => cause,
+            ListStreamsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -809,14 +828,16 @@ impl DynamoDbStreams for DynamoDbStreamsClient {
 
                     serde_json::from_str::<DescribeStreamOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeStreamError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeStreamError::from_response(response))),
+                )
             }
         })
     }
@@ -844,14 +865,16 @@ impl DynamoDbStreams for DynamoDbStreamsClient {
 
                     serde_json::from_str::<GetRecordsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetRecordsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetRecordsError::from_response(response))),
+                )
             }
         })
     }
@@ -879,14 +902,16 @@ impl DynamoDbStreams for DynamoDbStreamsClient {
 
                     serde_json::from_str::<GetShardIteratorOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(GetShardIteratorError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(GetShardIteratorError::from_response(response))),
+                )
             }
         })
     }
@@ -914,14 +939,16 @@ impl DynamoDbStreams for DynamoDbStreamsClient {
 
                     serde_json::from_str::<ListStreamsOutput>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ListStreamsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ListStreamsError::from_response(response))),
+                )
             }
         })
     }

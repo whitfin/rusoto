@@ -18,7 +18,7 @@ use std::io;
 use futures::future;
 use futures::Future;
 use rusoto_core::region;
-use rusoto_core::request::DispatchSignedRequest;
+use rusoto_core::request::{BufferedHttpResponse, DispatchSignedRequest};
 use rusoto_core::{Client, RusotoFuture};
 
 use rusoto_core::credential::{CredentialsError, ProvideAwsCredentials};
@@ -26,7 +26,7 @@ use rusoto_core::request::HttpDispatchError;
 
 use rusoto_core::signature::SignedRequest;
 use serde_json;
-use serde_json::from_str;
+use serde_json::from_slice;
 use serde_json::Value as SerdeJsonValue;
 /// <p><p/></p>
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
@@ -42,6 +42,7 @@ pub struct AddAttachmentsToSetRequest {
 
 /// <p>The ID and expiry time of the attachment set returned by the <a>AddAttachmentsToSet</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddAttachmentsToSetResponse {
     /// <p>The ID of the attachment set. If an <code>attachmentSetId</code> was not specified, a new attachment set is created, and the ID of the set is returned in the response. If an <code>attachmentSetId</code> was specified, the attachments are added to the specified set, if it exists.</p>
     #[serde(rename = "attachmentSetId")]
@@ -75,6 +76,7 @@ pub struct AddCommunicationToCaseRequest {
 
 /// <p>The result of the <a>AddCommunicationToCase</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AddCommunicationToCaseResponse {
     /// <p>True if <a>AddCommunicationToCase</a> succeeds. Otherwise, returns an error.</p>
     #[serde(rename = "result")]
@@ -90,7 +92,7 @@ pub struct Attachment {
     #[serde(
         deserialize_with = "::rusoto_core::serialization::SerdeBlob::deserialize_blob",
         serialize_with = "::rusoto_core::serialization::SerdeBlob::serialize_blob",
-        default,
+        default
     )]
     pub data: Option<Vec<u8>>,
     /// <p>The name of the attachment file.</p>
@@ -101,6 +103,7 @@ pub struct Attachment {
 
 /// <p>The file name and ID of an attachment to a case communication. You can use the ID to retrieve the attachment with the <a>DescribeAttachment</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct AttachmentDetails {
     /// <p>The ID of the attachment.</p>
     #[serde(rename = "attachmentId")]
@@ -114,6 +117,7 @@ pub struct AttachmentDetails {
 
 /// <p><p>A JSON-formatted object that contains the metadata for a support case. It is contained the response from a <a>DescribeCases</a> request. <b>CaseDetails</b> contains the following fields:</p> <ul> <li> <p> <b>caseId.</b> The AWS Support case ID requested or returned in the call. The case ID is an alphanumeric string formatted as shown in this example: case-<i>12345678910-2013-c4c1d2bf33c5cf47</i>.</p> </li> <li> <p> <b>categoryCode.</b> The category of problem for the AWS Support case. Corresponds to the CategoryCode values returned by a call to <a>DescribeServices</a>.</p> </li> <li> <p> <b>displayId.</b> The identifier for the case on pages in the AWS Support Center.</p> </li> <li> <p> <b>language.</b> The ISO 639-1 code for the language in which AWS provides support. AWS Support currently supports English (&quot;en&quot;) and Japanese (&quot;ja&quot;). Language parameters must be passed explicitly for operations that take them.</p> </li> <li> <p> <b>recentCommunications.</b> One or more <a>Communication</a> objects. Fields of these objects are <code>attachments</code>, <code>body</code>, <code>caseId</code>, <code>submittedBy</code>, and <code>timeCreated</code>.</p> </li> <li> <p> <b>nextToken.</b> A resumption point for pagination.</p> </li> <li> <p> <b>serviceCode.</b> The identifier for the AWS service that corresponds to the service code defined in the call to <a>DescribeServices</a>.</p> </li> <li> <p> <b>severityCode. </b>The severity code assigned to the case. Contains one of the values returned by the call to <a>DescribeSeverityLevels</a>.</p> </li> <li> <p> <b>status.</b> The status of the case in the AWS Support Center.</p> </li> <li> <p> <b>subject.</b> The subject line of the case.</p> </li> <li> <p> <b>submittedBy.</b> The email address of the account that submitted the case.</p> </li> <li> <p> <b>timeCreated.</b> The time the case was created, in ISO-8601 format.</p> </li> </ul></p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CaseDetails {
     /// <p>The AWS Support case ID requested or returned in the call. The case ID is an alphanumeric string formatted as shown in this example: case-<i>12345678910-2013-c4c1d2bf33c5cf47</i> </p>
     #[serde(rename = "caseId")]
@@ -167,6 +171,7 @@ pub struct CaseDetails {
 
 /// <p>A JSON-formatted name/value pair that represents the category name and category code of the problem, selected from the <a>DescribeServices</a> response for each AWS service.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Category {
     /// <p>The category code for the support case.</p>
     #[serde(rename = "code")]
@@ -180,6 +185,7 @@ pub struct Category {
 
 /// <p>A communication associated with an AWS Support case. The communication consists of the case ID, the message body, attachment information, the account email address, and the date and time of the communication.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Communication {
     /// <p>Information about the attachments to the case communication.</p>
     #[serde(rename = "attachmentSet")]
@@ -244,6 +250,7 @@ pub struct CreateCaseRequest {
 
 /// <p>The AWS Support case ID returned by a successful completion of the <a>CreateCase</a> operation. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct CreateCaseResponse {
     /// <p>The AWS Support case ID requested or returned in the call. The case ID is an alphanumeric string formatted as shown in this example: case-<i>12345678910-2013-c4c1d2bf33c5cf47</i> </p>
     #[serde(rename = "caseId")]
@@ -260,6 +267,7 @@ pub struct DescribeAttachmentRequest {
 
 /// <p>The content and file name of the attachment returned by the <a>DescribeAttachment</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeAttachmentResponse {
     /// <p>The attachment content and file name.</p>
     #[serde(rename = "attachment")]
@@ -310,6 +318,7 @@ pub struct DescribeCasesRequest {
 
 /// <p>Returns an array of <a>CaseDetails</a> objects and a <code>nextToken</code> that defines a point for pagination in the result set.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCasesResponse {
     /// <p>The details for the cases that match the request.</p>
     #[serde(rename = "cases")]
@@ -347,6 +356,7 @@ pub struct DescribeCommunicationsRequest {
 
 /// <p>The communications returned by the <a>DescribeCommunications</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeCommunicationsResponse {
     /// <p>The communications for the case.</p>
     #[serde(rename = "communications")]
@@ -373,6 +383,7 @@ pub struct DescribeServicesRequest {
 
 /// <p>The list of AWS services returned by the <a>DescribeServices</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeServicesResponse {
     /// <p>A JSON-formatted list of AWS services.</p>
     #[serde(rename = "services")]
@@ -391,6 +402,7 @@ pub struct DescribeSeverityLevelsRequest {
 
 /// <p>The list of severity levels returned by the <a>DescribeSeverityLevels</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeSeverityLevelsResponse {
     /// <p>The available severity levels for the support case. Available severity levels are defined by your service level agreement with AWS.</p>
     #[serde(rename = "severityLevels")]
@@ -408,6 +420,7 @@ pub struct DescribeTrustedAdvisorCheckRefreshStatusesRequest {
 
 /// <p>The statuses of the Trusted Advisor checks returned by the <a>DescribeTrustedAdvisorCheckRefreshStatuses</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeTrustedAdvisorCheckRefreshStatusesResponse {
     /// <p>The refresh status of the specified Trusted Advisor checks.</p>
     #[serde(rename = "statuses")]
@@ -428,6 +441,7 @@ pub struct DescribeTrustedAdvisorCheckResultRequest {
 
 /// <p>The result of the Trusted Advisor check returned by the <a>DescribeTrustedAdvisorCheckResult</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeTrustedAdvisorCheckResultResponse {
     /// <p>The detailed results of the Trusted Advisor check.</p>
     #[serde(rename = "result")]
@@ -445,6 +459,7 @@ pub struct DescribeTrustedAdvisorCheckSummariesRequest {
 
 /// <p>The summaries of the Trusted Advisor checks returned by the <a>DescribeTrustedAdvisorCheckSummaries</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeTrustedAdvisorCheckSummariesResponse {
     /// <p>The summary information for the requested Trusted Advisor checks.</p>
     #[serde(rename = "summaries")]
@@ -461,6 +476,7 @@ pub struct DescribeTrustedAdvisorChecksRequest {
 
 /// <p>Information about the Trusted Advisor checks returned by the <a>DescribeTrustedAdvisorChecks</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct DescribeTrustedAdvisorChecksResponse {
     /// <p>Information about all available Trusted Advisor checks.</p>
     #[serde(rename = "checks")]
@@ -469,6 +485,7 @@ pub struct DescribeTrustedAdvisorChecksResponse {
 
 /// <p>The five most recent communications associated with the case.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RecentCaseCommunications {
     /// <p>The five most recent communications associated with the case.</p>
     #[serde(rename = "communications")]
@@ -490,6 +507,7 @@ pub struct RefreshTrustedAdvisorCheckRequest {
 
 /// <p>The current refresh status of a Trusted Advisor check.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct RefreshTrustedAdvisorCheckResponse {
     /// <p>The current refresh status for a check, including the amount of time until the check is eligible for refresh.</p>
     #[serde(rename = "status")]
@@ -507,6 +525,7 @@ pub struct ResolveCaseRequest {
 
 /// <p>The status of the case returned by the <a>ResolveCase</a> operation.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct ResolveCaseResponse {
     /// <p>The status of the case after the <a>ResolveCase</a> request was processed.</p>
     #[serde(rename = "finalCaseStatus")]
@@ -520,6 +539,7 @@ pub struct ResolveCaseResponse {
 
 /// <p>Information about an AWS service returned by the <a>DescribeServices</a> operation. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Service {
     /// <p>A list of categories that describe the type of support issue a case describes. Categories consist of a category name and a category code. Category names and codes are passed to AWS Support when you call <a>CreateCase</a>.</p>
     #[serde(rename = "categories")]
@@ -537,6 +557,7 @@ pub struct Service {
 
 /// <p>A code and name pair that represent a severity level that can be applied to a support case.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct SeverityLevel {
     /// <p>One of four values: "low," "medium," "high," and "urgent". These values correspond to response times returned to the caller in <code>severityLevel.name</code>. </p>
     #[serde(rename = "code")]
@@ -550,6 +571,7 @@ pub struct SeverityLevel {
 
 /// <p>The container for summary information that relates to the category of the Trusted Advisor check.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCategorySpecificSummary {
     /// <p>The summary information about cost savings for a Trusted Advisor check that is in the Cost Optimizing category.</p>
     #[serde(rename = "costOptimizing")]
@@ -559,6 +581,7 @@ pub struct TrustedAdvisorCategorySpecificSummary {
 
 /// <p>The description and metadata for a Trusted Advisor check.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCheckDescription {
     /// <p>The category of the Trusted Advisor check.</p>
     #[serde(rename = "category")]
@@ -579,6 +602,7 @@ pub struct TrustedAdvisorCheckDescription {
 
 /// <p>The refresh status of a Trusted Advisor check.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCheckRefreshStatus {
     /// <p>The unique identifier for the Trusted Advisor check.</p>
     #[serde(rename = "checkId")]
@@ -593,6 +617,7 @@ pub struct TrustedAdvisorCheckRefreshStatus {
 
 /// <p>The results of a Trusted Advisor check returned by <a>DescribeTrustedAdvisorCheckResult</a>.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCheckResult {
     /// <p>Summary information that relates to the category of the check. Cost Optimizing is the only category that is currently supported.</p>
     #[serde(rename = "categorySpecificSummary")]
@@ -615,6 +640,7 @@ pub struct TrustedAdvisorCheckResult {
 
 /// <p>A summary of a Trusted Advisor check result, including the alert status, last refresh, and number of resources examined.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCheckSummary {
     /// <p>Summary information that relates to the category of the check. Cost Optimizing is the only category that is currently supported.</p>
     #[serde(rename = "categorySpecificSummary")]
@@ -638,6 +664,7 @@ pub struct TrustedAdvisorCheckSummary {
 
 /// <p>The estimated cost savings that might be realized if the recommended actions are taken.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorCostOptimizingSummary {
     /// <p>The estimated monthly savings that might be realized if the recommended actions are taken.</p>
     #[serde(rename = "estimatedMonthlySavings")]
@@ -649,6 +676,7 @@ pub struct TrustedAdvisorCostOptimizingSummary {
 
 /// <p>Contains information about a resource identified by a Trusted Advisor check.</p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorResourceDetail {
     /// <p>Specifies whether the AWS resource was ignored by Trusted Advisor because it was marked as suppressed by the user.</p>
     #[serde(rename = "isSuppressed")]
@@ -671,6 +699,7 @@ pub struct TrustedAdvisorResourceDetail {
 
 /// <p>Details about AWS resources that were analyzed in a call to Trusted Advisor <a>DescribeTrustedAdvisorCheckSummaries</a>. </p>
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TrustedAdvisorResourcesSummary {
     /// <p>The number of AWS resources that were flagged (listed) by the Trusted Advisor check.</p>
     #[serde(rename = "resourcesFlagged")]
@@ -705,55 +734,63 @@ pub enum AddAttachmentsToSetError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddAttachmentsToSetError {
-    pub fn from_body(body: &str) -> AddAttachmentsToSetError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddAttachmentsToSetError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AttachmentLimitExceeded" => AddAttachmentsToSetError::AttachmentLimitExceeded(
-                        String::from(error_message),
-                    ),
-                    "AttachmentSetExpired" => {
-                        AddAttachmentsToSetError::AttachmentSetExpired(String::from(error_message))
-                    }
-                    "AttachmentSetIdNotFound" => AddAttachmentsToSetError::AttachmentSetIdNotFound(
-                        String::from(error_message),
-                    ),
-                    "AttachmentSetSizeLimitExceeded" => {
-                        AddAttachmentsToSetError::AttachmentSetSizeLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalServerError" => {
-                        AddAttachmentsToSetError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        AddAttachmentsToSetError::Validation(error_message.to_string())
-                    }
-                    _ => AddAttachmentsToSetError::Unknown(String::from(body)),
+            match *error_type {
+                "AttachmentLimitExceeded" => {
+                    return AddAttachmentsToSetError::AttachmentLimitExceeded(String::from(
+                        error_message,
+                    ))
                 }
+                "AttachmentSetExpired" => {
+                    return AddAttachmentsToSetError::AttachmentSetExpired(String::from(
+                        error_message,
+                    ))
+                }
+                "AttachmentSetIdNotFound" => {
+                    return AddAttachmentsToSetError::AttachmentSetIdNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "AttachmentSetSizeLimitExceeded" => {
+                    return AddAttachmentsToSetError::AttachmentSetSizeLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return AddAttachmentsToSetError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AddAttachmentsToSetError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddAttachmentsToSetError::Unknown(String::from(body)),
         }
+        return AddAttachmentsToSetError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddAttachmentsToSetError {
     fn from(err: serde_json::error::Error) -> AddAttachmentsToSetError {
-        AddAttachmentsToSetError::Unknown(err.description().to_string())
+        AddAttachmentsToSetError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddAttachmentsToSetError {
@@ -789,7 +826,8 @@ impl Error for AddAttachmentsToSetError {
             AddAttachmentsToSetError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddAttachmentsToSetError::Unknown(ref cause) => cause,
+            AddAttachmentsToSetError::ParseError(ref cause) => cause,
+            AddAttachmentsToSetError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -810,52 +848,56 @@ pub enum AddCommunicationToCaseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl AddCommunicationToCaseError {
-    pub fn from_body(body: &str) -> AddCommunicationToCaseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> AddCommunicationToCaseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AttachmentSetExpired" => AddCommunicationToCaseError::AttachmentSetExpired(
-                        String::from(error_message),
-                    ),
-                    "AttachmentSetIdNotFound" => {
-                        AddCommunicationToCaseError::AttachmentSetIdNotFound(String::from(
-                            error_message,
-                        ))
-                    }
-                    "CaseIdNotFound" => {
-                        AddCommunicationToCaseError::CaseIdNotFound(String::from(error_message))
-                    }
-                    "InternalServerError" => AddCommunicationToCaseError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        AddCommunicationToCaseError::Validation(error_message.to_string())
-                    }
-                    _ => AddCommunicationToCaseError::Unknown(String::from(body)),
+            match *error_type {
+                "AttachmentSetExpired" => {
+                    return AddCommunicationToCaseError::AttachmentSetExpired(String::from(
+                        error_message,
+                    ))
                 }
+                "AttachmentSetIdNotFound" => {
+                    return AddCommunicationToCaseError::AttachmentSetIdNotFound(String::from(
+                        error_message,
+                    ))
+                }
+                "CaseIdNotFound" => {
+                    return AddCommunicationToCaseError::CaseIdNotFound(String::from(error_message))
+                }
+                "InternalServerError" => {
+                    return AddCommunicationToCaseError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return AddCommunicationToCaseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => AddCommunicationToCaseError::Unknown(String::from(body)),
         }
+        return AddCommunicationToCaseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for AddCommunicationToCaseError {
     fn from(err: serde_json::error::Error) -> AddCommunicationToCaseError {
-        AddCommunicationToCaseError::Unknown(err.description().to_string())
+        AddCommunicationToCaseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for AddCommunicationToCaseError {
@@ -890,7 +932,8 @@ impl Error for AddCommunicationToCaseError {
             AddCommunicationToCaseError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            AddCommunicationToCaseError::Unknown(ref cause) => cause,
+            AddCommunicationToCaseError::ParseError(ref cause) => cause,
+            AddCommunicationToCaseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -911,48 +954,50 @@ pub enum CreateCaseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl CreateCaseError {
-    pub fn from_body(body: &str) -> CreateCaseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> CreateCaseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AttachmentSetExpired" => {
-                        CreateCaseError::AttachmentSetExpired(String::from(error_message))
-                    }
-                    "AttachmentSetIdNotFound" => {
-                        CreateCaseError::AttachmentSetIdNotFound(String::from(error_message))
-                    }
-                    "CaseCreationLimitExceeded" => {
-                        CreateCaseError::CaseCreationLimitExceeded(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        CreateCaseError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => CreateCaseError::Validation(error_message.to_string()),
-                    _ => CreateCaseError::Unknown(String::from(body)),
+            match *error_type {
+                "AttachmentSetExpired" => {
+                    return CreateCaseError::AttachmentSetExpired(String::from(error_message))
                 }
+                "AttachmentSetIdNotFound" => {
+                    return CreateCaseError::AttachmentSetIdNotFound(String::from(error_message))
+                }
+                "CaseCreationLimitExceeded" => {
+                    return CreateCaseError::CaseCreationLimitExceeded(String::from(error_message))
+                }
+                "InternalServerError" => {
+                    return CreateCaseError::InternalServerError(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return CreateCaseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => CreateCaseError::Unknown(String::from(body)),
         }
+        return CreateCaseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for CreateCaseError {
     fn from(err: serde_json::error::Error) -> CreateCaseError {
-        CreateCaseError::Unknown(err.description().to_string())
+        CreateCaseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for CreateCaseError {
@@ -985,7 +1030,8 @@ impl Error for CreateCaseError {
             CreateCaseError::Validation(ref cause) => cause,
             CreateCaseError::Credentials(ref err) => err.description(),
             CreateCaseError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            CreateCaseError::Unknown(ref cause) => cause,
+            CreateCaseError::ParseError(ref cause) => cause,
+            CreateCaseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1004,49 +1050,51 @@ pub enum DescribeAttachmentError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeAttachmentError {
-    pub fn from_body(body: &str) -> DescribeAttachmentError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeAttachmentError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "AttachmentIdNotFound" => {
-                        DescribeAttachmentError::AttachmentIdNotFound(String::from(error_message))
-                    }
-                    "DescribeAttachmentLimitExceeded" => {
-                        DescribeAttachmentError::DescribeAttachmentLimitExceeded(String::from(
-                            error_message,
-                        ))
-                    }
-                    "InternalServerError" => {
-                        DescribeAttachmentError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeAttachmentError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeAttachmentError::Unknown(String::from(body)),
+            match *error_type {
+                "AttachmentIdNotFound" => {
+                    return DescribeAttachmentError::AttachmentIdNotFound(String::from(
+                        error_message,
+                    ))
                 }
+                "DescribeAttachmentLimitExceeded" => {
+                    return DescribeAttachmentError::DescribeAttachmentLimitExceeded(String::from(
+                        error_message,
+                    ))
+                }
+                "InternalServerError" => {
+                    return DescribeAttachmentError::InternalServerError(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeAttachmentError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeAttachmentError::Unknown(String::from(body)),
         }
+        return DescribeAttachmentError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeAttachmentError {
     fn from(err: serde_json::error::Error) -> DescribeAttachmentError {
-        DescribeAttachmentError::Unknown(err.description().to_string())
+        DescribeAttachmentError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeAttachmentError {
@@ -1080,7 +1128,8 @@ impl Error for DescribeAttachmentError {
             DescribeAttachmentError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeAttachmentError::Unknown(ref cause) => cause,
+            DescribeAttachmentError::ParseError(ref cause) => cause,
+            DescribeAttachmentError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1097,44 +1146,44 @@ pub enum DescribeCasesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCasesError {
-    pub fn from_body(body: &str) -> DescribeCasesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCasesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CaseIdNotFound" => {
-                        DescribeCasesError::CaseIdNotFound(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        DescribeCasesError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeCasesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCasesError::Unknown(String::from(body)),
+            match *error_type {
+                "CaseIdNotFound" => {
+                    return DescribeCasesError::CaseIdNotFound(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return DescribeCasesError::InternalServerError(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return DescribeCasesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeCasesError::Unknown(String::from(body)),
         }
+        return DescribeCasesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCasesError {
     fn from(err: serde_json::error::Error) -> DescribeCasesError {
-        DescribeCasesError::Unknown(err.description().to_string())
+        DescribeCasesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCasesError {
@@ -1165,7 +1214,8 @@ impl Error for DescribeCasesError {
             DescribeCasesError::Validation(ref cause) => cause,
             DescribeCasesError::Credentials(ref err) => err.description(),
             DescribeCasesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeCasesError::Unknown(ref cause) => cause,
+            DescribeCasesError::ParseError(ref cause) => cause,
+            DescribeCasesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1182,44 +1232,46 @@ pub enum DescribeCommunicationsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeCommunicationsError {
-    pub fn from_body(body: &str) -> DescribeCommunicationsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeCommunicationsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CaseIdNotFound" => {
-                        DescribeCommunicationsError::CaseIdNotFound(String::from(error_message))
-                    }
-                    "InternalServerError" => DescribeCommunicationsError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DescribeCommunicationsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeCommunicationsError::Unknown(String::from(body)),
+            match *error_type {
+                "CaseIdNotFound" => {
+                    return DescribeCommunicationsError::CaseIdNotFound(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return DescribeCommunicationsError::InternalServerError(String::from(
+                        error_message,
+                    ))
+                }
+                "ValidationException" => {
+                    return DescribeCommunicationsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeCommunicationsError::Unknown(String::from(body)),
         }
+        return DescribeCommunicationsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeCommunicationsError {
     fn from(err: serde_json::error::Error) -> DescribeCommunicationsError {
-        DescribeCommunicationsError::Unknown(err.description().to_string())
+        DescribeCommunicationsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeCommunicationsError {
@@ -1252,7 +1304,8 @@ impl Error for DescribeCommunicationsError {
             DescribeCommunicationsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeCommunicationsError::Unknown(ref cause) => cause,
+            DescribeCommunicationsError::ParseError(ref cause) => cause,
+            DescribeCommunicationsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1267,41 +1320,41 @@ pub enum DescribeServicesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeServicesError {
-    pub fn from_body(body: &str) -> DescribeServicesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeServicesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeServicesError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        DescribeServicesError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeServicesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeServicesError::InternalServerError(String::from(error_message))
                 }
+                "ValidationException" => {
+                    return DescribeServicesError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeServicesError::Unknown(String::from(body)),
         }
+        return DescribeServicesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeServicesError {
     fn from(err: serde_json::error::Error) -> DescribeServicesError {
-        DescribeServicesError::Unknown(err.description().to_string())
+        DescribeServicesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeServicesError {
@@ -1331,7 +1384,8 @@ impl Error for DescribeServicesError {
             DescribeServicesError::Validation(ref cause) => cause,
             DescribeServicesError::Credentials(ref err) => err.description(),
             DescribeServicesError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            DescribeServicesError::Unknown(ref cause) => cause,
+            DescribeServicesError::ParseError(ref cause) => cause,
+            DescribeServicesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1346,41 +1400,43 @@ pub enum DescribeSeverityLevelsError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeSeverityLevelsError {
-    pub fn from_body(body: &str) -> DescribeSeverityLevelsError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeSeverityLevelsError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => DescribeSeverityLevelsError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        DescribeSeverityLevelsError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeSeverityLevelsError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeSeverityLevelsError::InternalServerError(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return DescribeSeverityLevelsError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeSeverityLevelsError::Unknown(String::from(body)),
         }
+        return DescribeSeverityLevelsError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeSeverityLevelsError {
     fn from(err: serde_json::error::Error) -> DescribeSeverityLevelsError {
-        DescribeSeverityLevelsError::Unknown(err.description().to_string())
+        DescribeSeverityLevelsError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeSeverityLevelsError {
@@ -1412,7 +1468,8 @@ impl Error for DescribeSeverityLevelsError {
             DescribeSeverityLevelsError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeSeverityLevelsError::Unknown(ref cause) => cause,
+            DescribeSeverityLevelsError::ParseError(ref cause) => cause,
+            DescribeSeverityLevelsError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1427,47 +1484,47 @@ pub enum DescribeTrustedAdvisorCheckRefreshStatusesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeTrustedAdvisorCheckRefreshStatusesError {
-    pub fn from_body(body: &str) -> DescribeTrustedAdvisorCheckRefreshStatusesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(
+        res: BufferedHttpResponse,
+    ) -> DescribeTrustedAdvisorCheckRefreshStatusesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeTrustedAdvisorCheckRefreshStatusesError::InternalServerError(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => {
-                        DescribeTrustedAdvisorCheckRefreshStatusesError::Validation(
-                            error_message.to_string(),
-                        )
-                    }
-                    _ => {
-                        DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(String::from(body))
-                    }
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeTrustedAdvisorCheckRefreshStatusesError::InternalServerError(
+                        String::from(error_message),
+                    )
                 }
+                "ValidationException" => {
+                    return DescribeTrustedAdvisorCheckRefreshStatusesError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(String::from(body)),
         }
+        return DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeTrustedAdvisorCheckRefreshStatusesError {
     fn from(err: serde_json::error::Error) -> DescribeTrustedAdvisorCheckRefreshStatusesError {
-        DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(err.description().to_string())
+        DescribeTrustedAdvisorCheckRefreshStatusesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeTrustedAdvisorCheckRefreshStatusesError {
@@ -1503,7 +1560,8 @@ impl Error for DescribeTrustedAdvisorCheckRefreshStatusesError {
             DescribeTrustedAdvisorCheckRefreshStatusesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(ref cause) => cause,
+            DescribeTrustedAdvisorCheckRefreshStatusesError::ParseError(ref cause) => cause,
+            DescribeTrustedAdvisorCheckRefreshStatusesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1518,43 +1576,45 @@ pub enum DescribeTrustedAdvisorCheckResultError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeTrustedAdvisorCheckResultError {
-    pub fn from_body(body: &str) -> DescribeTrustedAdvisorCheckResultError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeTrustedAdvisorCheckResultError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeTrustedAdvisorCheckResultError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => DescribeTrustedAdvisorCheckResultError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => DescribeTrustedAdvisorCheckResultError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeTrustedAdvisorCheckResultError::InternalServerError(
+                        String::from(error_message),
+                    )
                 }
+                "ValidationException" => {
+                    return DescribeTrustedAdvisorCheckResultError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeTrustedAdvisorCheckResultError::Unknown(String::from(body)),
         }
+        return DescribeTrustedAdvisorCheckResultError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeTrustedAdvisorCheckResultError {
     fn from(err: serde_json::error::Error) -> DescribeTrustedAdvisorCheckResultError {
-        DescribeTrustedAdvisorCheckResultError::Unknown(err.description().to_string())
+        DescribeTrustedAdvisorCheckResultError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeTrustedAdvisorCheckResultError {
@@ -1586,7 +1646,8 @@ impl Error for DescribeTrustedAdvisorCheckResultError {
             DescribeTrustedAdvisorCheckResultError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeTrustedAdvisorCheckResultError::Unknown(ref cause) => cause,
+            DescribeTrustedAdvisorCheckResultError::ParseError(ref cause) => cause,
+            DescribeTrustedAdvisorCheckResultError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1601,43 +1662,45 @@ pub enum DescribeTrustedAdvisorCheckSummariesError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeTrustedAdvisorCheckSummariesError {
-    pub fn from_body(body: &str) -> DescribeTrustedAdvisorCheckSummariesError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeTrustedAdvisorCheckSummariesError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeTrustedAdvisorCheckSummariesError::InternalServerError(
-                            String::from(error_message),
-                        )
-                    }
-                    "ValidationException" => DescribeTrustedAdvisorCheckSummariesError::Validation(
-                        error_message.to_string(),
-                    ),
-                    _ => DescribeTrustedAdvisorCheckSummariesError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeTrustedAdvisorCheckSummariesError::InternalServerError(
+                        String::from(error_message),
+                    )
                 }
+                "ValidationException" => {
+                    return DescribeTrustedAdvisorCheckSummariesError::Validation(
+                        error_message.to_string(),
+                    )
+                }
+                _ => {}
             }
-            Err(_) => DescribeTrustedAdvisorCheckSummariesError::Unknown(String::from(body)),
         }
+        return DescribeTrustedAdvisorCheckSummariesError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeTrustedAdvisorCheckSummariesError {
     fn from(err: serde_json::error::Error) -> DescribeTrustedAdvisorCheckSummariesError {
-        DescribeTrustedAdvisorCheckSummariesError::Unknown(err.description().to_string())
+        DescribeTrustedAdvisorCheckSummariesError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeTrustedAdvisorCheckSummariesError {
@@ -1669,7 +1732,8 @@ impl Error for DescribeTrustedAdvisorCheckSummariesError {
             DescribeTrustedAdvisorCheckSummariesError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeTrustedAdvisorCheckSummariesError::Unknown(ref cause) => cause,
+            DescribeTrustedAdvisorCheckSummariesError::ParseError(ref cause) => cause,
+            DescribeTrustedAdvisorCheckSummariesError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1684,43 +1748,43 @@ pub enum DescribeTrustedAdvisorChecksError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl DescribeTrustedAdvisorChecksError {
-    pub fn from_body(body: &str) -> DescribeTrustedAdvisorChecksError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> DescribeTrustedAdvisorChecksError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => {
-                        DescribeTrustedAdvisorChecksError::InternalServerError(String::from(
-                            error_message,
-                        ))
-                    }
-                    "ValidationException" => {
-                        DescribeTrustedAdvisorChecksError::Validation(error_message.to_string())
-                    }
-                    _ => DescribeTrustedAdvisorChecksError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return DescribeTrustedAdvisorChecksError::InternalServerError(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return DescribeTrustedAdvisorChecksError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => DescribeTrustedAdvisorChecksError::Unknown(String::from(body)),
         }
+        return DescribeTrustedAdvisorChecksError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for DescribeTrustedAdvisorChecksError {
     fn from(err: serde_json::error::Error) -> DescribeTrustedAdvisorChecksError {
-        DescribeTrustedAdvisorChecksError::Unknown(err.description().to_string())
+        DescribeTrustedAdvisorChecksError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for DescribeTrustedAdvisorChecksError {
@@ -1752,7 +1816,8 @@ impl Error for DescribeTrustedAdvisorChecksError {
             DescribeTrustedAdvisorChecksError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            DescribeTrustedAdvisorChecksError::Unknown(ref cause) => cause,
+            DescribeTrustedAdvisorChecksError::ParseError(ref cause) => cause,
+            DescribeTrustedAdvisorChecksError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1767,41 +1832,43 @@ pub enum RefreshTrustedAdvisorCheckError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl RefreshTrustedAdvisorCheckError {
-    pub fn from_body(body: &str) -> RefreshTrustedAdvisorCheckError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> RefreshTrustedAdvisorCheckError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "InternalServerError" => RefreshTrustedAdvisorCheckError::InternalServerError(
-                        String::from(error_message),
-                    ),
-                    "ValidationException" => {
-                        RefreshTrustedAdvisorCheckError::Validation(error_message.to_string())
-                    }
-                    _ => RefreshTrustedAdvisorCheckError::Unknown(String::from(body)),
+            match *error_type {
+                "InternalServerError" => {
+                    return RefreshTrustedAdvisorCheckError::InternalServerError(String::from(
+                        error_message,
+                    ))
                 }
+                "ValidationException" => {
+                    return RefreshTrustedAdvisorCheckError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => RefreshTrustedAdvisorCheckError::Unknown(String::from(body)),
         }
+        return RefreshTrustedAdvisorCheckError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for RefreshTrustedAdvisorCheckError {
     fn from(err: serde_json::error::Error) -> RefreshTrustedAdvisorCheckError {
-        RefreshTrustedAdvisorCheckError::Unknown(err.description().to_string())
+        RefreshTrustedAdvisorCheckError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for RefreshTrustedAdvisorCheckError {
@@ -1833,7 +1900,8 @@ impl Error for RefreshTrustedAdvisorCheckError {
             RefreshTrustedAdvisorCheckError::HttpDispatch(ref dispatch_error) => {
                 dispatch_error.description()
             }
-            RefreshTrustedAdvisorCheckError::Unknown(ref cause) => cause,
+            RefreshTrustedAdvisorCheckError::ParseError(ref cause) => cause,
+            RefreshTrustedAdvisorCheckError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -1850,44 +1918,44 @@ pub enum ResolveCaseError {
     Credentials(CredentialsError),
     /// A validation error occurred.  Details from AWS are provided.
     Validation(String),
+    /// An error occurred parsing the response payload.
+    ParseError(String),
     /// An unknown error occurred.  The raw HTTP response is provided.
-    Unknown(String),
+    Unknown(BufferedHttpResponse),
 }
 
 impl ResolveCaseError {
-    pub fn from_body(body: &str) -> ResolveCaseError {
-        match from_str::<SerdeJsonValue>(body) {
-            Ok(json) => {
-                let raw_error_type = json
-                    .get("__type")
-                    .and_then(|e| e.as_str())
-                    .unwrap_or("Unknown");
-                let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or(body);
+    pub fn from_response(res: BufferedHttpResponse) -> ResolveCaseError {
+        if let Ok(json) = from_slice::<SerdeJsonValue>(&res.body) {
+            let raw_error_type = json
+                .get("__type")
+                .and_then(|e| e.as_str())
+                .unwrap_or("Unknown");
+            let error_message = json.get("message").and_then(|m| m.as_str()).unwrap_or("");
 
-                let pieces: Vec<&str> = raw_error_type.split("#").collect();
-                let error_type = pieces.last().expect("Expected error type");
+            let pieces: Vec<&str> = raw_error_type.split("#").collect();
+            let error_type = pieces.last().expect("Expected error type");
 
-                match *error_type {
-                    "CaseIdNotFound" => {
-                        ResolveCaseError::CaseIdNotFound(String::from(error_message))
-                    }
-                    "InternalServerError" => {
-                        ResolveCaseError::InternalServerError(String::from(error_message))
-                    }
-                    "ValidationException" => {
-                        ResolveCaseError::Validation(error_message.to_string())
-                    }
-                    _ => ResolveCaseError::Unknown(String::from(body)),
+            match *error_type {
+                "CaseIdNotFound" => {
+                    return ResolveCaseError::CaseIdNotFound(String::from(error_message))
                 }
+                "InternalServerError" => {
+                    return ResolveCaseError::InternalServerError(String::from(error_message))
+                }
+                "ValidationException" => {
+                    return ResolveCaseError::Validation(error_message.to_string())
+                }
+                _ => {}
             }
-            Err(_) => ResolveCaseError::Unknown(String::from(body)),
         }
+        return ResolveCaseError::Unknown(res);
     }
 }
 
 impl From<serde_json::error::Error> for ResolveCaseError {
     fn from(err: serde_json::error::Error) -> ResolveCaseError {
-        ResolveCaseError::Unknown(err.description().to_string())
+        ResolveCaseError::ParseError(err.description().to_string())
     }
 }
 impl From<CredentialsError> for ResolveCaseError {
@@ -1918,7 +1986,8 @@ impl Error for ResolveCaseError {
             ResolveCaseError::Validation(ref cause) => cause,
             ResolveCaseError::Credentials(ref err) => err.description(),
             ResolveCaseError::HttpDispatch(ref dispatch_error) => dispatch_error.description(),
-            ResolveCaseError::Unknown(ref cause) => cause,
+            ResolveCaseError::ParseError(ref cause) => cause,
+            ResolveCaseError::Unknown(_) => "unknown error",
         }
     }
 }
@@ -2076,14 +2145,15 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<AddAttachmentsToSetResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddAttachmentsToSetError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddAttachmentsToSetError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2111,14 +2181,15 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<AddCommunicationToCaseResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(AddCommunicationToCaseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(AddCommunicationToCaseError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2146,14 +2217,16 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<CreateCaseResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(CreateCaseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(CreateCaseError::from_response(response))),
+                )
             }
         })
     }
@@ -2181,14 +2254,16 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeAttachmentResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeAttachmentError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeAttachmentError::from_response(response))),
+                )
             }
         })
     }
@@ -2216,14 +2291,16 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeCasesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCasesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeCasesError::from_response(response))),
+                )
             }
         })
     }
@@ -2251,14 +2328,15 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeCommunicationsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeCommunicationsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeCommunicationsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2286,14 +2364,16 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeServicesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeServicesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(DescribeServicesError::from_response(response))),
+                )
             }
         })
     }
@@ -2321,14 +2401,15 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeSeverityLevelsResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeSeverityLevelsError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response.buffer().from_err().and_then(|response| {
+                        Err(DescribeSeverityLevelsError::from_response(response))
+                    }),
+                )
             }
         })
     }
@@ -2362,13 +2443,12 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeTrustedAdvisorCheckRefreshStatusesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeTrustedAdvisorCheckRefreshStatusesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeTrustedAdvisorCheckRefreshStatusesError::from_response(response))
                 }))
             }
         })
@@ -2403,12 +2483,13 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeTrustedAdvisorCheckResultResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeTrustedAdvisorCheckResultError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(DescribeTrustedAdvisorCheckResultError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -2444,12 +2525,13 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeTrustedAdvisorCheckSummariesResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeTrustedAdvisorCheckSummariesError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
+                    Err(DescribeTrustedAdvisorCheckSummariesError::from_response(
+                        response,
                     ))
                 }))
             }
@@ -2482,13 +2564,12 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<DescribeTrustedAdvisorChecksResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(DescribeTrustedAdvisorChecksError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(DescribeTrustedAdvisorChecksError::from_response(response))
                 }))
             }
         })
@@ -2520,13 +2601,12 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<RefreshTrustedAdvisorCheckResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
                 Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(RefreshTrustedAdvisorCheckError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
+                    Err(RefreshTrustedAdvisorCheckError::from_response(response))
                 }))
             }
         })
@@ -2555,14 +2635,16 @@ impl AWSSupport for AWSSupportClient {
 
                     serde_json::from_str::<ResolveCaseResponse>(
                         String::from_utf8_lossy(body.as_ref()).as_ref(),
-                    ).unwrap()
+                    )
+                    .unwrap()
                 }))
             } else {
-                Box::new(response.buffer().from_err().and_then(|response| {
-                    Err(ResolveCaseError::from_body(
-                        String::from_utf8_lossy(response.body.as_ref()).as_ref(),
-                    ))
-                }))
+                Box::new(
+                    response
+                        .buffer()
+                        .from_err()
+                        .and_then(|response| Err(ResolveCaseError::from_response(response))),
+                )
             }
         })
     }
