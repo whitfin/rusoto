@@ -49,12 +49,7 @@ use rusoto_core::credential::{ProvideAwsCredentials, CredentialsError, AwsCreden
 use rusoto_core::request::{Headers, HttpResponse};
 use rusoto_core::signature::SignedRequest;
 use futures::future::{FutureResult, ok};
-use futures::stream::once;
 use http::{HttpTryFrom, StatusCode};
-use rusoto_core::credential::{AwsCredentials, CredentialsError, ProvideAwsCredentials};
-use rusoto_core::request::{Headers, HttpResponse};
-use rusoto_core::signature::SignedRequest;
-use rusoto_core::{DispatchSignedRequest, HttpDispatchError};
 use serde::Serialize;
 
 /// Provides a set of credentials that always resolve
