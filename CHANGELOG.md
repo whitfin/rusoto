@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 - Add ByteStream struct to core
+- Add Connect service
+- Add MediaTailor support
 
 ## [0.35.0] - 2018-10-31
 
