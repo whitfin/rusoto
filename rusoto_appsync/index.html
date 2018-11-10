@@ -1,0 +1,700 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `rusoto_appsync` crate."><meta name="keywords" content="rust, rustlang, rust-lang, rusoto_appsync"><title>rusoto_appsync - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../rusoto_appsync/index.html'><img src='https://raw.githubusercontent.com/rusoto/rusoto/master/assets/logo-square.png' alt='logo' width='100'></a><p class='location'>Crate rusoto_appsync</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'rusoto_appsync', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/rusoto_appsync/lib.rs.html#14-32' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>rusoto_appsync</a></span></h1><div class='docblock'><p>AWS AppSync provides API actions for creating and interacting with data sources using GraphQL from your application.</p>
+<p>If you're using the service, you're probably looking for <a href="struct.AppSyncClient.html">AppSyncClient</a> and <a href="trait.AppSync.html">AppSync</a>.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ApiKey.html"
+                                  title='struct rusoto_appsync::ApiKey'>ApiKey</a></td>
+                           <td class='docblock-short'>
+                                <p><p>Describes an API key.</p> <p>Customers invoke AWS AppSync GraphQL APIs with API keys as an identity mechanism. There are two key versions:</p> <p> <b>da1</b>: This version was introduced at launch in November 2017. These keys always expire after 7 days. Key expiration is managed by DynamoDB TTL. The keys will cease to be valid after Feb 21, 2018 and should not be used after that date.</p> <ul> <li> <p> <code>ListApiKeys</code> returns the expiration time in milliseconds.</p> </li> <li> <p> <code>CreateApiKey</code> returns the expiration time in milliseconds.</p> </li> <li> <p> <code>UpdateApiKey</code> is not available for this key version.</p> </li> <li> <p> <code>DeleteApiKey</code> deletes the item from the table.</p> </li> <li> <p>Expiration is stored in DynamoDB as milliseconds. This results in a bug where keys are not automatically deleted because DynamoDB expects the TTL to be stored in seconds. As a one-time action, we will delete these keys from the table after Feb 21, 2018.</p> </li> </ul> <p> <b>da2</b>: This version was introduced in February 2018 when AppSync added support to extend key expiration.</p> <ul> <li> <p> <code>ListApiKeys</code> returns the expiration time in seconds.</p> </li> <li> <p> <code>CreateApiKey</code> returns the expiration time in seconds and accepts a user-provided expiration time in seconds.</p> </li> <li> <p> <code>UpdateApiKey</code> returns the expiration time in seconds and accepts a user-provided expiration time in seconds. Key expiration can only be updated while the key has not expired.</p> </li> <li> <p> <code>DeleteApiKey</code> deletes the item from the table.</p> </li> <li> <p>Expiration is stored in DynamoDB as seconds.</p> </li> </ul></p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.AppSyncClient.html"
+                                  title='struct rusoto_appsync::AppSyncClient'>AppSyncClient</a></td>
+                           <td class='docblock-short'>
+                                <p>A client for the AWSAppSync API.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateApiKeyRequest.html"
+                                  title='struct rusoto_appsync::CreateApiKeyRequest'>CreateApiKeyRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateApiKeyResponse.html"
+                                  title='struct rusoto_appsync::CreateApiKeyResponse'>CreateApiKeyResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateDataSourceRequest.html"
+                                  title='struct rusoto_appsync::CreateDataSourceRequest'>CreateDataSourceRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateDataSourceResponse.html"
+                                  title='struct rusoto_appsync::CreateDataSourceResponse'>CreateDataSourceResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateGraphqlApiRequest.html"
+                                  title='struct rusoto_appsync::CreateGraphqlApiRequest'>CreateGraphqlApiRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateGraphqlApiResponse.html"
+                                  title='struct rusoto_appsync::CreateGraphqlApiResponse'>CreateGraphqlApiResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateResolverRequest.html"
+                                  title='struct rusoto_appsync::CreateResolverRequest'>CreateResolverRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateResolverResponse.html"
+                                  title='struct rusoto_appsync::CreateResolverResponse'>CreateResolverResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateTypeRequest.html"
+                                  title='struct rusoto_appsync::CreateTypeRequest'>CreateTypeRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CreateTypeResponse.html"
+                                  title='struct rusoto_appsync::CreateTypeResponse'>CreateTypeResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DataSource.html"
+                                  title='struct rusoto_appsync::DataSource'>DataSource</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a data source.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteApiKeyRequest.html"
+                                  title='struct rusoto_appsync::DeleteApiKeyRequest'>DeleteApiKeyRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteApiKeyResponse.html"
+                                  title='struct rusoto_appsync::DeleteApiKeyResponse'>DeleteApiKeyResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteDataSourceRequest.html"
+                                  title='struct rusoto_appsync::DeleteDataSourceRequest'>DeleteDataSourceRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteDataSourceResponse.html"
+                                  title='struct rusoto_appsync::DeleteDataSourceResponse'>DeleteDataSourceResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteGraphqlApiRequest.html"
+                                  title='struct rusoto_appsync::DeleteGraphqlApiRequest'>DeleteGraphqlApiRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteGraphqlApiResponse.html"
+                                  title='struct rusoto_appsync::DeleteGraphqlApiResponse'>DeleteGraphqlApiResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteResolverRequest.html"
+                                  title='struct rusoto_appsync::DeleteResolverRequest'>DeleteResolverRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteResolverResponse.html"
+                                  title='struct rusoto_appsync::DeleteResolverResponse'>DeleteResolverResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteTypeRequest.html"
+                                  title='struct rusoto_appsync::DeleteTypeRequest'>DeleteTypeRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DeleteTypeResponse.html"
+                                  title='struct rusoto_appsync::DeleteTypeResponse'>DeleteTypeResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DynamodbDataSourceConfig.html"
+                                  title='struct rusoto_appsync::DynamodbDataSourceConfig'>DynamodbDataSourceConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a DynamoDB data source configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ElasticsearchDataSourceConfig.html"
+                                  title='struct rusoto_appsync::ElasticsearchDataSourceConfig'>ElasticsearchDataSourceConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes an Elasticsearch data source configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetDataSourceRequest.html"
+                                  title='struct rusoto_appsync::GetDataSourceRequest'>GetDataSourceRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetDataSourceResponse.html"
+                                  title='struct rusoto_appsync::GetDataSourceResponse'>GetDataSourceResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetGraphqlApiRequest.html"
+                                  title='struct rusoto_appsync::GetGraphqlApiRequest'>GetGraphqlApiRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetGraphqlApiResponse.html"
+                                  title='struct rusoto_appsync::GetGraphqlApiResponse'>GetGraphqlApiResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetIntrospectionSchemaRequest.html"
+                                  title='struct rusoto_appsync::GetIntrospectionSchemaRequest'>GetIntrospectionSchemaRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetIntrospectionSchemaResponse.html"
+                                  title='struct rusoto_appsync::GetIntrospectionSchemaResponse'>GetIntrospectionSchemaResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetResolverRequest.html"
+                                  title='struct rusoto_appsync::GetResolverRequest'>GetResolverRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetResolverResponse.html"
+                                  title='struct rusoto_appsync::GetResolverResponse'>GetResolverResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetSchemaCreationStatusRequest.html"
+                                  title='struct rusoto_appsync::GetSchemaCreationStatusRequest'>GetSchemaCreationStatusRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetSchemaCreationStatusResponse.html"
+                                  title='struct rusoto_appsync::GetSchemaCreationStatusResponse'>GetSchemaCreationStatusResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetTypeRequest.html"
+                                  title='struct rusoto_appsync::GetTypeRequest'>GetTypeRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GetTypeResponse.html"
+                                  title='struct rusoto_appsync::GetTypeResponse'>GetTypeResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GraphqlApi.html"
+                                  title='struct rusoto_appsync::GraphqlApi'>GraphqlApi</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a GraphQL API.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.HttpDataSourceConfig.html"
+                                  title='struct rusoto_appsync::HttpDataSourceConfig'>HttpDataSourceConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a Http data source configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.LambdaDataSourceConfig.html"
+                                  title='struct rusoto_appsync::LambdaDataSourceConfig'>LambdaDataSourceConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a Lambda data source configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListApiKeysRequest.html"
+                                  title='struct rusoto_appsync::ListApiKeysRequest'>ListApiKeysRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListApiKeysResponse.html"
+                                  title='struct rusoto_appsync::ListApiKeysResponse'>ListApiKeysResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListDataSourcesRequest.html"
+                                  title='struct rusoto_appsync::ListDataSourcesRequest'>ListDataSourcesRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListDataSourcesResponse.html"
+                                  title='struct rusoto_appsync::ListDataSourcesResponse'>ListDataSourcesResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListGraphqlApisRequest.html"
+                                  title='struct rusoto_appsync::ListGraphqlApisRequest'>ListGraphqlApisRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListGraphqlApisResponse.html"
+                                  title='struct rusoto_appsync::ListGraphqlApisResponse'>ListGraphqlApisResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListResolversRequest.html"
+                                  title='struct rusoto_appsync::ListResolversRequest'>ListResolversRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListResolversResponse.html"
+                                  title='struct rusoto_appsync::ListResolversResponse'>ListResolversResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListTypesRequest.html"
+                                  title='struct rusoto_appsync::ListTypesRequest'>ListTypesRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.ListTypesResponse.html"
+                                  title='struct rusoto_appsync::ListTypesResponse'>ListTypesResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.LogConfig.html"
+                                  title='struct rusoto_appsync::LogConfig'>LogConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>The CloudWatch Logs configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.OpenIDConnectConfig.html"
+                                  title='struct rusoto_appsync::OpenIDConnectConfig'>OpenIDConnectConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes an Open Id Connect configuration.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Resolver.html"
+                                  title='struct rusoto_appsync::Resolver'>Resolver</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a resolver.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.StartSchemaCreationRequest.html"
+                                  title='struct rusoto_appsync::StartSchemaCreationRequest'>StartSchemaCreationRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.StartSchemaCreationResponse.html"
+                                  title='struct rusoto_appsync::StartSchemaCreationResponse'>StartSchemaCreationResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Type.html"
+                                  title='struct rusoto_appsync::Type'>Type</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes a type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateApiKeyRequest.html"
+                                  title='struct rusoto_appsync::UpdateApiKeyRequest'>UpdateApiKeyRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateApiKeyResponse.html"
+                                  title='struct rusoto_appsync::UpdateApiKeyResponse'>UpdateApiKeyResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateDataSourceRequest.html"
+                                  title='struct rusoto_appsync::UpdateDataSourceRequest'>UpdateDataSourceRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateDataSourceResponse.html"
+                                  title='struct rusoto_appsync::UpdateDataSourceResponse'>UpdateDataSourceResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateGraphqlApiRequest.html"
+                                  title='struct rusoto_appsync::UpdateGraphqlApiRequest'>UpdateGraphqlApiRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateGraphqlApiResponse.html"
+                                  title='struct rusoto_appsync::UpdateGraphqlApiResponse'>UpdateGraphqlApiResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateResolverRequest.html"
+                                  title='struct rusoto_appsync::UpdateResolverRequest'>UpdateResolverRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateResolverResponse.html"
+                                  title='struct rusoto_appsync::UpdateResolverResponse'>UpdateResolverResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateTypeRequest.html"
+                                  title='struct rusoto_appsync::UpdateTypeRequest'>UpdateTypeRequest</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UpdateTypeResponse.html"
+                                  title='struct rusoto_appsync::UpdateTypeResponse'>UpdateTypeResponse</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.UserPoolConfig.html"
+                                  title='struct rusoto_appsync::UserPoolConfig'>UserPoolConfig</a></td>
+                           <td class='docblock-short'>
+                                <p>Describes an Amazon Cognito User Pool configuration.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CreateApiKeyError.html"
+                                  title='enum rusoto_appsync::CreateApiKeyError'>CreateApiKeyError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by CreateApiKey</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CreateDataSourceError.html"
+                                  title='enum rusoto_appsync::CreateDataSourceError'>CreateDataSourceError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by CreateDataSource</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CreateGraphqlApiError.html"
+                                  title='enum rusoto_appsync::CreateGraphqlApiError'>CreateGraphqlApiError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by CreateGraphqlApi</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CreateResolverError.html"
+                                  title='enum rusoto_appsync::CreateResolverError'>CreateResolverError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by CreateResolver</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.CreateTypeError.html"
+                                  title='enum rusoto_appsync::CreateTypeError'>CreateTypeError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by CreateType</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DeleteApiKeyError.html"
+                                  title='enum rusoto_appsync::DeleteApiKeyError'>DeleteApiKeyError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by DeleteApiKey</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DeleteDataSourceError.html"
+                                  title='enum rusoto_appsync::DeleteDataSourceError'>DeleteDataSourceError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by DeleteDataSource</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DeleteGraphqlApiError.html"
+                                  title='enum rusoto_appsync::DeleteGraphqlApiError'>DeleteGraphqlApiError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by DeleteGraphqlApi</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DeleteResolverError.html"
+                                  title='enum rusoto_appsync::DeleteResolverError'>DeleteResolverError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by DeleteResolver</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DeleteTypeError.html"
+                                  title='enum rusoto_appsync::DeleteTypeError'>DeleteTypeError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by DeleteType</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetDataSourceError.html"
+                                  title='enum rusoto_appsync::GetDataSourceError'>GetDataSourceError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetDataSource</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetGraphqlApiError.html"
+                                  title='enum rusoto_appsync::GetGraphqlApiError'>GetGraphqlApiError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetGraphqlApi</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetIntrospectionSchemaError.html"
+                                  title='enum rusoto_appsync::GetIntrospectionSchemaError'>GetIntrospectionSchemaError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetIntrospectionSchema</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetResolverError.html"
+                                  title='enum rusoto_appsync::GetResolverError'>GetResolverError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetResolver</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetSchemaCreationStatusError.html"
+                                  title='enum rusoto_appsync::GetSchemaCreationStatusError'>GetSchemaCreationStatusError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetSchemaCreationStatus</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.GetTypeError.html"
+                                  title='enum rusoto_appsync::GetTypeError'>GetTypeError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by GetType</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ListApiKeysError.html"
+                                  title='enum rusoto_appsync::ListApiKeysError'>ListApiKeysError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by ListApiKeys</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ListDataSourcesError.html"
+                                  title='enum rusoto_appsync::ListDataSourcesError'>ListDataSourcesError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by ListDataSources</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ListGraphqlApisError.html"
+                                  title='enum rusoto_appsync::ListGraphqlApisError'>ListGraphqlApisError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by ListGraphqlApis</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ListResolversError.html"
+                                  title='enum rusoto_appsync::ListResolversError'>ListResolversError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by ListResolvers</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ListTypesError.html"
+                                  title='enum rusoto_appsync::ListTypesError'>ListTypesError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by ListTypes</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.StartSchemaCreationError.html"
+                                  title='enum rusoto_appsync::StartSchemaCreationError'>StartSchemaCreationError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by StartSchemaCreation</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.UpdateApiKeyError.html"
+                                  title='enum rusoto_appsync::UpdateApiKeyError'>UpdateApiKeyError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by UpdateApiKey</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.UpdateDataSourceError.html"
+                                  title='enum rusoto_appsync::UpdateDataSourceError'>UpdateDataSourceError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by UpdateDataSource</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.UpdateGraphqlApiError.html"
+                                  title='enum rusoto_appsync::UpdateGraphqlApiError'>UpdateGraphqlApiError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by UpdateGraphqlApi</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.UpdateResolverError.html"
+                                  title='enum rusoto_appsync::UpdateResolverError'>UpdateResolverError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by UpdateResolver</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.UpdateTypeError.html"
+                                  title='enum rusoto_appsync::UpdateTypeError'>UpdateTypeError</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors returned by UpdateType</p>
+
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.AppSync.html"
+                                  title='trait rusoto_appsync::AppSync'>AppSync</a></td>
+                           <td class='docblock-short'>
+                                <p>Trait representing the capabilities of the AWSAppSync API. AWSAppSync clients implement this trait.</p>
+
+                           </td>
+                       </tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "rusoto_appsync";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
